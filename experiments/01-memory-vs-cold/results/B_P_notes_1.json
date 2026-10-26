@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 29490,
+ "stop_reason": "end_turn",
+ "session_id": "f3f3a7b0-8da3-4880-88ff-2d1d9e579a75",
+ "total_cost_usd": 0.11481830000000001,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 18383,
+  "cache_read_input_tokens": 37403,
+  "output_tokens": 3753,
+  "output_tokens_details": {
+   "thinking_tokens": 214
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 18383,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1662,
+    "cache_read_input_tokens": 18734,
+    "cache_creation_input_tokens": 3791,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 3791
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 8,
+   "outputTokens": 3753,
+   "cacheReadInputTokens": 37403,
+   "cacheCreationInputTokens": 18383,
+   "webSearchRequests": 0,
+   "costUSD": 0.11481830000000001,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 214,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 10,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Credit is applied only by the Stripe webhook, so a \"payment succeeded\" that never reaches the balance has to fail at one of these points. I read the code to confirm each one.\n\n**Before the handler runs**\n1. **The webhook never arrives or is rejected.**\n   - The controller reads `req.rawBody` and the `stripe-signature` header (`src/payment/gateway/gateway.controller.ts:353-361`).\n   - A missing raw body or a wrong secret throws in `stripe.service.ts:172-194`. This includes `STRIPE_PAYMENT_WEBHOOK_SECRET_KEY` being unset and the payload not being a Buffer.\n   - Stripe sees a non-2xx response and retries.\n2. **The event type is ignored.**\n   - Only event types starting with `payment_intent` are handled (`stripe.processor.ts:296-305`).\n   - Anything else, such as `checkout.session.*` or `charge.*`, only logs a `console.warn` and the request returns 200. Stripe will not retry, and no credit is applied.\n3. **The processor is not Stripe.** Bankful and PaymentCloud have stub `_processWebhookEvent` methods (`bankful.processor.ts:130`, `payment-cloud.processor.ts:130`), and only Stripe has a webhook route. A payment through either of those never credits anything.\n\n**Inside `handleCheckoutCompleted` (`pay-in.service.ts`)**\n4. **The metadata is missing.**\n   - `paymentIntentHandler` reads `regularUserId` and `diamondPackageId` from `paymentIntent.metadata`, defaulting to `''` (`:330-335`).\n   - An empty `regularUserId` returns with only a warning (`:225-230`).\n   - The webhook still returns 200, no transaction is recorded, and Stripe does not retry.\n5. **The user or package lookup fails.** An unknown user or package returns silently with a warning and no transaction (`:234-237`, `:243-246`).\n6. **The status is not \"succeeded\".**\n   - Only `succeeded` maps to COMPLETED.\n   - `processing` maps to PROCESSING, so a payment that was still processing when the user saw success gets no credit at that moment (`:325-331`, `:250`).\n   - Any other status maps to REJECTED, and the user is told the top-up failed (`:290-293`).\n   - A card that later moves from `processing` to `succeeded` depends on a second event arriving.\n7. **A DynamoDB or SQL error throws.**\n   - `getUserBalanceAmount`, `createUserBalanceAmount` and `syncBalanceAmount` can all throw, as can the SQL update inside the sync (`:251-268`, `regular-users.service.ts:302-322`).\n   - `syncBalanceAmount` wraps errors in a 500, so Stripe retries.\n   - The write is not atomic: if DynamoDB succeeds and SQL fails, the two stores disagree. The retry then reads the already-updated DynamoDB value and adds the diamonds again.\n8. **A new balance record is created but SQL is not updated.**\n   - When no DynamoDB balance exists, the code calls `createUserBalanceAmount` and never calls `syncBalanceAmount` (`:256-261`).\n   - The SQL `diamondAmount` is therefore not updated for a first-time buyer.\n   - This is a likely cause of \"paid but no diamonds\" if the app reads the balance from SQL. I did not trace which store the UI reads from.\n9. **Later steps fail after the credit.**\n   - `handleAfterTopUp` (websocket) at `:274` and `createDiamondHistorical` at `:280` run after the credit, with no try/catch around them.\n   - If either throws, the webhook returns an error and Stripe retries. The retry credits the diamonds a second time. There is also no transaction row for the first attempt, because `transactionsService.create` at `:296` never ran.\n   - If the user was offline, the websocket notification may simply not be delivered, so the UI doesn't refresh even though the balance is correct.\n\n**Related risks**\n- **Double-credit on retry:** there is no idempotency check on `externalPaymentId` (`:304`), so every retry in items 7 and 9 credits again.\n- **Race:** the read-modify-write balance update (`:251-268`) can lose an update if two webhooks for the same user run at once.\n\n**Where to look first:** check the Stripe dashboard for the event's delivery status, then the logs for `User not found`, `Regular user ID not found`, `Error syncing balance amount`, or `Unhandled event type`. For a first-time buyer, compare the DynamoDB balance with the SQL `diamondAmount`.",
+ "ttft_ms": 1566,
+ "type": "result",
+ "duration_ms": 29594,
+ "uuid": "9deea303-78b6-4295-9106-f53eaa341ecd",
+ "ttft_stream_ms": 1018,
+ "time_to_request_ms": 68,
+ "first_content_frame_ms": 1019,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "B_P_notes_1",
+ "_wall_s": 30.7,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_clean"
+}

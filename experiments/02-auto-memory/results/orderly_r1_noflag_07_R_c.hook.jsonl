@@ -1,0 +1,1 @@
+{"seq": 7, "mode": "noflag", "ranked": [[0.325, "R_a"], [0.207, "E_a"], [0.178, "R_b"], [0.114, "E_b"], [0.034, "O_b"], [0.021, "O_a"]], "chosen": ["R_a", "E_a"], "changed": {"R_a": ["SiftOrder/src/main/java/com/siftit/domain/accountsPayable/RecurringAPInvoiceGenerationService.java"], "E_a": []}}

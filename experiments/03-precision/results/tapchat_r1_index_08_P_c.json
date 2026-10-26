@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 19204,
+ "stop_reason": "end_turn",
+ "session_id": "fa6eb5ef-f309-44b7-b4bc-17f35262c479",
+ "total_cost_usd": 0.0726139,
+ "usage": {
+  "input_tokens": 14,
+  "cache_creation_input_tokens": 10403,
+  "cache_read_input_tokens": 66439,
+  "output_tokens": 2433,
+  "output_tokens_details": {
+   "thinking_tokens": 150
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 10403,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 874,
+    "cache_read_input_tokens": 13727,
+    "cache_creation_input_tokens": 2058,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 2058
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 14,
+   "outputTokens": 2433,
+   "cacheReadInputTokens": 66439,
+   "cacheCreationInputTokens": 10403,
+   "webSearchRequests": 0,
+   "costUSD": 0.0726139,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 150,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Mostly prevented for sequential retries, but not for concurrent ones.** I read the code but didn't run anything.\n\n**What prevents it**\n- `src/payment/pay-in/pay-in.service.ts:225-233` is an idempotency check. `handleCheckoutCompleted` looks up a transaction by `externalPaymentId`, which is the Stripe `paymentIntent.id` (set at `:343`). If one exists, it logs \"Duplicate checkout event ignored\" and returns before touching the balance.\n- `src/transactions/transactions.service.ts:146-150` is that lookup, `findOne({ where: { paymentId } })`.\n- The transaction row is written at `pay-in.service.ts:305-318`, after the balance and history writes. A retry that arrives after the first run has finished will hit the check and be skipped.\n\n**What allows it**\n1. **Race on concurrent retries.** The check at `:225` and the insert at `:305` are separate steps with no lock or transaction around them. The balance update (`:260-281`), the DynamoDB history write (`:289`) and the websocket notification all happen in between. If Stripe redelivers while the first attempt is still running, both can pass the check and credit the diamonds twice.\n2. **No uniqueness constraint in the database.** `src/transactions/entities/transaction.entity.ts:29-30` declares `payment_id` as a plain nullable column, with no `unique` or index. Nothing at the database level stops a second row or a second credit.\n3. **Non-atomic crash window.** If the process fails after the balance credit (`:274` or `:266`) but before the transaction insert (`:305`), the retry sees no transaction and credits again. The balance lives in DynamoDB and the transaction in SQL, so no single transaction covers both.\n4. **Balance update is read-then-write.** `:260-277` reads the balance, adds the package amount and writes the total back through `syncBalanceAmount`. It isn't an atomic increment, so concurrent runs can also lose updates.\n5. **No dedupe by Stripe event ID.** `src/payment-processor/processors/stripe.processor.ts:286-306` verifies the signature and passes `event.data.object` to the handler. It never records or checks `event.id`. Dedupe relies only on the PaymentIntent ID.\n\n**Related point:** a non-final status such as `processing` also creates a transaction row, because the `status` mapping at `:334-338` feeds the same path. A later `succeeded` event for the same intent would then be treated as a duplicate at `:228` and never credited. That is the opposite problem (a missed credit), but it comes from the same check.",
+ "ttft_ms": 1482,
+ "type": "result",
+ "duration_ms": 19412,
+ "uuid": "9bd578dc-7406-4fbf-a699-5feb3339f247",
+ "ttft_stream_ms": 835,
+ "time_to_request_ms": 114,
+ "first_content_frame_ms": 835,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r1_index_08_P_c",
+ "_wall_s": 44.1,
+ "_variant": "index",
+ "_seq": 8
+}

@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 15487,
+ "stop_reason": "end_turn",
+ "session_id": "de93c586-fb0f-42d3-8ba7-e7fa80ca7f7f",
+ "total_cost_usd": 0.076104,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 12564,
+  "cache_read_input_tokens": 47280,
+  "output_tokens": 2110,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 12564,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1057,
+    "cache_read_input_tokens": 14672,
+    "cache_creation_input_tokens": 1115,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1115
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2110,
+   "cacheReadInputTokens": 47280,
+   "cacheCreationInputTokens": 12564,
+   "webSearchRequests": 0,
+   "costUSD": 0.076104,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 0,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 7,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Yes, support can see them, but only some of the failures show up there.\n\n**Endpoints** (`SiftOrder/src/main/java/com/siftit/webservices/personae/admin/AdminEmailReceivingWebService.java`, base path `/data/admin/emailReceiving`, line 19)\n- `GET /invoice/errors/{start}/{end}` (`:30-35`) is the failed-email list. It returns `EmailReceivingRecordDto` objects with sender, S3 key, attachments, `errors` and local part.\n- `GET /invoice/rest/{restId}/{start}/{end}` (`:37-43`) returns all records for one restaurant, failed or not.\n- `GET /invoice/{prefix}/{nextToken}` (`:24-28`) lists raw S3 emails under a prefix, 25 per page (`InvoiceEmailService.java:72-73`). Support can use it to browse `unparsable/` or `invoices/`.\n- `GET /download/{morphedS3Key}` (`:51-56`) downloads the `.eml` file.\n\n**How an email counts as failed**\n- The errors endpoint calls `InvoiceEmailService.getErrors` (`InvoiceEmailService.java:243-245`). That runs `findAnyWithErrors` (`InternalEmailReceivingRecordRepository.java:14-15`): `length(e.errors) > 1` within the created-time range.\n- An email is \"failed\" if its saved `EmailReceivingRecord` has a non-empty `errors` field.\n- Records are saved at `InvoiceEmailService.java:166`. Errors are added at:\n  - `:125`: restaurant inactive.\n  - `:138`: text attachment with no supplier mapping.\n  - `:141`: attachment is not an image or text type.\n  - `:144`: exception while processing one attachment.\n  - `:160`: unknown restaurant ID.\n  - `:163`: no address addressed to us.\n  - `:110`: errors from the recipient resolver.\n\n**Failures that are missing from it**\n- **Unparsable emails:** these are only logged (`:182`). The file is moved to `unparsable/` and no record is written. Support can only find them by browsing that prefix with the `/invoice/{prefix}` endpoint.\n- **Other failures in `handleEmail`:** S3 read errors, parser errors and a failed record save are only logged (`:168`, `:185`). The file stays in `invoices/` and is retried, with no record.\n- **Dev environment:** processing is skipped entirely (`:91`).\n- **Emails that never reached S3, or a job that isn't running:** these are invisible to this code.\n- **Failures after the attachment is saved:** an OCR failure or a failed conversion to an invoice is not recorded in `EmailReceivingRecord`. I didn't trace those, so I can't say where they are recorded.\n\nI took the line numbers for `InvoiceEmailService.java` from a saved earlier note (`.agent-memory/006_E_b.md`). I rechecked `:72-73`, `:110`, `:125-166`, `:182`, `:185` and `:243-245` against the code, but not `:91` or `:168`.",
+ "ttft_ms": 1909,
+ "type": "result",
+ "duration_ms": 15803,
+ "uuid": "af5f7ad5-025e-4897-b1ce-9511180afac3",
+ "ttft_stream_ms": 1446,
+ "time_to_request_ms": 255,
+ "first_content_frame_ms": 1446,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r1_index_09_E_c",
+ "_wall_s": 17.4,
+ "_variant": "index",
+ "_seq": 9
+}

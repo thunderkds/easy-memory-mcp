@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 26058,
+ "stop_reason": "end_turn",
+ "session_id": "f0cdbbbe-9e42-4fff-a9c1-9e255c167753",
+ "total_cost_usd": 0.11924570000000001,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 19615,
+  "cache_read_input_tokens": 58957,
+  "output_tokens": 3487,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 19615,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1477,
+    "cache_read_input_tokens": 20839,
+    "cache_creation_input_tokens": 2918,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 2918
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 3487,
+   "cacheReadInputTokens": 58957,
+   "cacheCreationInputTokens": 19615,
+   "webSearchRequests": 0,
+   "costUSD": 0.11924570000000001,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 0,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 11,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Failure points between \"payment succeeded\" and the balance update, in order. The path is the Stripe webhook, then `handleCheckoutCompleted`, then the balance write.\n\n**Webhook intake**\n1. **Signature or config rejection.** `STRIPE_PAYMENT_WEBHOOK_SECRET_KEY` is missing (`stripe.service.ts:170-173`), the signature is missing (`:165`), or `constructEvent` fails (`:183-194`). Stripe sees an error and retries, but a bad secret fails every time.\n2. **Raw body not a Buffer.** This throws \"Invalid payload format\" (`stripe.service.ts:178-181`). It depends on the raw-body middleware, and `gateway.controller.ts:360` reads `req.rawBody` with no guard.\n3. **Event type is ignored.** Only types starting with `payment_intent` are handled (`stripe.processor.ts:299-305`). Anything else, such as `charge.succeeded` or `checkout.session.*`, goes to a `console.warn` and returns 200. Nothing is credited.\n4. **Wrong intent status.** Every `payment_intent.*` event goes to the handler, and the status map only covers `succeeded`, `processing` and `canceled` (`pay-in.service.ts:325-332`). Anything else, such as `requires_action` or `payment_failed`, becomes `REJECTED`, so no diamonds are added. A `processing` status also adds none, and nothing credits the user when the intent later succeeds, unless a `succeeded` event arrives and is handled.\n\n**Silent early returns in `handleCheckoutCompleted`**\n\nThese log a warning and return normally, so Stripe gets 200 and never retries.\n5. **Missing `regularUserId` in metadata** (`pay-in.service.ts:225-230`). It is set at checkout as `regularUserId || ''` (`:74`), and `paymentIntentHandler` falls back to `''` (`:332`).\n6. **User not found** (`pay-in.service.ts:234-237`).\n7. **Diamond package not found** (`pay-in.service.ts:243-246`). `diamondPackageId` can be empty or stale, for example if the package was deleted or changed.\n\n**Balance write**\n8. **Dynamo read or write failure.** `getUserBalanceAmount` (`:251`), `createUserBalanceAmount` (`:257`, rethrows at `aws-dynamodb.service.ts:393`) or `updateUserBalanceAmount` (`regular-users.service.ts:308`) can throw. That produces a 500, so Stripe retries, but see 10 and 11.\n9. **Non-atomic Dynamo and SQL update.** `syncBalanceAmount` writes Dynamo first, then `regularUserRepository.update` (`regular-users.service.ts:308-316`). If the SQL write fails, Dynamo is already credited and the two stores disagree. The app may then display the SQL `diamondAmount`.\n10. **Read-modify-write race.** The balance is read at `pay-in.service.ts:251` and written at `:263-268` with no conditional or atomic increment. Concurrent top-ups, or a gift spend during a call, can overwrite the credit.\n\n**After the credit**\n11. **Retries can double-credit or be dropped.** Nothing dedupes on `externalPaymentId`. If a step after the credit throws, Stripe retries and the balance is credited again. Those steps are `createDiamondHistorical` (`:280`) and `transactionsService.create` (`:296`). The reverse also happens: a Stripe retry gives up and nothing reconciles.\n12. **Websocket notification is fire-and-forget.** `handleAfterTopUp` (`:274`) is not awaited. If the client isn't connected, the balance is correct but the UI never refreshes. This looks like \"not added\" to the user.\n\n**Other**\n13. **Non-Stripe processors have no crediting path.** `PaymentCloudController` is empty (`payment-cloud.controller.ts:4-7`), and the only webhook route is `stripe/webhook`. A card paid through Bankful or PaymentCloud never reaches `handleCheckoutCompleted` from any webhook I found.\n\nI'd check items 5 to 7 and 13 first, since they fail silently with a 200. I'd also check the Stripe dashboard's webhook delivery log for the payment intent.",
+ "ttft_ms": 1255,
+ "type": "result",
+ "duration_ms": 26178,
+ "uuid": "dfce5446-686a-4a98-90cc-8ac28e18df79",
+ "ttft_stream_ms": 860,
+ "time_to_request_ms": 80,
+ "first_content_frame_ms": 860,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "B_P_cold_1",
+ "_wall_s": 27.4,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_clean"
+}

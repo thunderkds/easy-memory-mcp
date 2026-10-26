@@ -1,0 +1,1 @@
+{"seq": 7, "mode": "auto", "ranked": [[0.451, "M_a"], [0.133, "M_b"], [0.12, "P_b"], [0.077, "D_a"], [0.061, "P_a"], [0.058, "D_b"]], "chosen": ["M_a"], "changed": {"M_a": ["src/appeals/appeals.service.ts", "src/jobs/jobs.service.ts", "src/regular-users/regular-users.service.ts", "src/verified-users/verified-users.service.ts"]}}

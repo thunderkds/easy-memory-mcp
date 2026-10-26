@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 16547,
+ "stop_reason": "end_turn",
+ "session_id": "d21da4c4-3044-4e8d-9091-1a27bae78c1f",
+ "total_cost_usd": 0.0544455,
+ "usage": {
+  "input_tokens": 6,
+  "cache_creation_input_tokens": 7052,
+  "cache_read_input_tokens": 24155,
+  "output_tokens": 2381,
+  "output_tokens_details": {
+   "thinking_tokens": 86
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 7052,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1427,
+    "cache_read_input_tokens": 11228,
+    "cache_creation_input_tokens": 1199,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1199
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 6,
+   "outputTokens": 2381,
+   "cacheReadInputTokens": 24155,
+   "cacheCreationInputTokens": 7052,
+   "webSearchRequests": 0,
+   "costUSD": 0.0544455,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 86,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 6,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Places where a succeeded card payment can fail to credit diamonds, in order. I read the webhook path in the code and checked it against my earlier notes.\n\n**Before the handler runs (Stripe to our server)**\n1. **Webhook not delivered or rejected.** The only credit path is `POST /payment/stripe/webhook` (`gateway.controller.ts:351-362`). If the endpoint isn't registered in Stripe, is unreachable, or fails, nothing is credited and the checkout response gives no hint.\n2. **Signature or raw-body failure.** `validateWebhookEvent` throws if the signature or `req.rawBody` is wrong, for example with a wrong webhook secret or a parsed body (`stripe.processor.ts:292-295`). Stripe sees an error and retries, but nothing is credited meanwhile.\n3. **Event type ignored.** Only `payment_intent.*` events are handled. Anything else goes to `console.warn` and returns success (`stripe.processor.ts:299-305`). If the endpoint is subscribed to the wrong events, this drops them silently.\n4. **Non-succeeded status.** The handler is called for every `payment_intent.*` event, and `paymentIntentHandler` maps any status other than `succeeded`, `processing` or `canceled` to REJECTED (`pay-in.service.ts:325-331`). An intermediate event such as `requires_action` or `payment_failed` therefore sends a failure notification and writes a failed transaction. A card that is later confirmed arrives as a separate `succeeded` event. A `processing` status takes the non-COMPLETED branch and credits nothing at that point.\n\n**Silent early returns in `handleCheckoutCompleted`**\n\nThese log a warning and return, so Stripe gets a 200 and never retries.\n5. **Missing `regularUserId` in the metadata** (`pay-in.service.ts:225-230`). `paymentIntentHandler` defaults it to `''`.\n6. **User not found** (`pay-in.service.ts:234-237`).\n7. **Package not found** (`pay-in.service.ts:243-246`). This can happen if the package was deleted or its id is missing from the metadata.\n\nIn cases 5-7 the user is charged, no balance changes, and no `FUND` transaction row is written. That makes these the hardest to trace.\n\n**Balance write (`pay-in.service.ts:250-272`)**\n8. **DynamoDB read fails.** `getUserBalanceAmount` throws, the webhook returns 500, and Stripe retries.\n9. **First purchase (no balance record).** `createUserBalanceAmount` writes only to DynamoDB (`pay-in.service.ts:256-261`). The SQL `regularUser.diamondAmount` isn't updated. Anything that reads the SQL column will show 0.\n10. **Partial update in `syncBalanceAmount`** (`regular-users.service.ts:308-316`). If the DynamoDB update succeeds and the SQL update fails, it throws. DynamoDB is then credited but SQL isn't. A Stripe retry computes from the already-updated DynamoDB value, so it double-credits.\n11. **Read-modify-write race.** The balance is read, a new value is computed, and it is written back without a conditional update (`pay-in.service.ts:251-268`). A concurrent spend or top-up can overwrite the credit.\n\n**After the credit (can still report failure)**\n12. **Step failures after the credit.** The websocket notification (`pay-in.service.ts:274`), `createDiamondHistorical` (`:280`) and `transactionsService.create` (`:296`) all run after the balance write. If one throws, the webhook returns 500 and Stripe retries. The retry credits the balance again, because there is no idempotency check on `externalPaymentId`.\n13. **Websocket notification is fire-and-forget.** If the user is offline or disconnected, the app may not show the new balance until it refetches. The balance itself is fine.\n\n**What to check first for this report:** look in the logs for \"Processing Stripe webhook\", the warnings from cases 5-7, and any error from `syncBalanceAmount`. Then compare the Stripe PaymentIntent's metadata and delivery attempts with the `FUND` transaction row for that `paymentId`.",
+ "ttft_ms": 8820,
+ "type": "result",
+ "duration_ms": 24536,
+ "uuid": "e3aaf658-5b0e-4350-85ec-035752ee7554",
+ "ttft_stream_ms": 8705,
+ "time_to_request_ms": 7946,
+ "first_content_frame_ms": 8706,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r1_judge_05_P_b",
+ "_wall_s": 44.1,
+ "_variant": "judge",
+ "_seq": 5
+}

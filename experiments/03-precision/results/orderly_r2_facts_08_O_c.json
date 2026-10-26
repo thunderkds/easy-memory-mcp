@@ -1,0 +1,113 @@
+{
+ "duration_api_ms": 17293,
+ "stop_reason": "end_turn",
+ "session_id": "c55ceede-c846-43b9-a533-5ed7df1a830d",
+ "total_cost_usd": 0.0677267,
+ "usage": {
+  "input_tokens": 14,
+  "cache_creation_input_tokens": 9866,
+  "cache_read_input_tokens": 64647,
+  "output_tokens": 2177,
+  "output_tokens_details": {
+   "thinking_tokens": 175
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 9866,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 615,
+    "cache_read_input_tokens": 11734,
+    "cache_creation_input_tokens": 3511,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 3511
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 14,
+   "outputTokens": 2177,
+   "cacheReadInputTokens": 64647,
+   "cacheCreationInputTokens": 9866,
+   "webSearchRequests": 0,
+   "costUSD": 0.0677267,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 175,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [
+  {
+   "tool_name": "Read",
+   "tool_use_id": "toolu_01VedVbNZjEjXC5grWBg2cmN",
+   "tool_input": {
+    "file_path": "/home/hungnguyen/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/03-precision/work/orderly_r2_facts/repo/SiftOrder/src/main/java/com/siftit/interactions/externalcommunication/RestaurantOrderV3EmailSender.java",
+    "offset": 50,
+    "limit": 110
+   }
+  }
+ ],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**No. On a resend the restaurant's order-email subscribers are not emailed.** The sender and the suppliers are still emailed.\n\n- **Resend path:** `finalizeOrResend` treats an order that already has a finished time as a resend (`RestaurantOrderService.java:176`). It then calls `sendOrderEmail(order, false)` (`:182`). A first-time finalize goes through `finalize`, which calls `sendOrderEmail(existingOrder, true)` (`:193`).\n- **Where subscribers get dropped:** both subscriber lookups, FoodOrder (`:201`) and BarOrder (`:207`), are gated on `includeSubscribers`. With `false`, `subscriberEmails` stays empty. `emailSender.send(currentUserEmail, subscriberEmails, existingOrder)` at `:213` therefore receives no subscribers.\n\n**Who is emailed on a resend**\n- **Master order email:** it goes to the current user, with `ccEmails` (the empty subscriber set) as CC (`RestaurantOrderV3EmailSender.java:57`, `:86-94`).\n- **Each supplier's email:** its to-list is the supplier's own to-addresses from `getSupplierEmailLists` (`:103`) plus the current user (`:128`). The CC list is the supplier's CC addresses plus `ccEmails` (`:129`), so no subscribers are in it.\n- **Recording:** a `SentSupplierEmail` row is saved for each to-address that MailJet responded for (`:142-147`).\n- **SMS:** a text goes to the supplier if a number is configured (`:149-152`).\n\nI didn't read the code that builds `ccEmails` inside `emailSender.send`. I'm inferring from the call at `:213` that the subscriber set ends up there, and that an empty set means no extra CC.",
+ "ttft_ms": 2379,
+ "type": "result",
+ "duration_ms": 17758,
+ "uuid": "126d7196-9a14-4a53-b9a2-6a1afa2c04d1",
+ "ttft_stream_ms": 1218,
+ "time_to_request_ms": 368,
+ "first_content_frame_ms": 1218,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r2_facts_08_O_c",
+ "_wall_s": 39.0,
+ "_variant": "facts",
+ "_seq": 8
+}

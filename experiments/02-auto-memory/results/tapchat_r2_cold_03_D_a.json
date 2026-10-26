@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 16232,
+ "stop_reason": "end_turn",
+ "session_id": "7dc18a1e-9b1b-4d41-8288-3e9579798fd6",
+ "total_cost_usd": 0.0618343,
+ "usage": {
+  "input_tokens": 6,
+  "cache_creation_input_tokens": 9919,
+  "cache_read_input_tokens": 17163,
+  "output_tokens": 2043,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 9919,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1314,
+    "cache_read_input_tokens": 6600,
+    "cache_creation_input_tokens": 8178,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 8178
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 6,
+   "outputTokens": 2043,
+   "cacheReadInputTokens": 17163,
+   "cacheCreationInputTokens": 9919,
+   "webSearchRequests": 0,
+   "costUSD": 0.0618343,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 0,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 6,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Registration**\n- `POST /fcm/register-token` is guarded by `JwtAuthGuard`. It takes the user from `@CurrentUser()` and the body as `RegisterDeviceTokenDto` (`deviceId`, `fcmToken`) (`src/fcm/fcm.controller.ts:30-49`).\n- `FcmService.registerDeviceToken` (`src/fcm/fcm.service.ts:91-120`) allows one active token per user:\n  1. It looks for any existing row for the user (`:97-99`).\n  2. If one exists, it soft-deactivates all of the user's tokens with `isActive=false` and `deletedAt=now` (`:101-103`, `:146-151`).\n  3. It then inserts a new row (`:106-112`).\n- `DELETE /fcm/unregister-token/:deviceId` deactivates the token for that user and device (`fcm.controller.ts:51-66`, `fcm.service.ts:127-140`).\n\n**Storage**\n- The `DeviceToken` entity maps to the `device_tokens` table (`src/fcm/entities/device-token.entity.ts:11-39`).\n- Its columns are `userId`, `deviceId`, `fcmToken` (text), `isActive` and `deletedAt`, plus created/updated timestamps.\n- There is a composite index on `(userId, isActive)` (`:12`).\n- The migrations are `1753262876986-add-device-token-table.ts`, `1754380262420-update-device-tokens-tables.ts` and the two index migrations.\n\n**Sending**\n- Firebase Admin is initialized in the service constructor from the `FIREBASE_SERVICE_ACCOUNT_KEY` env var, a JSON string (`fcm.service.ts:39-83`). If the key is missing, it logs a warning and `firebaseApp` stays unset.\n- `sendNotificationToUser` (`:172-195`) calls `getUserDeviceToken` (`:158`) to fetch the user's single active token, then calls `sendNotificationToToken`.\n- `sendNotificationToToken` (`:234-277`) requires an initialized app and a `data` payload. It sends a data-only message (`{token, data}`) through `messaging().send()` (`:255-260`). There is no `notification` block, so the client has to build the notification from the data.\n- Convenience wrappers set an `event` field from `EventTypes`:\n  - `sendCallingNotificationToUser` sends `INCOMING_CALL` (`:305-319`).\n  - `sendMissedCallNotificationToUser` sends `MISSED_CALL` (`:326-334`).\n  - `sendKYCNotificationToUser` sends `KYC_PASSED`, and only on success (`:203-226`).\n- There is also an admin-only `POST /fcm/send-to-user/:userId` (`fcm.controller.ts:68-81`). It uses `JwtAuthGuard` and `RolesGuard`, but I didn't check whether a `@Roles` decorator is applied.\n\n**Callers**\n- `src/calls/calls.service.ts:114` sends the incoming-call push.\n- `src/websockets/in-call-websocket/services/in-call-notification.service.ts:100` sends the missed-call push.\n- `src/vouched/vouched.service.ts:245` sends the KYC push.\n- `src/auth/auth.service.ts:230`, `:273` and `:501` call `getDeviceTokenByUserId` (`fcm.service.ts:292`) to read the token for auth and profile flows. They don't send anything.\n\n**Gaps**\n- `removeInvalidTokens` (`fcm.service.ts:283`) is private and never called. Stale or invalid FCM tokens are not cleaned up when a send fails, and the failure surfaces as a `BadRequestException`.\n- Registering a token on a second device deactivates the first device's token, so only the latest device receives pushes.",
+ "ttft_ms": 2452,
+ "type": "result",
+ "duration_ms": 16384,
+ "uuid": "8d2aad29-49b4-4022-ae04-e612bcbb8a14",
+ "ttft_stream_ms": 1847,
+ "time_to_request_ms": 104,
+ "first_content_frame_ms": 1847,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r2_cold_03_D_a",
+ "_wall_s": 28.1,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r2/repo_cold",
+ "_mode": "off",
+ "_seq": 3
+}

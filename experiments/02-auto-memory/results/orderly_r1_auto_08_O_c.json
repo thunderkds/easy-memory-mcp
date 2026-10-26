@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 11051,
+ "stop_reason": "end_turn",
+ "session_id": "767284ad-1e71-483a-8419-f0e8e48a68d8",
+ "total_cost_usd": 0.0552328,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 9555,
+  "cache_read_input_tokens": 47428,
+  "output_tokens": 1225,
+  "output_tokens_details": {
+   "thinking_tokens": 137
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 9555,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 422,
+    "cache_read_input_tokens": 11314,
+    "cache_creation_input_tokens": 3570,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 3570
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 1225,
+   "cacheReadInputTokens": 47428,
+   "cacheCreationInputTokens": 9555,
+   "webSearchRequests": 0,
+   "costUSD": 0.0552328,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 137,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 5,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**No. On a resend, the order-email subscribers are not emailed.**\n\n- `finalizeOrResend` sets `isResend` to true when the order already has a finished time (`RestaurantOrderService.java:176`). It then calls `sendOrderEmail(order, false)` (`:182`). A first-time finalize passes `true` (`:193`).\n- With `includeSubscribers` false, the FoodOrder and BarOrder subscriber lookups are skipped (`:201`, `:207`). `subscriberEmails` stays empty, and that empty set is what `emailSender.send` gets as the CC list (`:213`).\n\n**Who does get emailed on a resend:**\n- **The current user:** they get the master order email with the CSV attachment (`RestaurantOrderV3EmailSender.java:57`, `:86-95`). It has no CCs, because the CC list is empty.\n- **Each supplier on the order:** they get their own order email (`:59-62`). The supplier's contact addresses come from `getSupplierEmailLists` (`:103`). The current user is added to the \"to\" list (`:128`). The CC list is empty (`:129`).\n- **Supplier SMS:** a supplier that has an SMS number also gets a text (`:149-152`).\n\nI haven't run any of this.",
+ "ttft_ms": 2125,
+ "type": "result",
+ "duration_ms": 11316,
+ "uuid": "cfe31969-f2db-474e-90ea-cd9d7ed78708",
+ "ttft_stream_ms": 990,
+ "time_to_request_ms": 167,
+ "first_content_frame_ms": 990,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r1_auto_08_O_c",
+ "_wall_s": 23.5,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/orderly_r1/repo_auto",
+ "_mode": "auto",
+ "_seq": 8
+}

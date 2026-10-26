@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 15206,
+ "stop_reason": "end_turn",
+ "session_id": "99d0eaf4-20c1-42b9-ae89-f8bd2418fe54",
+ "total_cost_usd": 0.0614349,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 9414,
+  "cache_read_input_tokens": 31729,
+  "output_tokens": 2059,
+  "output_tokens_details": {
+   "thinking_tokens": 44
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 9414,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 673,
+    "cache_read_input_tokens": 11851,
+    "cache_creation_input_tokens": 2883,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 2883
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 8,
+   "outputTokens": 2059,
+   "cacheReadInputTokens": 31729,
+   "cacheCreationInputTokens": 9414,
+   "webSearchRequests": 0,
+   "costUSD": 0.0614349,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 44,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where the call goes:** `src/admin/admin.service.ts`, in the two status-update methods. Each already has an `if (SUSPENDED || DELETED)` block that calls `sseService.notifyStatusChanged`, right after the DB update.\n- Regular users: `updateRegularUserStatusById`, block at `admin.service.ts:376-391`.\n- Verified users: the matching block at `admin.service.ts:668-683`.\n\nPut the push inside the `SUSPENDED` case of each block. For example, add an inner `if (statusUpdated === ...SUSPENDED)` next to the SSE call at `:384` and `:676`. The block also covers `DELETED`, which product didn't ask for, so don't send there. Both blocks run after `updateAndReturn` (`:371` and `:663`), so the push only goes out once the suspension has been saved.\n\n**Which method to call:** `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` at `src/fcm/fcm.service.ts:172`.\n- It looks up the user's active device token and sends the push. If the user has no token, it returns `{ success: false }`.\n- On other errors it throws a `BadRequestException`. Wrap the call in try/catch so an FCM failure doesn't fail the suspension.\n- `sendKYCNotificationToUser` (`:203`) is the pattern to copy. It passes `data: { event: EventTypes.KYC_PASSED }`.\n- You'll likely need to add a new `EventTypes` value such as `ACCOUNT_SUSPENDED`. I didn't look up where `EventTypes` is defined.\n- You could also add a small wrapper like `sendSuspendedNotificationToUser` in `FcmService`.\n\n**Wiring needed:** `AdminService`'s constructor (`admin.service.ts:60-71`) doesn't inject `FcmService`. You'll need to add it there and import `FcmModule` into the admin module. I didn't check whether `FcmModule` exports the service.",
+ "ttft_ms": 1668,
+ "type": "result",
+ "duration_ms": 15375,
+ "uuid": "24bb8019-7cec-455c-9461-049852880be1",
+ "ttft_stream_ms": 988,
+ "time_to_request_ms": 113,
+ "first_content_frame_ms": 988,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_cold_04_M_b",
+ "_wall_s": 19.4,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r3/repo_cold",
+ "_mode": "off",
+ "_seq": 4
+}

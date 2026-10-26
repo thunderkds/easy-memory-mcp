@@ -1,0 +1,113 @@
+{
+ "duration_api_ms": 14293,
+ "stop_reason": "end_turn",
+ "session_id": "6cecc5d9-e40d-4372-b07c-84f023a9ee2c",
+ "total_cost_usd": 0.0618711,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 9861,
+  "cache_read_input_tokens": 48671,
+  "output_tokens": 1754,
+  "output_tokens_details": {
+   "thinking_tokens": 157
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 9861,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 802,
+    "cache_read_input_tokens": 13289,
+    "cache_creation_input_tokens": 1954,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1954
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 1754,
+   "cacheReadInputTokens": 48671,
+   "cacheCreationInputTokens": 9861,
+   "webSearchRequests": 0,
+   "costUSD": 0.0618711,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 157,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [
+  {
+   "tool_name": "Read",
+   "tool_use_id": "toolu_015onZCcDHSk3gKexPqNcKjg",
+   "tool_input": {
+    "file_path": "/home/hungnguyen/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/03-precision/work/tapchat_r3_judge/repo/src/payment/pay-in/pay-in.service.ts",
+    "offset": 215,
+    "limit": 135
+   }
+  }
+ ],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 5,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Mostly prevented, but not fully.** A sequential retry is blocked. A concurrent retry or a retry after a partial failure can still double-credit.\n\n**What prevents it**\n- `src/payment/pay-in/pay-in.service.ts:225-233` looks up an existing transaction by `externalPaymentId`, which is the PaymentIntent id (set at `:343`). If one exists, it logs \"Duplicate checkout event ignored\" and returns before touching the balance.\n- The lookup is `TransactionsService.findByPaymentId` at `src/transactions/transactions.service.ts:146-151`. It is a plain `findOne({ where: { paymentId } })`.\n- The transaction row is written at `pay-in.service.ts:305-318`, after the credit. So once a first delivery has finished, any later retry is ignored.\n\n**Where it can still double-credit**\n1. **Concurrent deliveries.**\n   - The check at `:225` and the insert at `:305` are separate steps with no lock or transaction around them.\n   - `src/transactions/entities/transaction.entity.ts:29` defines `payment_id` as a plain nullable column. I saw no unique constraint on it in the entity, and I didn't check the migrations.\n   - Two deliveries that overlap can both pass the check. Each then reads the balance and writes `old + package` (`:260`, `:272-277`), so both credit.\n2. **Retry after a partial failure.**\n   - The balance is credited at `:265-281`, and the transaction row is only created at `:305`.\n   - If `createDiamondHistorical` (`:289`) or `transactionsService.create` (`:305`) throws, the balance is already credited but no transaction row exists.\n   - Stripe then gets a 500 and retries. The retry passes the duplicate check and credits again.\n3. **Status-blind guard.**\n   - `paymentIntentHandler` maps every `payment_intent.*` event to a status (`:334-340`), and `handleCheckoutCompleted` writes a transaction row for each, including non-completed ones (`:305-318`).\n   - If a `processing` or `requires_action` event for the same PaymentIntent arrives first, it writes a transaction row.\n   - The later `succeeded` event is then treated as a duplicate at `:228` and never credits. That's a missed credit, not a double credit.\n\nI read the code but didn't run it. I didn't check the migrations for a unique index.",
+ "ttft_ms": 5189,
+ "type": "result",
+ "duration_ms": 18253,
+ "uuid": "e16f4088-27bc-4b81-be8e-b070e18b7b41",
+ "ttft_stream_ms": 4701,
+ "time_to_request_ms": 3894,
+ "first_content_frame_ms": 4701,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_judge_08_P_c",
+ "_wall_s": 37.3,
+ "_variant": "judge",
+ "_seq": 8
+}

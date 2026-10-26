@@ -1,0 +1,10 @@
+{
+ "seq": 7,
+ "label": "R_c",
+ "prompt": "If the recurring AP invoice job runs twice on the same day, can it create a duplicate invoice for the same date? Name the method that prevents or allows it.\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**Normally no. A second run on the same day shouldn't create a duplicate for the same date, and the main guard is `isDueForGeneration`.** I read the code only and didn't run it.\n\n- **`isDueForGeneration`** (`RecurringAPInvoiceGenerationService.java:73-80`) is what stops a repeat run. It returns false when `nextPostDate` is after the reference date. After each generation, `processRecurringConfig` advances it (`:61-62`) and saves the config (`:70`). A second run therefore sees a later `nextPostDate` and generates nothing.\n- **Invoice-number merge**: if the config's state weren't advanced, the invoice number is a second guard. `buildInvoiceFromConfig` sets the number to `\"REC-\" + configId + \"-\" + invoiceDate` (`:170`). `InvoiceService.mergeOrFixupIfDuplicate` (`InvoiceService.java:613-663`) looks up an existing invoice with the same restaurant, supplier and number. For a same-day match, it merges the new invoice into the existing one (`:662`) rather than creating a second.\n- **`existsByRecurringAPInvoiceConfigIdAndInvoiceId`** (`:123`) doesn't prevent duplicates. It only avoids writing the link row twice for the same saved invoice.\n\n**Race window:** I found no lock or unique constraint here. Two runs that overlap, both reading the config before either saves, could pass `isDueForGeneration`. The invoice-number merge would then be the only protection, and it is a check-then-act lookup, not a database guarantee.",
+ "files": {
+  "SiftOrder/src/main/java/com/siftit/domain/accountsPayable/RecurringAPInvoiceGenerationService.java": "d491a70f760d7da1170127d98228e84355e1c34f5a207508b8194d46364aa083",
+  "SiftOrder/src/main/java/com/siftit/domain/invoice/InvoiceService.java": "293755696a1c155263e6aebe9eef3411eaf3be6d1c633ddf49d349962bd8bded"
+ }
+}

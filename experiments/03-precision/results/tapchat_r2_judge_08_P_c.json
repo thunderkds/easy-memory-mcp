@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 11629,
+ "stop_reason": "end_turn",
+ "session_id": "8a1f0e15-eb91-4434-a349-5311ad26ef77",
+ "total_cost_usd": 0.04583809999999999,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 7248,
+  "cache_read_input_tokens": 36601,
+  "output_tokens": 1317,
+  "output_tokens_details": {
+   "thinking_tokens": 45
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 7248,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 711,
+    "cache_read_input_tokens": 12234,
+    "cache_creation_input_tokens": 396,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 396
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 8,
+   "outputTokens": 1317,
+   "cacheReadInputTokens": 36601,
+   "cacheCreationInputTokens": 7248,
+   "webSearchRequests": 0,
+   "costUSD": 0.04583809999999999,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 45,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 4,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Mostly prevented for sequential retries, but not for concurrent or partially failed ones.**\n\n**What prevents it**\n- `src/payment/pay-in/pay-in.service.ts:225-233`: `handleCheckoutCompleted` calls `transactionsService.findByPaymentId(externalPaymentId)` first. If a transaction already exists, it logs \"Duplicate checkout event ignored\" and returns.\n- `externalPaymentId` is the Stripe `paymentIntent.id` (`pay-in.service.ts:343`).\n- The lookup is `src/transactions/transactions.service.ts:146-150`.\n- The transaction row is written at `pay-in.service.ts:305-318` with `paymentId: externalPaymentId`.\n- So a retry that arrives after the first delivery finished is ignored.\n\n**Gaps that can still double-credit**\n1. **No atomicity or unique constraint.** `payment_id` is a plain nullable column (`src/transactions/entities/transaction.entity.ts:29-30`). It has no `@Unique` or index. Two deliveries that overlap can both pass the check at line 225 before either writes the row at line 305. Stripe can do this when a retry fires while the first request is still slow. Both then credit.\n2. **The transaction row is written last.** The order is balance credit (`:259-281`), then the DynamoDB history record (`:289`), then the transaction row (`:305`). If anything after the credit throws, the webhook returns 500 and Stripe retries. No row exists yet, so the dedupe check passes and the credit is applied again. One example is `syncBalanceAmount` failing on its SQL write after DynamoDB was updated.\n3. **The balance update is a non-atomic read-then-write** (`:260-277`). Concurrent webhooks can also lose an update, which is the opposite error.\n\n**Fix:** add a unique index on `payment_id`. Better, write a pending transaction row before crediting, so a duplicate insert fails. Alternatively, wrap the credit and the row in one atomic step.\n\nI read only the Stripe path and did not check the Bankful or PaymentCloud paths.",
+ "ttft_ms": 5806,
+ "type": "result",
+ "duration_ms": 16081,
+ "uuid": "8ba572ae-ab33-4910-87a5-165e84e2a632",
+ "ttft_stream_ms": 5400,
+ "time_to_request_ms": 4400,
+ "first_content_frame_ms": 5400,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r2_judge_08_P_c",
+ "_wall_s": 41.5,
+ "_variant": "judge",
+ "_seq": 8
+}

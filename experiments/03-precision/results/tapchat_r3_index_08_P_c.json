@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 20996,
+ "stop_reason": "end_turn",
+ "session_id": "88cd5bc2-a85e-4f0b-af87-36ba0b28bf02",
+ "total_cost_usd": 0.090885,
+ "usage": {
+  "input_tokens": 14,
+  "cache_creation_input_tokens": 14046,
+  "cache_read_input_tokens": 84030,
+  "output_tokens": 2627,
+  "output_tokens_details": {
+   "thinking_tokens": 95
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 14046,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 913,
+    "cache_read_input_tokens": 18184,
+    "cache_creation_input_tokens": 1244,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1244
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 14,
+   "outputTokens": 2627,
+   "cacheReadInputTokens": 84030,
+   "cacheCreationInputTokens": 14046,
+   "webSearchRequests": 0,
+   "costUSD": 0.090885,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 95,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Sequential retries are blocked. Concurrent deliveries can still double-credit.**\n\n**What prevents it (sequential retries):**\n- `src/payment/pay-in/pay-in.service.ts:225-233`: `handleCheckoutCompleted` calls `transactionsService.findByPaymentId(externalPaymentId)`. If a transaction already exists, it logs \"Duplicate checkout event ignored\" and returns before touching the balance.\n- The key is the Stripe PaymentIntent id, set at `pay-in.service.ts:343`. It is stored as `paymentId` when the transaction is created (`pay-in.service.ts:313`).\n- The lookup is `transactions.service.ts:146-151`.\n- The balance and history writes (`pay-in.service.ts:259-295`) come before the transaction insert (`:305`). A retry that arrives after the first run has finished therefore sees the row and stops.\n\n**What allows it (concurrent or partial failure):**\n- **Race:** the check and the insert aren't atomic, and nothing locks between them. If Stripe delivers the same event twice at nearly the same time, both can pass `findByPaymentId` before either inserts. Both then credit the balance.\n- **No unique constraint:** `payment_id` is a plain nullable column (`src/transactions/entities/transaction.entity.ts:29`). I found no unique index or migration on it, so the database wouldn't reject the second insert either.\n- **Non-atomic balance update:** `pay-in.service.ts:272-277` reads the balance, adds the amount, then writes it back (`syncBalanceAmount`). Concurrent runs can also lose updates.\n- **Partial failure, which can mean a missing transaction row:** if the handler throws after the balance write (`:274`) but before the transaction insert (`:305`), the diamonds are credited but no row exists. Stripe's retry then credits again. This depends on a throw in `createDiamondHistorical` or `transactionsService.create`.\n- **Non-success statuses are recorded too:** a `processing` event inserts a row with `PROCESSING` status (`:305-318`). When the later `succeeded` event arrives, `findByPaymentId` finds that row and returns early (`:228`). The diamonds are then never credited, which is the opposite problem. I haven't checked whether other code updates that row.\n\n**Event ids aren't used.** `stripe.processor.ts:292-301` verifies the signature and passes only `event.data.object` to the handler, so the Stripe `event.id` is never recorded for deduplication.\n\n**Fix:** add a unique index on `payment_id` and handle the conflict, or wrap the check, credit and insert in one DB transaction with a lock.\n\nI didn't run anything or edit files.",
+ "ttft_ms": 1398,
+ "type": "result",
+ "duration_ms": 21224,
+ "uuid": "d39bf181-4761-4cac-b572-3497e906e4b9",
+ "ttft_stream_ms": 865,
+ "time_to_request_ms": 107,
+ "first_content_frame_ms": 866,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_index_08_P_c",
+ "_wall_s": 48.5,
+ "_variant": "index",
+ "_seq": 8
+}

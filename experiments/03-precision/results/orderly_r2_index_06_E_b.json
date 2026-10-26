@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 15379,
+ "stop_reason": "end_turn",
+ "session_id": "64990c22-79b2-4d7d-a504-d83c14253fcb",
+ "total_cost_usd": 0.0487895,
+ "usage": {
+  "input_tokens": 6,
+  "cache_creation_input_tokens": 6692,
+  "cache_read_input_tokens": 20595,
+  "output_tokens": 1995,
+  "output_tokens_details": {
+   "thinking_tokens": 110
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 6692,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1457,
+    "cache_read_input_tokens": 8728,
+    "cache_creation_input_tokens": 3335,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 3335
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 6,
+   "outputTokens": 1995,
+   "cacheReadInputTokens": 20595,
+   "cacheCreationInputTokens": 6692,
+   "webSearchRequests": 0,
+   "costUSD": 0.0487895,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 110,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 4,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "A PDF invoice email can fail to show up for the reasons below. I checked `handleEmail` and its wrapper in `InvoiceEmailService.java` against the code. The rest comes from an earlier session's note that I didn't re-check. Paths are under `SiftOrder/src/main/java/com/siftit/`, and the file is `domain/emailReceiving/InvoiceEmailService.java`.\n\n**Failures that leave a record**\n\nEach of these goes into `EmailReceivingRecord.errors`, saved at `InvoiceEmailService.java:166`. The record also shows the S3 key the email was filed under.\n\n1. **Recipient address doesn't resolve to a restaurant.**\n   - The local part must be a numeric restaurant id, such as `1234@invoices\u2026` (`:189-206`).\n   - A non-numeric or unknown id is silently swallowed (`:200-202`).\n   - The email is filed under `unknown/<localPart>/\u2026` (`:159-160`).\n   - If no address looks like ours, it goes under `noLocalPart/\u2026` (`:162-163`).\n   - In both cases the PDF is never attached (`:119`).\n2. **Restaurant is inactive.** The error \"Restaurant was not marked active\" is added and the attachment is skipped (`:124-127`).\n3. **Attachment type isn't accepted.** Anything that isn't an image or PDF, or a text/CSV file, gets \"was not image or text type file\" (`:141`).\n4. **Saving the attachment throws.**\n   - Any exception from `saveNewGroupingForInvoice` or `addInvoiceAttachment` is caught and added as `\"<name> -- <message>\"` (`:143-145`).\n   - The email is still moved to `parsed/`, so it looks processed.\n   - The OCR send inside `addInvoiceAttachment` is in `domain/invoice/InvoiceService.java:1376-1378`.\n\n**Failures that only reach the log**\n\n5. **Email can't be parsed.**\n   - `FallbackMimeParser.java:40` and `:50` throw `UnparsableMessageException`.\n   - `:181-183` logs it and moves the file to `unparsable/`. No `EmailReceivingRecord` is saved.\n6. **Any other exception.**\n   - This covers an S3 read or move failure, a DB save failure, or a failure in the `readAllBytes` or resolver step.\n   - `handleEmail` logs it and rethrows (`:167-169`), and the wrapper logs it again (`:184-186`).\n   - Nothing is recorded in the DB, and the file stays in `invoices/`.\n   - It is retried on the next run, so a permanent failure repeats every 5 minutes.\n\n**Never reaches the code**\n\n7. **Dev environment.** `handleUnparsedEmails` returns immediately (`:91-93`).\n8. **Job doesn't run.**\n   - It runs every 5 minutes on a ShedLock lock (`jobs/ParseInvoiceEmailsJob.java:17-23`, `jobs/JobTimes.java:44`).\n   - A stuck lock, or an exception that rolls back the `@Transactional` method, stops processing.\n9. **Email never lands in the S3 bucket.** The prefix is `invoices/` under `boss.email.receiving.bucketName` (`:94`). The inbound mail setup is outside this repo.\n\n**Saved but not visible**\n\n10. **Attachment is saved but unassigned.** `setStatusToDoneIfAttachedToInvoice` (`InvoiceService.java:1411-1425`) only marks the grouping Done if an invoice already points at it. A new emailed PDF therefore stays an unassigned grouping, so the restaurant may not see it where they expect. OCR failures are also not recorded in the receiving record.\n\n**Where to look first:** query `EmailReceivingRecord` by sender or `localPart` and read its `errors`, `attachmentsMoved` and `s3Key`. If there's no record, check the `invoices/` and `unparsable/` prefixes in S3, then the logs (tag `tagName`, with `s3Key` or `failedEmailFile` metadata).",
+ "ttft_ms": 2002,
+ "type": "result",
+ "duration_ms": 15570,
+ "uuid": "da8977b6-4558-4e7a-812b-f6e54d877f5a",
+ "ttft_stream_ms": 1225,
+ "time_to_request_ms": 140,
+ "first_content_frame_ms": 1225,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r2_index_06_E_b",
+ "_wall_s": 41.2,
+ "_variant": "index",
+ "_seq": 6
+}

@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 14307,
+ "stop_reason": "end_turn",
+ "session_id": "8c6eaa19-1425-4261-87c1-b5f0bf491162",
+ "total_cost_usd": 0.05111979999999999,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 8245,
+  "cache_read_input_tokens": 39038,
+  "output_tokens": 1422,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 8245,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 590,
+    "cache_read_input_tokens": 13499,
+    "cache_creation_input_tokens": 1534,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1534
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 8,
+   "outputTokens": 1422,
+   "cacheReadInputTokens": 39038,
+   "cacheCreationInputTokens": 8245,
+   "webSearchRequests": 0,
+   "costUSD": 0.05111979999999999,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 0,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 6,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**No, not automatically.** The server has no logout endpoint or handler. A search of `src/` for `logout`, `signout` and `sign-out` (excluding specs) found nothing. Nothing in the auth code touches device tokens on logout either.\n\nThree things remove a token today, all in `src/fcm/`:\n\n1. **Explicit client call.** `DELETE unregister-token/:deviceId` (`fcm.controller.ts:51-65`) calls `fcmService.unregisterDeviceToken` (`fcm.service.ts:127-140`). That is a soft delete: it sets `isActive=false` and `deletedAt` for that user and device. Only the mobile app calling it on logout would make logout remove the token, and nothing on the server enforces that. `unregisterDeviceToken` has no other callers.\n2. **Re-registering.** `registerDeviceToken` (`fcm.service.ts:91-120`) finds any existing row for the user and calls `unregisterAllDeviceTokens` (`:102`, defined at `:146-151`). That soft-deletes every token for the user before it saves the new one. In practice the old token goes away at the next login on any device, and that login also deactivates the user's other devices.\n3. **Invalid tokens.** `removeInvalidTokens` (`fcm.service.ts:283-284`) hard-deletes rows by `fcmToken`. It is a private method that appears to be used for tokens FCM reports as invalid. I didn't trace its caller.\n\nWithout the client call, a logged-out device keeps an active token. It stays active until the user logs in again somewhere, or until FCM rejects the token. Sends only look up tokens with `isActive: true` (`fcm.service.ts:161`, `:294`), so that device would still receive pushes for the user's account.",
+ "ttft_ms": 1948,
+ "type": "result",
+ "duration_ms": 14436,
+ "uuid": "01ae274a-282b-4c4a-b495-4c38f4f23ed7",
+ "ttft_stream_ms": 1208,
+ "time_to_request_ms": 84,
+ "first_content_frame_ms": 1208,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "B_D_wrongmemory_2",
+ "_wall_s": 15.6,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_clean"
+}

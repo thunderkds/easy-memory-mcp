@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 12378,
+ "stop_reason": "end_turn",
+ "session_id": "c225a759-b90f-44a9-9cae-824938bb8c2c",
+ "total_cost_usd": 0.0446566,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 6478,
+  "cache_read_input_tokens": 31586,
+  "output_tokens": 1557,
+  "output_tokens_details": {
+   "thinking_tokens": 23
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 6478,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 716,
+    "cache_read_input_tokens": 11297,
+    "cache_creation_input_tokens": 563,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 563
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 8,
+   "outputTokens": 1557,
+   "cacheReadInputTokens": 31586,
+   "cacheCreationInputTokens": 6478,
+   "webSearchRequests": 0,
+   "costUSD": 0.0446566,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 23,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 5,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Mostly prevented, but not fully.** An earlier note said the webhook had no idempotency check. That is out of date: the current code has one.\n\n**What prevents it**\n- `src/payment/pay-in/pay-in.service.ts:225-233`: `handleCheckoutCompleted` calls `transactionsService.findByPaymentId(externalPaymentId)` first. If a transaction already exists, it logs \"Duplicate checkout event ignored\" and returns before touching the balance.\n- `externalPaymentId` is the Stripe `paymentIntent.id` (`pay-in.service.ts:343`).\n- The lookup is `findOne({ where: { paymentId } })` (`src/transactions/transactions.service.ts:146-150`).\n- A sequential retry after a successful run is therefore ignored.\n\n**Where it can still double-credit**\n1. **The transaction row is written last** (`pay-in.service.ts:305-318`), after the balance update (`:260-281`) and the diamond history record (`:289`). If anything fails in between, the balance has changed but no transaction exists, so Stripe's retry credits again. Nothing wraps these steps in a transaction.\n2. **There is no uniqueness guarantee.** `payment_id` is a plain nullable column (`src/transactions/entities/transaction.entity.ts:29-30`), with no unique index or constraint. Two concurrent deliveries can both pass the check at `:225` before either inserts, and both credit.\n3. **The balance update is a read-modify-write.** It reads the balance (`:260`), adds the amount, then calls `syncBalanceAmount` (`:272-277`). This is not atomic, so it adds to the race in point 2.\n4. **Non-success events also create a transaction row.** For example, `payment_intent.created` maps to `REJECTED` (`:340`) and is recorded under the same `paymentId`. If that row exists first, the later `succeeded` event hits the duplicate check at `:228` and is ignored. The user would then be charged but never credited. I haven't confirmed how the processor orders or filters events, so check `stripe.processor.ts`.\n\nI read the code but didn't run it.",
+ "ttft_ms": 1429,
+ "type": "result",
+ "duration_ms": 12643,
+ "uuid": "db19aa39-98ff-4bfb-8c4f-1afc3472eb34",
+ "ttft_stream_ms": 1024,
+ "time_to_request_ms": 213,
+ "first_content_frame_ms": 1024,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r1_facts_08_P_c",
+ "_wall_s": 37.5,
+ "_variant": "facts",
+ "_seq": 8
+}

@@ -1,0 +1,1 @@
+{"seq": 8, "mode": "auto", "ranked": [[0.335, "P_b"], [0.331, "P_a"], [0.05, "M_a"], [0.036, "D_b"], [0.03, "M_c"], [0.023, "D_a"], [0.0, "M_b"]], "chosen": ["P_b", "P_a"], "changed": {"P_b": ["src/payment/pay-in/pay-in.service.ts", "src/regular-users/regular-users.service.ts"], "P_a": ["src/payment/pay-in/pay-in.service.ts", "src/regular-users/regular-users.service.ts"]}}

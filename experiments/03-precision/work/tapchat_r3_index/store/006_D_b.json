@@ -1,0 +1,11 @@
+{
+ "seq": 6,
+ "label": "D_b",
+ "prompt": "When a user logs out of the app, is their FCM device token removed on the server? If not, what removes it today, and where?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "No. Logging out doesn't remove the FCM device token on the server.\n\n- **No logout handler:** I searched `src/` for `logout` (case-insensitive) and found nothing outside `src/fcm`. There's no logout endpoint or service method, so nothing in the auth flow touches `device_tokens`.\n- **Explicit client call:** `DELETE /fcm/unregister-token/:deviceId` (`src/fcm/fcm.controller.ts:59-64`) calls `FcmService.unregisterDeviceToken` (`src/fcm/fcm.service.ts:127`). That soft-deactivates the row, setting `isActive=false` and `deletedAt`. It only happens if the client calls it, and nothing on the server ties it to logout.\n- **Next registration:** `registerDeviceToken` (`fcm.service.ts:97-103`) calls `unregisterAllDeviceTokens` (`:146`) when the user already has a row. The old token is therefore only removed when that same user registers again. If a different user logs in on the same device, the first user's token stays active.\n- **Dead cleanup:** `removeInvalidTokens` (`fcm.service.ts:283-284`) would hard-delete tokens, but nothing calls it. I only found its definition and its spec (`fcm.service.spec.ts:570`). Tokens that FCM rejects are never cleaned up either.\n\nAfter logout, the token stays active, and `sendNotificationToUser` (`fcm.service.ts:172-185`) still pushes to it. This covers incoming-call, missed-call and KYC notifications.",
+ "files": {
+  "src/fcm/fcm.controller.ts": "4c4603247693d8360f782980a7ed8cea4a410dadbd39bdaf87a93ff1bdabfb37",
+  "src/fcm/fcm.service.spec.ts": "3e34f9b3d6c9877561f954ad9c2f3a2c7805d705501c62c645b55ebd35543637",
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34"
+ }
+}

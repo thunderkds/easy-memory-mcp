@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 23562,
+ "stop_reason": "end_turn",
+ "session_id": "522b53d7-55f1-4c97-9fd3-00ae4350b833",
+ "total_cost_usd": 0.0825351,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 12593,
+  "cache_read_input_tokens": 50331,
+  "output_tokens": 2711,
+  "output_tokens_details": {
+   "thinking_tokens": 123
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 12593,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 866,
+    "cache_read_input_tokens": 16882,
+    "cache_creation_input_tokens": 1116,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1116
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2711,
+   "cacheReadInputTokens": 50331,
+   "cacheCreationInputTokens": 12593,
+   "webSearchRequests": 0,
+   "costUSD": 0.0825351,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 123,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where to put the call:** `src/moderation/moderation.service.ts`, in the decision handler. Add one call in each of two blocks, right after the existing `sseService.notifyStatusChanged(...)`:\n- Regular users: after `:750-758`, inside `if (decisionActionDto.regularAction)`.\n- Verified users: after `:776-785`, inside `if (decisionActionDto.verifiedAction)`.\n\nLeave the guest block (`:788-814`) alone, since Product only asked for regular and verified users. Use the same user ids as the SSE calls: `moderation.regularUserId` and `moderation.verifiedUserId`.\n\n**Method to call:** `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` at `src/fcm/fcm.service.ts:172`.\n- It looks up the user's active device token and sends via `sendNotificationToToken` (`:234`).\n- Existing helpers follow the same pattern, for example `sendMissedCallNotificationToUser` at `:326-334` and `sendKYCNotificationToUser` at `:203`.\n- It sends a data-only message, with no title or body.\n\n**Wiring needed:**\n1. Add an `EventTypes.USER_SUSPENDED` value in `src/fcm/enums/event-types.enum.ts:1-6`. It currently has no suspension event.\n2. Add a wrapper such as `sendSuspendedNotificationToUser(userId)` in `FcmService`, modelled on `sendMissedCallNotificationToUser`.\n3. Import `FcmModule` in `src/moderation/moderation.module.ts:22-33`. `FcmService` is already exported from it (`src/fcm/fcm.module.ts:12`).\n4. Inject `FcmService` into the `ModerationService` constructor (`:106-116`).\n\n**Cautions:**\n- `sendNotificationToUser` returns `{ success: false }` when the user has no device token, but it throws `BadRequestException` on other failures (`:193`). Wrap the push in try/catch and log the error. Otherwise a push failure would skip `moderationRepository.save` at `:816` after the user is already suspended.\n- This only covers suspensions made through the moderation decision flow. Admin status updates (`src/admin/admin.service.ts:355-368`) also suspend users and would need their own call if they should notify too. I didn't inspect that path.\n- I didn't check whether `ModerationService` or its spec already mocks `FcmService`. It isn't injected now, so `moderation.service.spec.ts` will need a mock provider.",
+ "ttft_ms": 1428,
+ "type": "result",
+ "duration_ms": 23665,
+ "uuid": "5c5bd857-642a-4d03-9765-58c4441c537a",
+ "ttft_stream_ms": 1041,
+ "time_to_request_ms": 60,
+ "first_content_frame_ms": 1041,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "S_M_notes_2",
+ "_wall_s": 24.7,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_A_M"
+}

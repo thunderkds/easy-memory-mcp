@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 17548,
+ "stop_reason": "end_turn",
+ "session_id": "2a44c7e7-ace0-4ccc-9807-dc521a0c66c5",
+ "total_cost_usd": 0.0557177,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 7480,
+  "cache_read_input_tokens": 36617,
+  "output_tokens": 2212,
+  "output_tokens_details": {
+   "thinking_tokens": 56
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 7480,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 859,
+    "cache_read_input_tokens": 13069,
+    "cache_creation_input_tokens": 787,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 787
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 8,
+   "outputTokens": 2212,
+   "cacheReadInputTokens": 36617,
+   "cacheCreationInputTokens": 7480,
+   "webSearchRequests": 0,
+   "costUSD": 0.0557177,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 56,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 7,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where the call goes:** in `decideModeration` in `src/moderation/moderation.service.ts`. The notes call this method `makeDecision`, but the code names it `decideModeration` (`:721`). Add the push right after each existing `sseService.notifyStatusChanged(...)` call:\n- Regular users: after `:750-758`, using `moderation.regularUserId`.\n- Verified users: after `:776-785`, using `moderation.verifiedUserId`.\n\nBoth spots sit after `suspendByModeration` has succeeded, so the push only fires once the suspension is saved. The SSE call is already the \"tell the client its status changed\" step, so the push belongs next to it. Don't put it in the shared `suspendByModeration` (`src/base/base-user.service.ts:307-332`). The appeals and admin paths also change user status, and that would make them send this push too.\n\n**Which method to call:** `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` at `src/fcm/fcm.service.ts:172`.\n- It looks up the user's active device token and sends a data-only FCM message through `sendNotificationToToken` (`:234`).\n- `sendKYCNotificationToUser` (`:203`) and `sendMissedCallNotificationToUser` (`:326`) are the existing pattern to copy. Each is a thin wrapper that passes an `EventTypes` value.\n- I'd add a similar wrapper such as `sendSuspendedNotificationToUser`, and call that from the two spots above.\n\n**Changes needed before it works:**\n1. Add a new member such as `ACCOUNT_SUSPENDED` to `EventTypes` in `src/fcm/enums/event-types.enum.ts:1-6`. It has no suspension event yet.\n2. Inject `FcmService` into `ModerationService`. Nothing in `src/moderation` references it today. Also check that `moderation.module.ts` (imports at `:22`) imports `FcmModule` and that `FcmModule` exports `FcmService`. I didn't check that.\n\n**Error handling:**\n- `sendNotificationToUser` throws `BadRequestException` on failure. It returns `{ success: false }` when the user has no device token.\n- `decideModeration` has an outer `try` (`:726`). An uncaught push error there could fail the whole decision after the suspension was already applied.\n- Wrap the push in its own try/catch that logs the error, so a push failure doesn't fail the decision.\n\n**Guests:** the guest branch (`:788`) is out of scope, since you asked only about regular and verified users.",
+ "ttft_ms": 990,
+ "type": "result",
+ "duration_ms": 17669,
+ "uuid": "b013a070-6a0a-49ec-ba4c-c073ea04fdaa",
+ "ttft_stream_ms": 843,
+ "time_to_request_ms": 91,
+ "first_content_frame_ms": 844,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "S_M_digest_1",
+ "_wall_s": 18.9,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_A_M"
+}

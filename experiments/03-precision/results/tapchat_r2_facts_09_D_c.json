@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 8490,
+ "stop_reason": "end_turn",
+ "session_id": "8d1ca860-848b-4d7e-affe-89e2d51f5f2c",
+ "total_cost_usd": 0.0390302,
+ "usage": {
+  "input_tokens": 6,
+  "cache_creation_input_tokens": 6386,
+  "cache_read_input_tokens": 20242,
+  "output_tokens": 1145,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 6386,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 620,
+    "cache_read_input_tokens": 8215,
+    "cache_creation_input_tokens": 3535,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 3535
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 6,
+   "outputTokens": 1145,
+   "cacheReadInputTokens": 20242,
+   "cacheCreationInputTokens": 6386,
+   "webSearchRequests": 0,
+   "costUSD": 0.0390302,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 0,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 4,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**How it's sent**\n- `InCallNotificationService.sendMissedCallNotifications` calls `fcmService.sendMissedCallNotificationToUser(calleeId)` (`src/websockets/in-call-websocket/services/in-call-notification.service.ts:100`).\n- `sendMissedCallNotificationToUser` builds a data-only payload, `{ event: EventTypes.MISSED_CALL }` (`src/fcm/fcm.service.ts:326-333`). It passes the payload to `sendNotificationToUser`.\n- `sendNotificationToUser` looks up the callee's single active token with `getUserDeviceToken`, which filters on `userId` and `isActive: true` (`fcm.service.ts:177`, `:158-163`). It then calls `sendNotificationToToken` (`:187`).\n- `sendNotificationToToken` sends through Firebase Admin with `messaging().send({ token, data })`, with no `notification` block (`:255-260`).\n- After the FCM push, the same method sends a Twilio SMS with the app link (`in-call-notification.service.ts:108-111`).\n\n**If the callee has no device token**\n- `sendNotificationToUser` logs a warning, \"No active device tokens found\", and returns `{ success: false }` (`fcm.service.ts:179-182`). It doesn't throw.\n- The caller ignores the returned value (`in-call-notification.service.ts:100`). Execution continues to the SMS step, so the callee still gets the SMS fallback.\n- Other failures behave differently. If Firebase isn't initialized or the FCM send fails, `sendNotificationToUser` rethrows a `BadRequestException` (`fcm.service.ts:188-193`). That skips the SMS, because the `catch` at `in-call-notification.service.ts:116-120` logs the error and rethrows it.",
+ "ttft_ms": 1978,
+ "type": "result",
+ "duration_ms": 8656,
+ "uuid": "854d1c20-e4b7-42a1-9a11-52dd6d6c7e24",
+ "ttft_stream_ms": 951,
+ "time_to_request_ms": 118,
+ "first_content_frame_ms": 951,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r2_facts_09_D_c",
+ "_wall_s": 26.2,
+ "_variant": "facts",
+ "_seq": 9
+}

@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 9834,
+ "stop_reason": "end_turn",
+ "session_id": "e917e2a6-0308-4e1e-aa08-e68787b48629",
+ "total_cost_usd": 0.0384451,
+ "usage": {
+  "input_tokens": 6,
+  "cache_creation_input_tokens": 5829,
+  "cache_read_input_tokens": 20971,
+  "output_tokens": 1302,
+  "output_tokens_details": {
+   "thinking_tokens": 18
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 5829,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 747,
+    "cache_read_input_tokens": 8422,
+    "cache_creation_input_tokens": 2775,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 2775
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 6,
+   "outputTokens": 1302,
+   "cacheReadInputTokens": 20971,
+   "cacheCreationInputTokens": 5829,
+   "webSearchRequests": 0,
+   "costUSD": 0.0384451,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 18,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 4,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where the reason is stored:** the `generationBlockReason` column on the recurring config (`RecurringAPInvoiceConfig.java:88-89`). `flagGenerationBlock` sets it (`:296-297`) and `clearGenerationBlock` nulls it (`:300-301`). It's exposed as `generationBlockReason` in `RecurringAPInvoiceConfigDTO.java:34,79`. A successful generation clears it (`RecurringAPInvoiceGenerationService.java:131`, and `RecurringAPInvoiceService.java:137`).\n\n**Blockers that write a reason** (`RecurringAPInvoiceGenerationService.java`):\n- **Inactive vendor:** \"Vendor is deactivated\" (`:85-86`).\n- **Inactive restaurant:** \"Restaurant is inactive\" (`:94-96`).\n- **Archived or invalid GL account on a line:** \"GL account is archived or invalid: \u2026\" (`:104-113`).\n- **`ValidationException` while saving the invoice:** the exception message becomes the reason (`:133-134`).\n\nEach of these returns `false`, which breaks the loop (`:58-59`). The config is still saved with the block reason (`:70`), and `nextPostDate` stays unchanged. The job therefore retries on every run and hits the same block until the cause is fixed.\n\n**Blockers that leave no reason** (silent, in `isDueForGeneration`, `:73-80`):\n- `nextPostDate` is null.\n- `nextPostDate` is after the reference date.\n- `nextPostDate` is after `endDate`. In that case `nextPostDate` is also nulled (`:65-68`).\n\n**Config status:** the job only picks configs with status `Active` (`RecurringAPInvoiceService.java:404-410`, from earlier-session notes). I didn't re-check that line this session. `RecurringAPInvoiceConfig.java:245-246` also touches the case of an Active config with a null `nextPostDate`, and `:322` and `:331` null `nextPostDate`. I didn't read those paths, so I can't say what triggers them.\n\nTo diagnose, check the config's `generationBlockReason`, `status`, `nextPostDate` and `endDate`.",
+ "ttft_ms": 3777,
+ "type": "result",
+ "duration_ms": 12416,
+ "uuid": "913254d0-91eb-41b4-a3ba-a7e1edefa9e7",
+ "ttft_stream_ms": 3376,
+ "time_to_request_ms": 2535,
+ "first_content_frame_ms": 3376,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r1_judge_04_R_b",
+ "_wall_s": 40.7,
+ "_variant": "judge",
+ "_seq": 4
+}

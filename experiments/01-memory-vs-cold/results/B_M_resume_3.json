@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 65600,
+ "stop_reason": "end_turn",
+ "session_id": "531fd6c3-2507-4f78-b82d-54e19234aef7",
+ "total_cost_usd": 0.2428063,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 4856,
+  "cache_read_input_tokens": 136394,
+  "output_tokens": 2343,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 4856,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 847,
+    "cache_read_input_tokens": 36619,
+    "cache_creation_input_tokens": 865,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 865
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 28,
+   "outputTokens": 8665,
+   "thinkingTokens": 304,
+   "cacheReadInputTokens": 305243,
+   "cacheCreationInputTokens": 31394,
+   "webSearchRequests": 0,
+   "costUSD": 0.2428063,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where the call goes:** `ModerationService.makeDecision` in `src/moderation/moderation.service.ts`. Add one call in each of the two branches, right after the existing `sseService.notifyStatusChanged(...)` call:\n- Regular users: after `:750-758`, inside the `if (decisionActionDto.regularAction)` block that starts at `:735`. The user id is `moderation.regularUserId`.\n- Verified users: after the matching `notifyStatusChanged` call, around `:775-786`, inside the `if (decisionActionDto.verifiedAction)` block that starts at `:761`. The user id is `moderation.verifiedUserId`.\n\nBoth calls come after the DB suspension has succeeded (`suspendByModeration` at `:739` and `:765`). The SSE status-change notification already sits at that point, so the push belongs beside it. I didn't put it inside `suspendByModeration` (`src/base/base-user.service.ts:307`) because other callers could trigger it too, and that method has no FCM dependency.\n\n**Which method to call:** `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` at `src/fcm/fcm.service.ts:172`.\n- It looks up the user's device token and sends to it.\n- If the user has no token, it returns `{ success: false }`.\n- Other failures throw `BadRequestException`, so wrap the call in try/catch. A push error shouldn't fail the decision. `makeDecision` catches everything and rethrows (`:831`).\n- Existing callers use the same pattern: `sendKYCNotificationToUser` at `fcm.service.ts:203-213` is a small wrapper that calls `sendNotificationToUser` with an `EventTypes` value.\n\n**Wiring needed:**\n1. Add an event value such as `ACCOUNT_SUSPENDED` to `src/fcm/enums/event-types.enum.ts:1`. `KYC_PASSED` is at `:4`.\n2. Add `FcmModule` to the `imports` of `src/moderation/moderation.module.ts:22-34`. `FcmModule` already exports `FcmService` (`src/fcm/fcm.module.ts:12`), and `ModerationModule` doesn't import it yet.\n3. Inject `FcmService` into the `ModerationService` constructor.\n\nOptionally, add a `sendSuspensionNotificationToUser` wrapper next to `sendKYCNotificationToUser`. It could also put the 24h-vs-permanent distinction in `data`.",
+ "ttft_ms": 3128,
+ "type": "result",
+ "duration_ms": 18668,
+ "uuid": "3d32bd97-16c8-4940-aeb8-e94a10073626",
+ "ttft_stream_ms": 1670,
+ "time_to_request_ms": 78,
+ "first_content_frame_ms": 1670,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "B_M_resume_3",
+ "_wall_s": 19.7,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_A_M"
+}

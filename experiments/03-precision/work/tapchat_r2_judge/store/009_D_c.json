@@ -1,0 +1,10 @@
+{
+ "seq": 9,
+ "label": "D_c",
+ "prompt": "When a callee misses a call, how is the missed-call push sent, and what happens if the callee has no device token?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**How the push is sent**\n- `InCallNotificationService.sendMissedCallNotifications` calls `fcmService.sendMissedCallNotificationToUser(calleeId)` (`src/websockets/in-call-websocket/services/in-call-notification.service.ts:100`).\n- That method (`src/fcm/fcm.service.ts:326-334`) calls `sendNotificationToUser` with a data-only payload, `{ event: EventTypes.MISSED_CALL }`.\n- `sendNotificationToUser` looks up the callee's one active token with `getUserDeviceToken` (`fcm.service.ts:177`, `:158-164`).\n- It then calls `sendNotificationToToken` (`:187`). That sends `{ token, data }` through `firebaseApp.messaging().send()` (`:255-260`). There is no `notification` block, so the client app has to display it.\n\n**If the callee has no device token**\n- `sendNotificationToUser` logs a warning, \"No active device tokens found\", and returns `{ success: false }` (`fcm.service.ts:179-183`). It doesn't throw.\n- `in-call-notification.service.ts:100` ignores the return value, so the code carries on to the SMS step.\n- The SMS is sent right after, through `twilioService.sendSMS` with the missed-call message and an app link (`in-call-notification.service.ts:103-111`).\n- So a callee with no token still gets the SMS.\n\n**Failures that do throw**\n- If Firebase isn't initialized, or `messaging().send()` fails, the FCM service throws a `BadRequestException` (`fcm.service.ts:240`, `:275`, `:193`).\n- `sendMissedCallNotifications` rethrows it (`in-call-notification.service.ts:116-120`), so the SMS is skipped in that case.",
+ "files": {
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34",
+  "src/websockets/in-call-websocket/services/in-call-notification.service.ts": "676f4575778ea04e8b946c799b889a1e5824e57e60b721565bf832b3376f73ad"
+ }
+}

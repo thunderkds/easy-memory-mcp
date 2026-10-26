@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 14069,
+ "stop_reason": "end_turn",
+ "session_id": "1cb2b44b-4d91-42e6-94de-9513fdf86a33",
+ "total_cost_usd": 0.059722800000000006,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 9712,
+  "cache_read_input_tokens": 33188,
+  "output_tokens": 1754,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 9712,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 854,
+    "cache_read_input_tokens": 13176,
+    "cache_creation_input_tokens": 1842,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1842
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 8,
+   "outputTokens": 1754,
+   "cacheReadInputTokens": 33188,
+   "cacheCreationInputTokens": 9712,
+   "webSearchRequests": 0,
+   "costUSD": 0.059722800000000006,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 0,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 6,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where the reason is stored:** `RecurringAPInvoiceConfig.generationBlockReason`. It's a nullable string field at `RecurringAPInvoiceConfig.java:88-89`, mapped to the `generationBlockReason` VARCHAR(255) column (`db.changelog-2026-10-07-BOPD-235-recurring-ap-invoices.xml:46`).\n- `flagGenerationBlock` sets it (`RecurringAPInvoiceConfig.java:296`).\n- `clearGenerationBlock` nulls it (`:300`). That happens after a successful generation (`RecurringAPInvoiceGenerationService.java:131`) and when the config is edited (`RecurringAPInvoiceService.java:137`).\n- It's exposed to the UI as `generationBlockReason` in the DTO (`RecurringAPInvoiceConfigDTO.java:79`).\n\n**What blocks generation** (all in `RecurringAPInvoiceGenerationService.generateInvoiceForConfig`, `:82-142`). Each of these flags the reason and stops the loop, so the invoice isn't created:\n- The vendor is deactivated: \"Vendor is deactivated\" (`:85-86`).\n- The restaurant is inactive: \"Restaurant is inactive\" (`:94-96`).\n- A line's GL account is archived or invalid: \"GL account is archived or invalid: \u2026\" (`:104-111`).\n- Invoice build or save throws a `ValidationException`. The exception message becomes the reason (`:133-134`).\n\n**Blocks that leave no reason** (the config just isn't picked up or isn't due):\n- The scheduler only selects configs with `nextPostDate <= date` and a given status (`InternalRecurringAPInvoiceConfigRepository.java:16-17`). Statuses are `Active, Paused, Inactive, Expired` (`RecurringAPInvoiceConfigStatus.java:4`), so anything other than Active is skipped.\n- `isDueForGeneration` returns false when `nextPostDate` is empty or in the future, or is after `endDate` (`:73-80`).\n- After the loop, if `nextPostDate` is past `endDate`, it's set to null (`:65-68`). That ends the schedule silently.\n- A missing config throws `NotFoundException` with `INVALID_RECURRING_AP_INVOICE_CONFIG` (`:52-55`).\n\nI didn't read `RecurringAPInvoiceGenerationJob.java`, so any extra filtering there is unchecked.",
+ "ttft_ms": 1871,
+ "type": "result",
+ "duration_ms": 14426,
+ "uuid": "9c72d533-439c-4093-9798-4343f18b55e8",
+ "ttft_stream_ms": 1032,
+ "time_to_request_ms": 182,
+ "first_content_frame_ms": 1032,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r2_cold_04_R_b",
+ "_wall_s": 16.7,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/orderly_r2/repo_cold",
+ "_mode": "off",
+ "_seq": 4
+}

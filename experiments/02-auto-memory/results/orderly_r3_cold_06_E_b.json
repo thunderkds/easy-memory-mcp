@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 17177,
+ "stop_reason": "end_turn",
+ "session_id": "e574b61d-c8de-490f-9b4c-ff3752dc7fee",
+ "total_cost_usd": 0.0834809,
+ "usage": {
+  "input_tokens": 12,
+  "cache_creation_input_tokens": 13582,
+  "cache_read_input_tokens": 67689,
+  "output_tokens": 2236,
+  "output_tokens_details": {
+   "thinking_tokens": 100
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 13582,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1092,
+    "cache_read_input_tokens": 18314,
+    "cache_creation_input_tokens": 589,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 589
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 12,
+   "outputTokens": 2236,
+   "cacheReadInputTokens": 67689,
+   "cacheCreationInputTokens": 13582,
+   "webSearchRequests": 0,
+   "costUSD": 0.0834809,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 100,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "The inbound email flow is in `SiftOrder/src/main/java/com/siftit/domain/emailReceiving/InvoiceEmailService.java`. I haven't run anything, so this comes from reading the code only.\n\nMost failures are saved in the `emailReceivingRecord` table, in the `errors` column (`EmailReceivingRecord.java:27`). Admins can retrieve them with `getErrors()` (`InvoiceEmailService.java:243`). The raw email stays in S3 under the key stored on the record.\n\n| # | Reason | Where it's recorded |\n|---|---|---|\n| 1 | The recipient address couldn't be resolved, for example a bad `to`, `cc` or `bcc` header. | The error is added at `InvoiceRecipientResolver.java:76` and saved in `errors`. |\n| 2 | No address looks like `<id>@invoices\u2026`. | The error is added at `:163` and saved in `errors`. The S3 key is `noLocalPart/<file>` (`:162`). |\n| 3 | The local part isn't a known restaurant ID, or it isn't numeric. The lookup swallows its exceptions (`:200-202`). | The error is added at `:160` and saved in `errors`. The S3 key is `unknown/<localPart>/\u2026` (`:159`). |\n| 4 | The restaurant is inactive. | The error \"Restaurant was not marked active\" is added at `:125` and saved in `errors`. The attachment is skipped. |\n| 5 | The attachment isn't an accepted type. Only JPEG, PNG, BMP, PDF, JPG and GIF count as images (`:52`), and TXT and CSV count as text (`:53`). A PDF with a wrong or missing extension fails here. | The error is added at `:141` and saved in `errors`. |\n| 6 | The attachment is a TXT or CSV and the sender's domain has no supplier mapping. Only `rnc.sysco.com` is mapped (`:69`). | The error is added at `:138` and saved in `errors`. |\n| 7 | Saving the attachment threw an exception, from `saveNewGroupingForInvoice` or `addInvoiceAttachment`. | The error is added at `:144` and saved in `errors`. |\n| 8 | The MIME message couldn't be parsed at all (`FallbackMimeParser.java:40,50`). | It's logged via `orderlyLogger` at `:182`, tagged `InvoiceEmail`. No record is saved. The S3 file is moved to `unparsable/\u2026` (`:183`). |\n| 9 | Any other exception in `handleEmail`, or in saving the record or moving the S3 file. | It's logged via `orderlyLogger` at `:168` and `:185`. No record is saved. The email stays under `invoices/`, so the next run retries it. |\n| 10 | The job never ran. `handleUnparsedEmails` returns immediately in dev (`:91`). | Nothing is recorded. |\n\nTwo things to know when debugging:\n- The attachment-level errors (#4 to #7) only apply when a restaurant was found (`:119`). Otherwise only the restaurant-level error appears.\n- An email with no attachments at all produces a record with empty `allAttachments` and no error, so it looks like nothing happened.",
+ "ttft_ms": 1539,
+ "type": "result",
+ "duration_ms": 17577,
+ "uuid": "586f6802-85fc-4f19-bc82-d7d91ff94f5f",
+ "ttft_stream_ms": 992,
+ "time_to_request_ms": 175,
+ "first_content_frame_ms": 992,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r3_cold_06_E_b",
+ "_wall_s": 28.5,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/orderly_r3/repo_cold",
+ "_mode": "off",
+ "_seq": 6
+}

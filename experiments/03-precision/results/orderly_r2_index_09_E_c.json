@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 17812,
+ "stop_reason": "end_turn",
+ "session_id": "fdbb408a-4b43-4b87-be0a-816831ef658a",
+ "total_cost_usd": 0.10523500000000001,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 18794,
+  "cache_read_input_tokens": 56290,
+  "output_tokens": 2441,
+  "output_tokens_details": {
+   "thinking_tokens": 43
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 18794,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1187,
+    "cache_read_input_tokens": 19919,
+    "cache_creation_input_tokens": 2098,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 2098
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2441,
+   "cacheReadInputTokens": 56290,
+   "cacheCreationInputTokens": 18794,
+   "webSearchRequests": 0,
+   "costUSD": 0.10523500000000001,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 43,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Yes, support can see most failed inbound invoice emails through the admin web service, but not all of them. I read the code only and didn't run anything. Paths below start at `SiftOrder/src/main/java/com/siftit/`.\n\n**Endpoints** (`webservices/personae/admin/AdminEmailReceivingWebService.java`, mapped at `/data/admin/emailReceiving`, line 19)\n- `GET /invoice/errors/{start}/{end}` (`:30-35`) is the main failure list. It returns `EmailReceivingRecordDto`s with `errors`, `s3Key`, `fromEmail`, `allAttachments`, `attachmentsMoved` and `localPart`.\n- `GET /invoice/rest/{restId}/{start}/{end}` (`:37-43`) returns all records for one restaurant, failed or not.\n- `GET /invoice/{prefix}/{nextToken}` (`:24-28`) lists the raw emails under an S3 prefix. This is how support can browse `unparsable/`, `unknown/` or `noLocalPart/`.\n- `GET /download/{morphedS3Key}` (`:51-56`) downloads the `.eml` file.\n\n**How an email is judged failed**\n- `InvoiceEmailService.handleEmail` collects error strings into a list while it processes the email (`domain/emailReceiving/InvoiceEmailService.java:101-166`).\n- The errors come from these cases:\n  - the recipient resolver (`:110`);\n  - an inactive restaurant (`:125`);\n  - an attachment that isn't an image or text file (`:141`);\n  - a text attachment with no supplier mapping (`:138`);\n  - an exception while saving the attachment (`:144`);\n  - an unknown restaurant id (`:160`);\n  - no address that looks like ours (`:163`).\n- The record is saved at `:166`, with the errors joined into one string (`EmailReceivingRecord.java:40`).\n- The errors endpoint calls `getErrors` (`InvoiceEmailService.java:243-244`). That runs `findAnyWithErrors`, which selects records where `length(e.errors) > 1` and `createdTime` falls in the date range (`InternalEmailReceivingRecordRepository.java:14-15`). In other words, a failure means a saved record with a non-empty `errors` string.\n\n**Failures missing from the errors endpoint**\n- **Unparsable emails.** `UnparsableMessageException` is caught at `InvoiceEmailService.java:181-183`. The file is moved to `unparsable/` and no `EmailReceivingRecord` is saved, so the errors endpoint can't show it. Support can only find it by browsing the `unparsable/` prefix with the prefix endpoint.\n- **Other exceptions in `handleEmail`.** Examples are an S3 read failure, a DB save failure or a resolver failure. They are logged and rethrown (`:167-169`) and logged again (`:184-186`). No record is saved and the file stays in `invoices/`. It is retried on the next run, so a permanent failure repeats.\n- **Dev environment.** `handleUnparsedEmails` returns immediately (`:91-93`), so nothing is recorded there.\n- **Possible edge case in the filter.** `length(errors) > 1` skips a record whose only error string is one character long. I don't expect that in practice.\n- **Possible gap in the OCR step.** An earlier session's note says OCR failures after the attachment is saved aren't recorded in the receiving record. I didn't re-check that.",
+ "ttft_ms": 2251,
+ "type": "result",
+ "duration_ms": 18508,
+ "uuid": "af344007-15c1-42c7-a26f-2ea380039135",
+ "ttft_stream_ms": 1563,
+ "time_to_request_ms": 647,
+ "first_content_frame_ms": 1564,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r2_index_09_E_c",
+ "_wall_s": 20.1,
+ "_variant": "index",
+ "_seq": 9
+}

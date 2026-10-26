@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 10562,
+ "stop_reason": "end_turn",
+ "session_id": "a7d90e9f-5960-425a-b0a0-7732a94c4eb4",
+ "total_cost_usd": 0.0420762,
+ "usage": {
+  "input_tokens": 4,
+  "cache_creation_input_tokens": 6588,
+  "cache_read_input_tokens": 13462,
+  "output_tokens": 1437,
+  "output_tokens_details": {
+   "thinking_tokens": 165
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 6588,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 827,
+    "cache_read_input_tokens": 8603,
+    "cache_creation_input_tokens": 2844,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 2844
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 4,
+   "outputTokens": 1437,
+   "cacheReadInputTokens": 13462,
+   "cacheCreationInputTokens": 6588,
+   "webSearchRequests": 0,
+   "costUSD": 0.0420762,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 165,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 4,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where to put the call:** `ModerationService.makeDecision` in `src/moderation/moderation.service.ts`. Add one call in each of two branches, right after the existing `sseService.notifyStatusChanged(...)` call:\n- **Regular user:** after `:750-758`. The user id is `moderation.regularUserId`.\n- **Verified user:** after `:776-785`. The user id is `moderation.verifiedUserId`.\n\nBoth calls come after `suspendByModeration` has succeeded (`:739` and `:765`). Both sit before `moderationRepository.save` at `:816`. Don't add one in the guest branch (`:788-814`), since the request covers only regular and verified users. A guest probably has no FCM token anyway.\n\n**Which method to call:** `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` (`src/fcm/fcm.service.ts:172`).\n- This is the same method the existing wrappers use. `sendKYCNotificationToUser` (`:203-213`) is the closest template.\n- The push is data-only, so the client has to render it. `data` is required.\n- If there's no active token it returns `{success:false}` and doesn't throw (`:179-182`). That means a missing token won't break the suspension flow.\n\n**Setup needed:**\n- `src/moderation` has no reference to `FcmModule` or `FcmService`, so you have to import `FcmModule` into the moderation module and inject `FcmService` into `ModerationService`.\n- You also need a new event type, for example `ACCOUNT_SUSPENDED`, in the `EventTypes` enum. The KYC wrapper uses it at `fcm.service.ts:211`.\n- Consider adding a thin wrapper such as `sendSuspendedNotificationToUser` in `FcmService`, next to the KYC, calling and missed-call wrappers.\n- Wrap the push in its own try/catch, or don't await it. `makeDecision` has one outer try/catch, and a push failure shouldn't abort the decision.\n\nI didn't open the `EventTypes` definition or the moderation module file, so check those two when you add the import and the enum value.",
+ "ttft_ms": 1785,
+ "type": "result",
+ "duration_ms": 10707,
+ "uuid": "a3a34c00-e9fe-41b7-a28f-9f901eb88659",
+ "ttft_stream_ms": 1004,
+ "time_to_request_ms": 124,
+ "first_content_frame_ms": 1004,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r2_auto_04_M_b",
+ "_wall_s": 12.9,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r2/repo_auto",
+ "_mode": "auto",
+ "_seq": 4
+}

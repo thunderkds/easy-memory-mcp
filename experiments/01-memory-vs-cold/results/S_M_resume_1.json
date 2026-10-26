@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 69007,
+ "stop_reason": "end_turn",
+ "session_id": "6c614e96-1319-43ed-8e52-94d1441ef025",
+ "total_cost_usd": 0.25183130000000004,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 6046,
+  "cache_read_input_tokens": 173004,
+  "output_tokens": 2403,
+  "output_tokens_details": {
+   "thinking_tokens": 116
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 6046,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 856,
+    "cache_read_input_tokens": 37433,
+    "cache_creation_input_tokens": 1241,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1241
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 30,
+   "outputTokens": 8725,
+   "thinkingTokens": 420,
+   "cacheReadInputTokens": 341853,
+   "cacheCreationInputTokens": 32584,
+   "webSearchRequests": 0,
+   "costUSD": 0.25183130000000004,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where to put the call**\n\nPut it in `ModerationService.makeDecision`, in two places:\n- Regular users: right after `this.sseService.notifyStatusChanged(...)` at `src/moderation/moderation.service.ts:750-758`, still inside the `if (decisionActionDto.regularAction)` block.\n- Verified users: right after the same call at `:776-785`, inside the `if (decisionActionDto.verifiedAction)` block.\n\nReasons:\n- This is the only place where a moderator's decision suspends a user. It runs once per decision, after `suspendByModeration` has succeeded (`:739`, `:765`). The shared `suspendByModeration` at `src/base/base-user.service.ts:307` is also a candidate, but putting the push there would couple the base user service to FCM.\n- The SSE status-change event is already sent from these two spots, so the push belongs next to it.\n- Do not add it to the admin status update (`src/admin/admin.service.ts:355`). That is a different path and wasn't part of the request.\n\n**Which method to call**\n\nCall `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` (`src/fcm/fcm.service.ts:172`).\n- Use `moderation.regularUserId` or `moderation.verifiedUserId` as the id.\n- It looks up the user's device token and returns `{ success: false }` with a warning if there is none (`:177-183`). If the send itself fails, it throws a `BadRequestException` (`:188-193`).\n- `sendKYCNotificationToUser` (`:203`) is the existing example to copy. It wraps `sendNotificationToUser` with an `EventTypes` value as `data.event`.\n- A suspension push needs a new `EventTypes` value, something like `ACCOUNT_SUSPENDED`. I haven't looked up where `EventTypes` is defined.\n- You could add a small wrapper like `sendSuspensionNotificationToUser`, as the KYC one does.\n\n**Wiring needed**\n\n- `ModerationService` doesn't inject `FcmService` (constructor at `:102-116`). Add it there.\n- `ModerationModule` doesn't import `FcmModule` (`src/moderation/moderation.module.ts:22-34`). Add it. `FcmModule` already exports `FcmService` (`src/fcm/fcm.module.ts:12`).\n- Wrap the push in a try/catch, or don't await it. Otherwise a missing token or an FCM failure inside `makeDecision`'s try block would turn a successful suspension into an error response.",
+ "ttft_ms": 3593,
+ "type": "result",
+ "duration_ms": 22107,
+ "uuid": "a3c58b4f-6e5e-4875-a33f-ef10d6237494",
+ "ttft_stream_ms": 2194,
+ "time_to_request_ms": 97,
+ "first_content_frame_ms": 2194,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "S_M_resume_1",
+ "_wall_s": 23.5,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_A_M"
+}

@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 17192,
+ "stop_reason": "end_turn",
+ "session_id": "7d23fce9-3bd6-4a09-a0c3-64aaface8ce4",
+ "total_cost_usd": 0.06930900000000001,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 10839,
+  "cache_read_input_tokens": 47130,
+  "output_tokens": 2122,
+  "output_tokens_details": {
+   "thinking_tokens": 55
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 10839,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 753,
+    "cache_read_input_tokens": 14635,
+    "cache_creation_input_tokens": 663,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 663
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2122,
+   "cacheReadInputTokens": 47130,
+   "cacheCreationInputTokens": 10839,
+   "webSearchRequests": 0,
+   "costUSD": 0.06930900000000001,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 55,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where to put the call:** `src/admin/admin.service.ts`, in the two status-update methods. Each one already has an `if (... SUSPENDED || DELETED)` block after `updateAndReturn` that calls `sseService.notifyStatusChanged`.\n- **Regular users:** `src/admin/admin.service.ts:376-391`. Add the push inside that block, or in a nested `if (statusUpdated === RegularUserStatus.SUSPENDED)`, next to `notifyStatusChanged` at line 384.\n- **Verified users:** `src/admin/admin.service.ts:668-683`. Do the same next to `notifyStatusChanged` at line 676, using `VerifiedUserStatus.SUSPENDED`.\n\nThe push goes after the DB update succeeds, so a failed update never notifies. Wrap it in try/catch and log the error, so a push failure doesn't fail the suspension. `vouched.service.ts:244-245` calls FCM without a try/catch, but its test at `vouched.service.spec.ts:609` expects FCM errors to be handled gracefully.\n\n**Method to call:** `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` at `src/fcm/fcm.service.ts:172`.\n- It looks up the user's active device token and returns `{ success: false }` if there isn't one.\n- It throws `BadRequestException` on other failures, which is another reason for the try/catch.\n- `sendKYCNotificationToUser` (`fcm.service.ts:203`) is the precedent. It calls `sendNotificationToUser` with `data.event = EventTypes.KYC_PASSED`.\n\n**Gaps:**\n- `AdminService` doesn't inject `FcmService` today. Its constructor is at `admin.service.ts:60`. You'll need to add it there and import `FcmModule` in the admin module.\n- I found no suspension-related `EventTypes` value. You'll need to add one (for example `ACCOUNT_SUSPENDED`) wherever `EventTypes` is defined. I didn't locate that file.\n- Optionally, add a thin wrapper like `sendSuspensionNotificationToUser` in `fcm.service.ts`, mirroring the KYC one.",
+ "ttft_ms": 1766,
+ "type": "result",
+ "duration_ms": 17368,
+ "uuid": "1ed93970-d47c-46b7-ad99-c5e23c18158a",
+ "ttft_stream_ms": 1069,
+ "time_to_request_ms": 123,
+ "first_content_frame_ms": 1069,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "S_M_cold_1",
+ "_wall_s": 18.7,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_A_M"
+}

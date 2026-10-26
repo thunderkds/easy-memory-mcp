@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 18443,
+ "stop_reason": "end_turn",
+ "session_id": "0425743a-6cb6-4b15-8390-efafe0d2b414",
+ "total_cost_usd": 0.0717645,
+ "usage": {
+  "input_tokens": 12,
+  "cache_creation_input_tokens": 10539,
+  "cache_read_input_tokens": 73045,
+  "output_tokens": 2228,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 10539,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 584,
+    "cache_read_input_tokens": 16621,
+    "cache_creation_input_tokens": 706,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 706
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 12,
+   "outputTokens": 2228,
+   "cacheReadInputTokens": 73045,
+   "cacheCreationInputTokens": 10539,
+   "webSearchRequests": 0,
+   "costUSD": 0.0717645,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 0,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 10,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "No. Logging out doesn't remove the FCM token on the server, because the backend has no logout handler. A grep for `logout`, `signOut` and `sign-out` in `src/**/*.ts` returned nothing.\n\nThe only things that deactivate or remove tokens today are these:\n\n- **Explicit client call:** `DELETE unregister-token/:deviceId` (`src/fcm/fcm.controller.ts:51-66`) calls `FcmService.unregisterDeviceToken` (`src/fcm/fcm.service.ts:127-140`). That is a soft delete: it sets `isActive=false` and `deletedAt`. It only runs if the app calls it on logout, and I can't tell that from this repo.\n- **Re-registration:** `registerDeviceToken` (`src/fcm/fcm.service.ts:96-103`) calls `unregisterAllDeviceTokens` (`:146-151`) when the user already has any token row. That soft-deactivates every old token for that user before the new one is saved. So the old token stays in the table until the next login or registration, and it is deactivated rather than deleted.\n\n`removeInvalidTokens` (`src/fcm/fcm.service.ts:283-285`) would hard-delete tokens by value, but it is private and nothing calls it. I found no cleanup of tokens that FCM reports as invalid, and no cron job for them.\n\nTwo other things to know:\n\n- Token lookups filter on `isActive: true` (`src/fcm/fcm.service.ts:161` and `:294`), so a soft-deleted token is not used for sends.\n- If the app never calls the unregister endpoint on logout, the token stays active until the user registers again. A different user logging in on the same device would not clear it either, because the cleanup is keyed on `userId`.",
+ "ttft_ms": 1836,
+ "type": "result",
+ "duration_ms": 18554,
+ "uuid": "0ee814be-5206-4176-ab57-d8e726103198",
+ "ttft_stream_ms": 1060,
+ "time_to_request_ms": 68,
+ "first_content_frame_ms": 1060,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "B_D_wrongmemory_3",
+ "_wall_s": 19.6,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_clean"
+}

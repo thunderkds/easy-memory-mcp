@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 12644,
+ "stop_reason": "end_turn",
+ "session_id": "b61d3a26-5f5d-4f0e-983f-08dcca37c24f",
+ "total_cost_usd": 0.0551614,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 8944,
+  "cache_read_input_tokens": 36494,
+  "output_tokens": 1572,
+  "output_tokens_details": {
+   "thinking_tokens": 41
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 8944,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 884,
+    "cache_read_input_tokens": 12513,
+    "cache_creation_input_tokens": 1763,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1763
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 8,
+   "outputTokens": 1572,
+   "cacheReadInputTokens": 36494,
+   "cacheCreationInputTokens": 8944,
+   "webSearchRequests": 0,
+   "costUSD": 0.0551614,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 41,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 4,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Mostly prevented, but not completely.** There is a duplicate check, so a sequential retry won't credit twice. It has race-condition and partial-failure holes.\n\n**What prevents it**\n- `src/payment/pay-in/pay-in.service.ts:225-233` looks up an existing transaction by the Stripe PaymentIntent ID (`externalPaymentId`). If one exists, it logs \"Duplicate checkout event ignored\" and returns before touching the balance.\n- The ID is set at `pay-in.service.ts:343` (`paymentIntent.id`). The `FUND` transaction row stores it as `paymentId` at `pay-in.service.ts:313`.\n- The lookup is `TransactionsService.findByPaymentId` (`src/transactions/transactions.service.ts:146-151`).\n\n**Where it can still double-credit**\n1. **Concurrent deliveries.** The check is a read, and the transaction row is only written at the end (`pay-in.service.ts:305`), after the balance update (`:259-281`). Two retries that overlap, both passing the check at `:225`, will each credit the balance. Nothing serializes them. `payment_id` has no unique constraint (`src/transactions/entities/transaction.entity.ts:29-30`, plain nullable column).\n2. **Failure after the credit, before the transaction row is written.** If `createDiamondHistorical` (`pay-in.service.ts:289`) or the `transactionsService.create` call (`:305`) throws, the balance is already credited but no transaction row exists. Stripe retries, the duplicate check passes, and the user is credited again.\n3. **Read-then-write balance.** The balance is read at `:260` and written back as a total at `:272-277`. Concurrent updates can overwrite each other, so a credit can be lost as well as doubled.\n4. **Empty ID bypass.** `findByPaymentId` returns `null` for an empty ID (`transactions.service.ts:147-148`), and `pay-in.service.ts:343` defaults the ID to `''`. In practice a PaymentIntent always has an ID, so this is unlikely.\n\nNon-`succeeded` events are also deduplicated. `processing` writes a `PROCESSING` transaction row, so a later `succeeded` event for the same intent hits the duplicate check at `:228` and is ignored. The user is never credited in that case. This is a separate bug, the opposite of a double credit.\n\n**Fix**\n- Add a unique index on `payment_id`.\n- Insert the transaction row first, or do the credit and insert in one DB transaction.\n- Make the Dynamo balance update atomic (an increment instead of read-then-write).",
+ "ttft_ms": 1396,
+ "type": "result",
+ "duration_ms": 12853,
+ "uuid": "1095a2bf-bf46-41eb-90f4-b15be51c4fb8",
+ "ttft_stream_ms": 965,
+ "time_to_request_ms": 142,
+ "first_content_frame_ms": 966,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_noflag_08_P_c",
+ "_wall_s": 28.4,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r3/repo_auto",
+ "_mode": "noflag",
+ "_seq": 8
+}

@@ -1,0 +1,10 @@
+{
+ "seq": 6,
+ "label": "D_b",
+ "prompt": "When a user logs out of the app, is their FCM device token removed on the server? If not, what removes it today, and where?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "No, not automatically. The server has no logout handler. A search of `src` for `logout` and `signOut` (case-insensitive) found nothing, so logging out does not touch the token.\n\n**What removes the token today**\n\n- **The client calls the unregister endpoint.** `DELETE unregister-token/:deviceId` (`src/fcm/fcm.controller.ts:51-66`) calls `FcmService.unregisterDeviceToken` (`src/fcm/fcm.service.ts:127-140`). The app has to call it explicitly, for example during its logout flow. Nothing on the server triggers it.\n- **The same user registers a new token.** `registerDeviceToken` (`src/fcm/fcm.service.ts:91-112`) deactivates all of that user's existing tokens at lines 97-103, then inserts the new one. This happens on the next login or registration, not at logout.\n\n**It's a soft delete, not a removal**\n\nBoth paths run an `update` that sets `isActive: false` and `deletedAt` (`src/fcm/fcm.service.ts:131` and `:149`). The row stays in the table. Sends only read rows with `isActive: true` (`src/fcm/fcm.service.ts:161` and `:294`).\n\n**Gaps**\n\n- If the client skips the unregister call at logout, the token stays active. That user's device keeps getting pushes until someone logs in on it and registers again.\n- `unregisterAllDeviceTokens` (`src/fcm/fcm.service.ts:146`) is only called from `registerDeviceToken`. No other code calls it.\n- I found no cleanup based on FCM error responses. A grep of `src/fcm` for `UNREGISTERED`, `not-registered` and `invalid-registration` found no matches.\n\nI didn't check the client app, so I can't say whether it calls the unregister endpoint at logout.",
+ "files": {
+  "src/fcm/fcm.controller.ts": "4c4603247693d8360f782980a7ed8cea4a410dadbd39bdaf87a93ff1bdabfb37",
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34"
+ }
+}

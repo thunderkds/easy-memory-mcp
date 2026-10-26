@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 16542,
+ "stop_reason": "end_turn",
+ "session_id": "836d66f6-b9fd-4dbc-be56-8e538e2e7eaa",
+ "total_cost_usd": 0.0589763,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 8783,
+  "cache_read_input_tokens": 46043,
+  "output_tokens": 1922,
+  "output_tokens_details": {
+   "thinking_tokens": 232
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 8783,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 808,
+    "cache_read_input_tokens": 13480,
+    "cache_creation_input_tokens": 683,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 683
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 1922,
+   "cacheReadInputTokens": 46043,
+   "cacheCreationInputTokens": 8783,
+   "webSearchRequests": 0,
+   "costUSD": 0.0589763,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 232,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 5,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Short answer:** In the normal case, no. The method that prevents it is `RecurringAPInvoiceGenerationService.processRecurringConfig`, which advances the config's `nextPostDate`. I did not find a hard database-level guard if two runs overlap.\n\n**What prevents it**\n- `processRecurringConfig` (`RecurringAPInvoiceGenerationService.java:51-71`) only generates while `isDueForGeneration` is true (`:56`, `:73-80`). That requires `nextPostDate <= referenceDate`.\n- After each invoice, it calls `config.setNextPostDate(...determineNextPostDate...)` (`:62`) and then `saveAndFlush(config)` (`:70`).\n- A second run on the same day loads the config with the already-advanced `nextPostDate`. The config no longer matches the query `findByNextPostDateLessThanEqualAndStatus` (`RecurringAPInvoiceService.java:406`), or it fails `isDueForGeneration`, so nothing is created.\n- The job runs every 5 hours (`JobTimes.java:41`) with a ShedLock lock, so this is the guard that gets exercised most.\n\n**What does not prevent it**\n- `existsByRecurringAPInvoiceConfigIdAndInvoiceId` (`:123-128`) checks the invoice ID of the invoice just saved, not the date. It only avoids a duplicate link row, not a duplicate invoice.\n- Each invoice gets the number `\"REC-\" + configId + \"-\" + invoiceDate` (`:170`). `APInvoiceService.mustNotDuplicateAnExistingInvoice` (`APInvoiceService.java:808`) would reject a repeated number, but this service calls `InvoiceService.save` (`:29`, `:122`). I did not check whether that path runs the same duplicate-number check.\n\n**Where it can still happen**\n- Two overlapping runs, such as the REST endpoint at `RecurringAPInvoiceWebServiceV2.java:241` and the job. Both could load the same config before either commits the new `nextPostDate`.\n- The config is loaded with `findById` (`:52`), and I saw no locking or versioning there.",
+ "ttft_ms": 1664,
+ "type": "result",
+ "duration_ms": 16943,
+ "uuid": "cbf6108b-3366-4057-abcb-f415ba76814e",
+ "ttft_stream_ms": 1269,
+ "time_to_request_ms": 293,
+ "first_content_frame_ms": 1269,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r2_facts_07_R_c",
+ "_wall_s": 45.2,
+ "_variant": "facts",
+ "_seq": 7
+}

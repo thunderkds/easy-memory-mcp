@@ -1,0 +1,10 @@
+{
+ "seq": 8,
+ "label": "O_c",
+ "prompt": "When a restaurant re-sends an order that was already sent, who gets emailed? In particular, are the restaurant's order-email subscribers emailed again?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "No. On a resend, the order-email subscribers are not emailed again.\n\n- **Resend detection:** `finalizeOrResend` treats an order as a resend if it already has a finished time (`RestaurantOrderService.java:176`). It then calls `sendOrderEmail(order, false)` (`:181-182`). A first-time finalize calls `sendOrderEmail(existingOrder, true)` (`:193`).\n- **Subscribers skipped:** the `includeSubscribers` flag gates both the FoodOrder and BarOrder subscriber lookups (`:201`, `:207`). With `false`, `subscriberEmails` stays empty. `emailSender.send(currentUserEmail, subscriberEmails, existingOrder)` (`:213`) therefore gets no CCs.\n\n**Who gets emailed on a resend:**\n- **The current user:** they get the master email, which goes to the user only (`RestaurantOrderV3EmailSender.java:65-96`).\n- **The suppliers:** `sendBySupplier` still emails each supplier's recipients (`RestaurantOrderV3EmailSender.java:98-147`).\n\nI took the `RestaurantOrderV3EmailSender` line numbers from an earlier saved note. I didn't re-read that file in this session.",
+ "files": {
+  "SiftOrder/src/main/java/com/siftit/domain/ordering/RestaurantOrderService.java": "cfd23b8f690a10c1efb68f11b2c7dc267c26950c14dfb248ea8038305c26110c",
+  "SiftOrder/src/main/java/com/siftit/interactions/externalcommunication/RestaurantOrderV3EmailSender.java": "2eede109e6256e1636cbe5d53c6023bf90b461910b32f87650e6d33daa5afa97"
+ }
+}

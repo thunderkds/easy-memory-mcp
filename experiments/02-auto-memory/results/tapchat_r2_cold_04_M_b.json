@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 17302,
+ "stop_reason": "end_turn",
+ "session_id": "3e064961-524d-4fcd-b8ec-06b818eec897",
+ "total_cost_usd": 0.0754895,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 11325,
+  "cache_read_input_tokens": 49595,
+  "output_tokens": 2521,
+  "output_tokens_details": {
+   "thinking_tokens": 32
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 11325,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 830,
+    "cache_read_input_tokens": 15442,
+    "cache_creation_input_tokens": 1203,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1203
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2521,
+   "cacheReadInputTokens": 49595,
+   "cacheCreationInputTokens": 11325,
+   "webSearchRequests": 0,
+   "costUSD": 0.0754895,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 32,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 11,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where the call goes:** both suspend paths are in `src/admin/admin.service.ts`. Each already has an `if (SUSPENDED || DELETED)` block right after the DB update that calls `sseService.notifyStatusChanged`.\n\n- **Regular users:** `updateRegularUserStatusById`, in the block at `src/admin/admin.service.ts:376-391`. Add the push after the SSE call at `:384`.\n- **Verified users:** `updateVerifiedUserStatusById`, in the block at `src/admin/admin.service.ts:668-683`. Add the push after the SSE call at `:676`.\n\nThe block also fires for DELETED, so guard the push with `statusUpdated === RegularUserStatus.SUSPENDED` (or `VerifiedUserStatus.SUSPENDED` in the verified path). Both paths already do this with a spread at `:387` and `:679`.\n\n**Which method to call:** `FcmService.sendNotificationToUser(userId, { data: { event: EventTypes.\u2026 } })` at `src/fcm/fcm.service.ts:172`.\n\n- The KYC push uses the same pattern. `sendKYCNotificationToUser` at `src/fcm/fcm.service.ts:203-214` wraps it with `data: { event: EventTypes.KYC_PASSED }`.\n- There's no suspension event yet. Add one to `EventTypes` at `src/fcm/enums/event-types.enum.ts:1-6`, for example `ACCOUNT_SUSPENDED = 'account_suspended'`.\n- You could also add a dedicated wrapper like the KYC one, e.g. `sendSuspendedNotificationToUser`.\n\n**Wiring needed:** `AdminService` doesn't inject `FcmService`. Its constructor is at `src/admin/admin.service.ts:60-71`, and `src/admin/admin.module.ts` has no reference to `FcmModule` or `FcmService`. You'd need to import `FcmModule` into the admin module and add `private readonly fcmService: FcmService` to the constructor. `admin.service.spec.ts` will also need an `FcmService` mock.\n\n**Failure handling:** `sendNotificationToUser` throws `BadRequestException` on error (`src/fcm/fcm.service.ts:193`). A failed push shouldn't fail the suspension, which has already been saved at that point. Wrap the call in try/catch and log the error, or call it without `await` and add a `.catch`.",
+ "ttft_ms": 1664,
+ "type": "result",
+ "duration_ms": 17512,
+ "uuid": "7fe91c97-5923-45c7-bb79-fcd628f72843",
+ "ttft_stream_ms": 914,
+ "time_to_request_ms": 136,
+ "first_content_frame_ms": 914,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r2_cold_04_M_b",
+ "_wall_s": 20.4,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r2/repo_cold",
+ "_mode": "off",
+ "_seq": 4
+}

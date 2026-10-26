@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 20596,
+ "stop_reason": "end_turn",
+ "session_id": "86589059-6060-4e0d-82fb-ef22cc0948d1",
+ "total_cost_usd": 0.08827249999999999,
+ "usage": {
+  "input_tokens": 12,
+  "cache_creation_input_tokens": 13851,
+  "cache_read_input_tokens": 62845,
+  "output_tokens": 2656,
+  "output_tokens_details": {
+   "thinking_tokens": 218
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 13851,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 968,
+    "cache_read_input_tokens": 18483,
+    "cache_creation_input_tokens": 701,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 701
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 12,
+   "outputTokens": 2656,
+   "cacheReadInputTokens": 62845,
+   "cacheCreationInputTokens": 13851,
+   "webSearchRequests": 0,
+   "costUSD": 0.08827249999999999,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 218,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 10,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Yes, support can see most failed inbound invoice emails in the admin app, but not all of them.\n\n**Where they see them:** The admin page `AdminUi/src/app/pages/invoiceEmails/invoiceEmails.component.ts:67` calls `getInvoiceErrors(start, end)`. It lists each record's errors (`invoiceEmails.html:46`) and lets support download the `.eml` (`:58`).\n\n**Endpoint:** `GET /data/admin/emailReceiving/invoice/errors/{start}/{end}` (`AdminEmailReceivingWebService.java:30-35`). It calls `InvoiceEmailService.getErrors` (`InvoiceEmailService.java:243`).\n\n**How it decides an email failed:** A record counts as failed when its stored `errors` string is longer than 1 character. The query is `length(e.errors) > 1 and createdTime between ?1 and ?2` (`InternalEmailReceivingRecordRepository.java:14`). The date range is inclusive of the end day.\n\n`handleEmail` adds errors in these cases:\n- Recipient resolution errors (`InvoiceEmailService.java:110`).\n- The restaurant is inactive (`:125`).\n- An attachment is neither an image nor a text file (`:141`).\n- A text attachment has no supplier mapping (`:138`).\n- Any exception while saving an attachment (`:144`).\n- The local part isn't a known restaurant ID (`:160`).\n- No address looks like it's addressed to us (`:163`).\n\n**Failures that never show up:** The endpoint only sees emails that got an `EmailReceivingRecord` saved at `:166`.\n- **Unparsable emails:** `UnparsableMessageException` is only logged. The file is moved to `unparsable/\u2026` in S3 and no record is saved (`:181-183`).\n- **Other exceptions in `handleEmail`:** These are logged and rethrown (`:167-170`). The outer catch at `:184-186` only logs, so there is no record and the file stays under `invoices/`. It is retried on every run of the job and never appears in the admin list.\n- **Emails with no attachments:** If the restaurant is found, no attachment loop runs, so no error is raised. This includes an inactive restaurant, because that check is inside the loop (`:119-125`). These emails are recorded as successes with nothing moved.\n- **The query's `length > 1` filter:** I didn't check how `joinObjectsOrEmptyString` stores an empty list (`EmailReceivingRecord.java:40`). If it stores something other than `\"\"`, successful records could be flagged as errors.\n\nThe only way to find the unlisted ones is to browse S3 directly. `GET /invoice/{prefix}/{nextToken}` (`AdminEmailReceivingWebService.java:24`) can list the `unparsable/` prefix, but I didn't check whether the UI calls it that way.",
+ "ttft_ms": 1876,
+ "type": "result",
+ "duration_ms": 20827,
+ "uuid": "f357e772-57f2-4fa7-9afb-c4593fbaae36",
+ "ttft_stream_ms": 915,
+ "time_to_request_ms": 139,
+ "first_content_frame_ms": 915,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r3_cold_09_E_c",
+ "_wall_s": 21.9,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/orderly_r3/repo_cold",
+ "_mode": "off",
+ "_seq": 9
+}

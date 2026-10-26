@@ -1,0 +1,12 @@
+{
+ "seq": 9,
+ "label": "D_c",
+ "prompt": "When a callee misses a call, how is the missed-call push sent, and what happens if the callee has no device token?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**How the push is sent**\n\n- When the call isn't answered, `calling-status.handler.ts:138-139` calls `notificationService.sendMissedCallNotifications(...)`.\n- That method (`in-call-notification.service.ts:93-100`) first calls `fcmService.sendMissedCallNotificationToUser(calleeId)`. It then sends an SMS through Twilio with the app link (`:108-111`).\n- `sendMissedCallNotificationToUser` (`fcm.service.ts:326-334`) calls `sendNotificationToUser` with a data-only payload, `{ event: EventTypes.MISSED_CALL }`. The enum value is `'missed_call'` (`src/fcm/enums/event-types.enum.ts:3`).\n- `sendNotificationToUser` (`fcm.service.ts:172-187`) looks up the user's active device token and passes it to `sendNotificationToToken`. That method (`:234-260`) sends it with `firebaseApp.messaging().send({ token, data })`.\n\n**If the callee has no device token**\n\n- `sendNotificationToUser` logs a warning, \"No active device tokens found\", and returns `{ success: false }` (`fcm.service.ts:179-182`). It doesn't throw.\n- `sendMissedCallNotifications` ignores that return value (`in-call-notification.service.ts:100`). It carries on to the SMS and logs \"Missed call notifications sent\" (`:108-115`). So the SMS is still the fallback, and the log line is misleading because no push went out.\n- Real FCM failures behave differently. `sendNotificationToUser` rethrows them as `BadRequestException` (`fcm.service.ts:188-193`). `sendMissedCallNotifications` logs and rethrows (`in-call-notification.service.ts:116-120`), so the SMS is skipped in that case.",
+ "files": {
+  "src/fcm/enums/event-types.enum.ts": "e9c86b7403fc3c1b8e40a2c2b4df2365ef23c9f12c47625cb245b78081ee1eac",
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34",
+  "src/websockets/in-call-websocket/handlers/calling-status.handler.ts": "8c3baedfbb961139bfca834db9875e1f47ea700240f4f11cbb6dbceb90bb2bc8",
+  "src/websockets/in-call-websocket/services/in-call-notification.service.ts": "676f4575778ea04e8b946c799b889a1e5824e57e60b721565bf832b3376f73ad"
+ }
+}

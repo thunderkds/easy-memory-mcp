@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 20848,
+ "stop_reason": "end_turn",
+ "session_id": "d933e269-511f-46d0-8e9b-ea0b90663767",
+ "total_cost_usd": 0.08948439999999999,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 15066,
+  "cache_read_input_tokens": 33444,
+  "output_tokens": 2586,
+  "output_tokens_details": {
+   "thinking_tokens": 69
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 15066,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1464,
+    "cache_read_input_tokens": 13179,
+    "cache_creation_input_tokens": 6746,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 6746
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 8,
+   "outputTokens": 2586,
+   "cacheReadInputTokens": 33444,
+   "cacheCreationInputTokens": 15066,
+   "webSearchRequests": 0,
+   "costUSD": 0.08948439999999999,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 69,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 7,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Everything below is on the Stripe path: card payment, then webhook, then balance. I read these files this session. I did not open `stripeService.validateWebhookEvent`, so I haven't checked how it fails.\n\n**A. Before the handler runs**\n1. **Webhook never reaches the app.** `POST /payment/stripe/webhook` (`gateway.controller.ts:351-362`) must be reachable and registered in Stripe. The raw-body path is hard-coded as `/api/v1/payment/stripe/webhook` (`src/core/constants/app.constant.ts:20`). A prefix or version mismatch breaks the raw body.\n2. **Signature check fails.** `validateWebhookEvent` is called at `stripe.processor.ts:292`. A wrong secret or a missing or altered `rawBody` makes it throw, so Stripe gets an error and the user gets no diamonds. I haven't read this function.\n3. **Event type is ignored.** Only types starting with `payment_intent` are handled. Anything else, such as `charge.*` or `checkout.session.*`, only gets a `console.warn` and returns success (`stripe.processor.ts:299-305`). If the Stripe account sends only those events, nothing is ever credited and nothing visibly fails.\n4. **Wrong status mapping.** `paymentIntentHandler` (`pay-in.service.ts:323-337`) maps every `payment_intent.*` event the same way.\n   - Any status other than succeeded, processing or canceled becomes REJECTED. A `requires_action` or `payment_failed` event is treated as a failed purchase.\n   - The handler doesn't check the event type. A late `processing` or `canceled` event is handled like any other, but it can't undo a credit already made.\n\n**B. Silent early returns in `handleCheckoutCompleted` (`pay-in.service.ts:221-317`)**\n\nEach of these only logs a warning, writes no transaction, and returns normally, so Stripe sees a 200 and won't retry.\n5. **Missing `regularUserId`** in the metadata (lines 225-230). The metadata is set at checkout (`pay-in.service.ts:72-75`). Payments made by another path or processor may lack it.\n6. **User not found** (lines 234-237).\n7. **Package not found** (lines 243-246). The package may have been deleted or deactivated after the checkout started.\n\n**C. Balance write (lines 250-272)**\n8. **DynamoDB read fails or throws** (line 251). The webhook returns an error. Stripe retries, but the transaction record isn't written until the end.\n9. **First purchase** (lines 256-261). `createUserBalanceAmount` writes only to DynamoDB. Postgres `diamondAmount` isn't updated here, so any screen that reads Postgres shows 0.\n10. **`syncBalanceAmount` partial failure** (`regular-users.service.ts:302-323`). The DynamoDB update runs first, then the Postgres update. If the second fails, it throws and the stores disagree. Stripe's retry then re-adds the diamonds on top of the DynamoDB write that already succeeded.\n11. **Read-then-write race** (lines 251-268). Two concurrent top-ups can overwrite each other, and one credit is lost.\n\n**D. After the credit**\n12. **Later steps can throw and fail the webhook.** The history write at lines 280-286 and the `FUND` transaction at lines 296-309 run after the balance write. A failure there returns an error even though the balance was updated. A Stripe retry would then double-credit, because I saw no idempotency check on `externalPaymentId`.\n13. **The websocket push is fire-and-forget** (lines 274-278). If the client isn't connected, the user sees no confirmation even though the balance changed. They may need to refresh.\n\n**E. Other**\n14. **Wrong processor.** For Bankful and PaymentCloud, the webhook handler just passes the payload through (`bankful.processor.ts:136`, `payment-cloud.processor.ts:136`). The only webhook route I found is the Stripe one, so a user who paid through either processor would never be credited. I didn't trace those flows.\n\nI'd check the webhook delivery log in the Stripe dashboard first. Then search the app logs for `Process checkout completed`, `Regular user ID not found`, `User not found`, `Diamond package not found` and `Unhandled event type`.",
+ "ttft_ms": 1700,
+ "type": "result",
+ "duration_ms": 21027,
+ "uuid": "288c2195-add5-4f97-9018-e67f0ab9f4fc",
+ "ttft_stream_ms": 1002,
+ "time_to_request_ms": 122,
+ "first_content_frame_ms": 1003,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_index_05_P_b",
+ "_wall_s": 40.3,
+ "_variant": "index",
+ "_seq": 5
+}

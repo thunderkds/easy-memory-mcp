@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 9840,
+ "stop_reason": "end_turn",
+ "session_id": "6f809eb6-54cc-4bbd-8fa7-605ce865514b",
+ "total_cost_usd": 0.0479357,
+ "usage": {
+  "input_tokens": 6,
+  "cache_creation_input_tokens": 8488,
+  "cache_read_input_tokens": 23117,
+  "output_tokens": 1166,
+  "output_tokens_details": {
+   "thinking_tokens": 60
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 8488,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 527,
+    "cache_read_input_tokens": 11754,
+    "cache_creation_input_tokens": 1593,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1593
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 6,
+   "outputTokens": 1166,
+   "cacheReadInputTokens": 23117,
+   "cacheCreationInputTokens": 8488,
+   "webSearchRequests": 0,
+   "costUSD": 0.0479357,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 60,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 4,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "No. Logging out doesn't remove the FCM device token on the server.\n\n- **No logout handler:** I searched `src/` for `logout` (case-insensitive) and found nothing outside `src/fcm`. There's no logout endpoint or service method, so nothing in the auth flow touches `device_tokens`.\n- **Explicit client call:** `DELETE /fcm/unregister-token/:deviceId` (`src/fcm/fcm.controller.ts:59-64`) calls `FcmService.unregisterDeviceToken` (`src/fcm/fcm.service.ts:127`). That soft-deactivates the row, setting `isActive=false` and `deletedAt`. It only happens if the client calls it, and nothing on the server ties it to logout.\n- **Next registration:** `registerDeviceToken` (`fcm.service.ts:97-103`) calls `unregisterAllDeviceTokens` (`:146`) when the user already has a row. The old token is therefore only removed when that same user registers again. If a different user logs in on the same device, the first user's token stays active.\n- **Dead cleanup:** `removeInvalidTokens` (`fcm.service.ts:283-284`) would hard-delete tokens, but nothing calls it. I only found its definition and its spec (`fcm.service.spec.ts:570`). Tokens that FCM rejects are never cleaned up either.\n\nAfter logout, the token stays active, and `sendNotificationToUser` (`fcm.service.ts:172-185`) still pushes to it. This covers incoming-call, missed-call and KYC notifications.",
+ "ttft_ms": 2052,
+ "type": "result",
+ "duration_ms": 9969,
+ "uuid": "34bb08c2-368a-4d9b-b739-d463ed02a233",
+ "ttft_stream_ms": 1354,
+ "time_to_request_ms": 98,
+ "first_content_frame_ms": 1354,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_index_06_D_b",
+ "_wall_s": 43.2,
+ "_variant": "index",
+ "_seq": 6
+}

@@ -1,0 +1,11 @@
+{
+ "seq": 6,
+ "label": "D_b",
+ "prompt": "When a user logs out of the app, is their FCM device token removed on the server? If not, what removes it today, and where?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**No. Logout doesn't remove the FCM token on the server.** There is no logout, signOut or sign_out code anywhere in the repo, and `src/auth/auth.controller.ts` has no FCM calls.\n\n**What removes tokens today:**\n\n1. **Explicit client call.** `DELETE unregister-token/:deviceId` (`src/fcm/fcm.controller.ts:51-65`) calls `unregisterDeviceToken` (`src/fcm/fcm.service.ts:127-138`). That soft-deletes the row by setting `isActive: false` and `deletedAt`. The client has to call it itself, and nothing ties it to logout.\n\n2. **Registering a new token.** `registerDeviceToken` (`src/fcm/fcm.service.ts:96-103`) finds any existing token for the user and calls `unregisterAllDeviceTokens` (`:146-149`). That soft-deletes all of the user's old tokens before it saves the new one. So a user keeps one active device at a time, and the old token only goes when they log in or register again.\n\n3. **Invalid-token cleanup.** `removeInvalidTokens` (`src/fcm/fcm.service.ts:283-284`) hard-deletes tokens by `fcmToken`. A repo-wide search for the name, excluding spec files, finds only its definition. Nothing calls it, so it looks like dead code.\n\n**Gap:** after logout, the token stays `isActive: true`. Pushes keep going to that device until the client calls unregister or a new registration replaces the token. The send path only filters on `isActive: true` (`src/fcm/fcm.service.ts:161`, `:294`).",
+ "files": {
+  "src/auth/auth.controller.ts": "585daf525441e50d73955279774ef4c7da045c180e19f4b12754c5f06bba842a",
+  "src/fcm/fcm.controller.ts": "4c4603247693d8360f782980a7ed8cea4a410dadbd39bdaf87a93ff1bdabfb37",
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34"
+ }
+}

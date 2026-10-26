@@ -1,0 +1,11 @@
+{
+ "seq": 6,
+ "label": "D_b",
+ "prompt": "When a user logs out of the app, is their FCM device token removed on the server? If not, what removes it today, and where?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**No. Logout doesn't remove the FCM token on the server.**\n\n- **No logout handling:** I found no logout, sign-out or token-revoke code in `src/`. `src/auth/auth.service.ts` only calls `fcmService.getDeviceTokenByUserId` (`:230`, `:273`, `:501`).\n- **Explicit removal:** The only endpoint is `DELETE /fcm/unregister-token/:deviceId` (`src/fcm/fcm.controller.ts:51-64`). It calls `FcmService.unregisterDeviceToken` (`src/fcm/fcm.service.ts:127`), which soft-deactivates the token with `isActive: false` and `deletedAt` (`:131`). The server never calls it itself, so the client has to call it before or at logout.\n- **Replacement on next registration:** `registerDeviceToken` deactivates the user's existing tokens with the same `isActive: false` update (`:149`). I inferred this from the line match and the earlier session notes, not from reading the surrounding code. So the old token survives until that user registers again, on any device.\n- **Invalid-token cleanup:** `removeInvalidTokens` (`:283-284`) hard-deletes tokens by `fcmToken`. A grep of `fcm.service.ts` finds no caller, and it's private, so it looks like dead code.\n\n**Consequence:** After logout, the token stays `isActive: true` unless the client calls unregister. Pushes such as calls, KYC and missed-call notifications can still reach the logged-out device. `getUserDeviceToken` (`:161`) filters only on `userId` and `isActive`.\n\n**Caveats:**\n- One `Read` of `fcm.service.ts` was denied. I mistyped the path, and the session can't approve further permission prompts, so I didn't retry it.\n- I haven't seen the code between `:127` and `:150`.\n- I didn't check the client app, so I can't say whether it calls unregister on logout.",
+ "files": {
+  "src/auth/auth.service.ts": "5df7027a82db2a76ed2de29cf16977e7fb735bb301c1a5a873df422105bc0bc7",
+  "src/fcm/fcm.controller.ts": "4c4603247693d8360f782980a7ed8cea4a410dadbd39bdaf87a93ff1bdabfb37",
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34"
+ }
+}

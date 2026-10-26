@@ -1,0 +1,9 @@
+{
+ "seq": 8,
+ "label": "O_c",
+ "prompt": "When a restaurant re-sends an order that was already sent, who gets emailed? In particular, are the restaurant's order-email subscribers emailed again?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "On a resend, the restaurant's order-email subscribers are **not** emailed again.\n\n- **Resend detection:** `finalizeOrResend` treats an order as a resend if it already has a finished time (`RestaurantOrderService.java:176`). It then calls `sendOrderEmail(order, false)` (`:181-182`). A first-time finalize calls `sendOrderEmail(existingOrder, true)` (`:193`).\n- **Subscriber lookup:** the `includeSubscribers` flag gates both the FoodOrder and BarOrder subscriber lookups (`:201`, `:207`). With `false`, `subscriberEmails` stays empty.\n- **Who gets the resend:**\n  - `emailSender.send(currentUserEmail, subscriberEmails, order)` (`:213`) goes to the user who clicked resend.\n  - `RestaurantOrderV3EmailSender.send` (`:41`) sends the master email to that user, with an empty CC list (`:65-95`).\n  - `sendBySupplier` (`:98-140`) sends to each supplier's own recipients from `getSupplierEmailLists` (`:103`). It adds the empty CC set at `:129` and the sender at `:140`.\n- **Finalize only:** `finalize` also adds the FoodOrder and BarOrder subscribers as CCs, excluding the current user (`:201-212`). It also saves `SentSample` rows and fires `OrderFinalizedEvent` (`:190-194`). A resend does neither.\n\nI didn't read the sender's `.cc(...)` handling beyond the lines above, so I'm assuming an empty collection adds no CCs. Nothing at those lines suggests otherwise.",
+ "files": {
+  "SiftOrder/src/main/java/com/siftit/domain/ordering/RestaurantOrderService.java": "cfd23b8f690a10c1efb68f11b2c7dc267c26950c14dfb248ea8038305c26110c"
+ }
+}

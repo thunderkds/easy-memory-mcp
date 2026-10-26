@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 18382,
+ "stop_reason": "end_turn",
+ "session_id": "59dad66f-7326-40df-9537-fb7a364c8a09",
+ "total_cost_usd": 0.0923748,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 15903,
+  "cache_read_input_tokens": 42768,
+  "output_tokens": 2447,
+  "output_tokens_details": {
+   "thinking_tokens": 44
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 15903,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1548,
+    "cache_read_input_tokens": 19882,
+    "cache_creation_input_tokens": 1342,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1342
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 8,
+   "outputTokens": 2447,
+   "cacheReadInputTokens": 42768,
+   "cacheCreationInputTokens": 15903,
+   "webSearchRequests": 0,
+   "costUSD": 0.0923748,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 44,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 7,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Everything below is in `SiftOrder/src/main/java/com/siftit/` (`domain/emailReceiving/` and `jobs/`). I read the main handler and grepped the rest; I didn't read `EmailParser.java`, `FallbackMimeParser.java` or `InvoiceRecipientResolver.java` in full. Their causes are inferred from the grep hits.\n\nProcessing runs in `ParseInvoiceEmailsJob.runParseInvoiceJob` (`jobs/ParseInvoiceEmailsJob.java:21`). It calls `InvoiceEmailService.handleUnparsedEmails`, which scans the S3 `invoices/` prefix.\n\n| # | Reason | Where it's recorded |\n|---|---|---|\n| 1 | Not running in a non-dev environment. In dev, `handleUnparsedEmails` returns immediately (`InvoiceEmailService.java:91`). | Nowhere. The email stays in S3 `invoices/`. |\n| 2 | The email can't be parsed as MIME. `FallbackMimeParser` throws `UnparsableMessageException` after two attempts (`FallbackMimeParser.java:40,50`). | Logged by `orderlyLogger.logException` (`InvoiceEmailService.java:182`). The file moves to S3 `unparsable/<key>` (`:183`). No `EmailReceivingRecord` is written. |\n| 3 | Any other exception in `handleEmail`, such as S3, DB or parser failure (`EmailParser.java:51`, `EmailAttachmentExtractor.java:202`). | Logged with `failedEmailFile` metadata (`InvoiceEmailService.java:168`) and again at `:185`. The file stays in `invoices/` and is retried on the next run. No DB record. |\n| 4 | No recipient address looks like `<id>@invoices\u2026`. | `errors` gets \"We could not find an email that looked like it was addressed to us\u2026\" (`:163`). The S3 key becomes `noLocalPart/\u2026` (`:162`). |\n| 5 | The recipient's local part isn't a known restaurant ID, or isn't numeric. The lookup swallows exceptions (`:200-202`). | `errors` gets \"`<x>` was not a known rest id\u2026\" (`:160`). The S3 key becomes `unknown/<localPart>/\u2026` (`:159`). |\n| 6 | Recipient resolution failed on the to, cc or bcc headers. | `errors` gets \"Exception trying to add to, cc, or bcc emails\" (`InvoiceRecipientResolver.java:76`). |\n| 7 | The restaurant exists but is inactive. | `errors` gets \"Restaurant was not marked active\" (`:125`). The attachment is skipped. |\n| 8 | The attachment is the wrong type. Only JPEG, PNG, BMP, PDF, JPG and GIF count as images (`:52`), and TXT or CSV are handled separately (`:53`). A PDF with no extension or an odd one is rejected. | `errors` gets \"`<name>` was not image or text type file\" (`:141`). |\n| 9 | The attachment is TXT or CSV and the sender's domain has no supplier mapping. Only `rnc.sysco.com` is mapped (`:69`). | `errors` gets \"`<name>` did not have a supplier mapping\" (`:138`). |\n| 10 | Saving the attachment or grouping threw an exception (`saveNewGroupingForInvoice` or `addInvoiceAttachment`, `:129-130`). | `errors` gets \"`<name>` -- `<message>`\" (`:144`). |\n| 11 | The PDF is inline, embedded or too large, so it isn't extracted as an attachment. There's a test fixture for this: `email_with_large_logo_no_invoice_attachment.eml`. | Nothing explicit. The name is missing from `allAttachments`, or the file shows up in `allAttachments` but not in `attachmentsMoved`. |\n\nFor causes 4 to 10, the `errors`, `allAttachments` and `attachmentsMoved` fields are saved in an `EmailReceivingRecord` (`InvoiceEmailService.java:166`, table `emailReceivingRecord`, `EmailReceivingRecord.java:15-30`). You can read them through `getErrors(start, end)` (`InvoiceEmailService.java:243`), which the admin `AdminEmailReceivingWebService` and the AdminUi `invoiceEmails` page use. Causes 2 and 3 only appear in the application logs under the `InvoiceEmail` tag.",
+ "ttft_ms": 1566,
+ "type": "result",
+ "duration_ms": 18573,
+ "uuid": "08d19678-c750-4ca6-92d6-3108468ffdb5",
+ "ttft_stream_ms": 1121,
+ "time_to_request_ms": 142,
+ "first_content_frame_ms": 1121,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r2_cold_06_E_b",
+ "_wall_s": 36.0,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/orderly_r2/repo_cold",
+ "_mode": "off",
+ "_seq": 6
+}

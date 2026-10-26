@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 13414,
+ "stop_reason": "end_turn",
+ "session_id": "f3f260b8-35e0-492a-afd7-f8591066e284",
+ "total_cost_usd": 0.0462263,
+ "usage": {
+  "input_tokens": 4,
+  "cache_creation_input_tokens": 6355,
+  "cache_read_input_tokens": 12783,
+  "output_tokens": 1952,
+  "output_tokens_details": {
+   "thinking_tokens": 101
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 6355,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1236,
+    "cache_read_input_tokens": 7408,
+    "cache_creation_input_tokens": 4322,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 4322
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 4,
+   "outputTokens": 1952,
+   "cacheReadInputTokens": 12783,
+   "cacheCreationInputTokens": 6355,
+   "webSearchRequests": 0,
+   "costUSD": 0.0462263,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 101,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 5,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Between Stripe reporting success and the balance update, these are the places where it can fail or stop silently. I re-read the code this session and the line numbers match it.\n\n**Webhook intake**\n- `gateway.controller.ts:351-362`: the webhook route needs `req.rawBody` and a valid `stripe-signature`. A missing raw body or a wrong webhook secret makes `validateWebhookEvent` throw (`stripe.processor.ts:292`). Nothing is credited, and Stripe has to retry.\n- `stripe.processor.ts:296-305`: only `payment_intent.*` events are handled. Any other event type, such as `charge.*` or `checkout.session.*`, only produces a `console.warn` and is acknowledged as a success.\n\n**Silent early returns in `handleCheckoutCompleted`**\n- `pay-in.service.ts:225-230`: a missing `regularUserId` in the intent metadata logs a warning and returns. `paymentIntentHandler` (`:332-333`) defaults it to `''`.\n- `pay-in.service.ts:234-237`: if the user isn't found, it logs and returns.\n- `pay-in.service.ts:243-246`: if the diamond package isn't found, it logs and returns. A package that was deleted or changed after checkout would cause this.\n- In all three cases the webhook returns 200, so Stripe won't retry. No transaction row is written either, so nothing records the payment.\n\n**Status mapping**\n- `pay-in.service.ts:325-331`: only `succeeded` becomes `COMPLETED`.\n- `processing` creates no credit at that moment. If the later `succeeded` event never arrives, the user is never credited.\n- Any other status is mapped to `REJECTED`.\n\n**Balance write**\n- `pay-in.service.ts:251-261`: when no DynamoDB balance record exists, it only calls `createUserBalanceAmount`. It does not update the SQL `diamondAmount`, unlike `syncBalanceAmount`. If the app displays the SQL value, a first-time buyer would see no diamonds.\n- `pay-in.service.ts:263-268`, `regular-users.service.ts:308-316`: the balance is read, then written, with no atomic update. A concurrent update can overwrite the credit.\n- `regular-users.service.ts:308-316`: DynamoDB is updated first and SQL second. If the SQL update fails, the two stores disagree. The method rethrows as a 500, so Stripe retries, and the retry would credit the diamonds a second time.\n- `pay-in.service.ts:280-286`, `:296-309`: the history record and the transaction row are written after the balance. If either throws, the webhook returns 500 and Stripe retries. There is no idempotency check on `externalPaymentId`, so the retry double-credits. If the transaction row is the only thing missing, support can't find the payment.\n\n**Notification**\n- `pay-in.service.ts:274-278`: the websocket push is fire-and-forget. If the user is offline, the client may never refresh its balance, even though the credit succeeded.\n\n**Other processors**\n- `pay-in.service.ts:60-77`: Bankful and PaymentCloud are also selectable at checkout. I only traced the Stripe webhook, so I don't know how those processors report success or credit diamonds.\n\nI'd check first for a Stripe webhook delivery that returned 4xx or 5xx, or a log line saying \"user not found\" or \"package not found\" for that payment intent.",
+ "ttft_ms": 3784,
+ "type": "result",
+ "duration_ms": 16380,
+ "uuid": "43db2a73-2ef4-4a22-9dbd-1bff8493e66a",
+ "ttft_stream_ms": 3691,
+ "time_to_request_ms": 2934,
+ "first_content_frame_ms": 3691,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r2_judge_05_P_b",
+ "_wall_s": 37.6,
+ "_variant": "judge",
+ "_seq": 5
+}

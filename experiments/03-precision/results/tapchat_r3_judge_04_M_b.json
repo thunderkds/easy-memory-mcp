@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 13927,
+ "stop_reason": "end_turn",
+ "session_id": "13982ba3-8141-4cd4-8cc6-d9713c3f78ff",
+ "total_cost_usd": 0.0662238,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 11113,
+  "cache_read_input_tokens": 37358,
+  "output_tokens": 1802,
+  "output_tokens_details": {
+   "thinking_tokens": 153
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 11113,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 951,
+    "cache_read_input_tokens": 14526,
+    "cache_creation_input_tokens": 1969,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1969
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 8,
+   "outputTokens": 1802,
+   "cacheReadInputTokens": 37358,
+   "cacheCreationInputTokens": 11113,
+   "webSearchRequests": 0,
+   "costUSD": 0.0662238,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 153,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 5,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where to put the call:** `ModerationService.makeDecision` in `src/moderation/moderation.service.ts`. Put it next to the existing SSE notifications, right after each successful suspend:\n- Regular user: after `suspendByModeration` (`:739`), beside `sseService.notifyStatusChanged` (`:750`).\n- Verified user: after `suspendByModeration` (`:765`), beside `sseService.notifyStatusChanged` (`:776`).\n- Leave the guest branch (`:788-814`) alone, since product only asked for regular and verified users.\n\nI'd put it in `makeDecision` rather than in `BaseUserService.suspendByModeration` (`src/base/base-user.service.ts:307`). The moderation service already sends the SSE status-change messages there, and the base service is also reused by other flows.\n\n**Which method to call:** `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` at `src/fcm/fcm.service.ts:172`.\n- It looks up the user's active device token and sends through `sendNotificationToToken` (`:234`).\n- It returns `{ success: false }` when the user has no token (`:179-183`). It throws `BadRequestException` on other failures (`:193`).\n- The closest existing example is `sendKYCNotificationToUser` (`:203-214`). It wraps `sendNotificationToUser` with a fixed `EventTypes` value.\n\n**Setup needed:**\n- `ModerationService` doesn't inject `FcmService` today, so add it to the constructor.\n- Make `FcmModule` (`src/fcm/fcm.module.ts:11`) export `FcmService` and import it into the moderation module. I didn't check whether it already exports it.\n- Add a new value such as `USER_SUSPENDED` to `EventTypes` (`src/fcm/enums/event-types.enum.ts`). The payload must be a string-only `data` map.\n- Wrap the call in try/catch so a push failure doesn't abort the decision before `moderationRepository.save` (`:816`). `sendNotificationToUser` throws on errors.\n- You could also add a thin helper like `sendSuspendedNotificationToUser` in `FcmService`, following the KYC and missed-call pattern at `:326`.\n\n**Other suspend path:** `src/admin/admin.service.ts` (around `:317-387` for regular users and `:574-679` for verified users) also sets the suspended status through a separate admin status update. I didn't read it closely. If product counts that as \"a moderator suspends them\", it needs the same call.",
+ "ttft_ms": 6821,
+ "type": "result",
+ "duration_ms": 19436,
+ "uuid": "3450efa1-32a1-4602-8be8-c42f2ed37e4c",
+ "ttft_stream_ms": 6270,
+ "time_to_request_ms": 5473,
+ "first_content_frame_ms": 6270,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_judge_04_M_b",
+ "_wall_s": 21.8,
+ "_variant": "judge",
+ "_seq": 4
+}

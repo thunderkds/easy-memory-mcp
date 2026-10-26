@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 65023,
+ "stop_reason": "end_turn",
+ "session_id": "45b8dbaa-d132-4ebc-83cb-faff788e5a6b",
+ "total_cost_usd": 0.2498846,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 6834,
+  "cache_read_input_tokens": 134357,
+  "output_tokens": 2280,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 6834,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 775,
+    "cache_read_input_tokens": 36592,
+    "cache_creation_input_tokens": 922,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 922
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 28,
+   "outputTokens": 8602,
+   "thinkingTokens": 304,
+   "cacheReadInputTokens": 303206,
+   "cacheCreationInputTokens": 33372,
+   "webSearchRequests": 0,
+   "costUSD": 0.2498846,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where the call goes:** `ModerationService.makeDecision` in `src/moderation/moderation.service.ts`. Add one call in each of the two existing branches, right after the `sseService.notifyStatusChanged(...)` call:\n- Regular users: after `:750-758`, inside `if (decisionActionDto.regularAction)` (`:735`). Use `moderation.regularUserId`.\n- Verified users: after `:776-785`, inside `if (decisionActionDto.verifiedAction)` (`:761`). Use `moderation.verifiedUserId`.\n\nThat is the one place both user types are suspended by a moderator, and it already sends the real-time SSE status event. The guest branch (`:788`) is out of scope for this request.\n\n**Method to call:** `FcmService.sendNotificationToUser(userId, notification: SendNotificationDto)` at `src/fcm/fcm.service.ts:172`.\n- It looks up the user's device token and returns `{ success: false }` with a warning if there isn't one (`:177-183`). A missing token won't break the flow.\n- It throws `BadRequestException` on any other failure (`:193`). Wrap the call in try/catch, or the suspension decision would fail after the user is already suspended.\n- `SendNotificationDto` is in `src/fcm/dtos/send-notification.dto.ts`. Check that file for the other fields; I only confirmed `data: object` at line 5.\n\n**Wiring needed:** `ModerationService` doesn't inject `FcmService` yet. You'd need two changes:\n- Add `FcmModule` to the `imports` array in `src/moderation/moderation.module.ts:22-34`. It already exports `FcmService` (`src/fcm/fcm.module.ts:12`).\n- Add `FcmService` to the `ModerationService` constructor.\n\n**Not suitable for this:** `sendKYCNotificationToUser`, `sendCallingNotificationToUser` and `sendMissedCallNotificationToUser` are for other events, so they don't fit.\n\n**Don't put it in `suspendByModeration`** (`src/base/base-user.service.ts:307`). The admin status update in `src/admin/admin.service.ts:355` also suspends users, and you'd probably not want a moderator-decision push for that. `makeDecision` is the moderator-only path.",
+ "ttft_ms": 2844,
+ "type": "result",
+ "duration_ms": 18141,
+ "uuid": "c5d34510-62c6-44ff-91ff-91f8da40c276",
+ "ttft_stream_ms": 1434,
+ "time_to_request_ms": 128,
+ "first_content_frame_ms": 1435,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "B_M_resume_1",
+ "_wall_s": 19.3,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_A_M"
+}

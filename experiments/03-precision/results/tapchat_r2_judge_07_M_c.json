@@ -1,0 +1,113 @@
+{
+ "duration_api_ms": 23039,
+ "stop_reason": "end_turn",
+ "session_id": "0af14549-b45c-4a8f-88a9-d9cb4447fdd6",
+ "total_cost_usd": 0.0857761,
+ "usage": {
+  "input_tokens": 12,
+  "cache_creation_input_tokens": 12637,
+  "cache_read_input_tokens": 62841,
+  "output_tokens": 2892,
+  "output_tokens_details": {
+   "thinking_tokens": 230
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 12637,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1203,
+    "cache_read_input_tokens": 14980,
+    "cache_creation_input_tokens": 3053,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 3053
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 12,
+   "outputTokens": 2892,
+   "cacheReadInputTokens": 62841,
+   "cacheCreationInputTokens": 12637,
+   "webSearchRequests": 0,
+   "costUSD": 0.0857761,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 230,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [
+  {
+   "tool_name": "Read",
+   "tool_use_id": "toolu_01XoMUQNQ1fy1d99g2Gff7pm",
+   "tool_input": {
+    "file_path": "/home/hungnguyen/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/03-precision/work/tapchat_r2_judge/repo/src/appeals/appeals.service.ts",
+    "offset": 98,
+    "limit": 110
+   }
+  }
+ ],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**No. A suspended guest is never restored today, either automatically or through an appeal.** Guests can be suspended, but nothing lifts the suspension.\n\n**Suspension:**\n- `ModerationService.makeDecision` calls `guestsService.suspendGuest` (`src/moderation/moderation.service.ts:792`).\n- `suspendGuest` sets `status=SUSPENDED`, `suspendedAt`, `suspendedType` and `suspendedRefId` (`src/guests/guests.service.ts:216-237`).\n\n**Methods that restore suspended users today:**\nAll of them are named `liftSuspensionByPhoneNumber`. An earlier note called this `restoreSuspendedUserByPhoneNumber`, but that name no longer exists.\n- `RegularUsersService.liftSuspensionByPhoneNumber` (`src/regular-users/regular-users.service.ts:372`) sets the user back to `ACTIVE` and clears the suspension fields.\n- `VerifiedUsersService.liftSuspensionByPhoneNumber` (`src/verified-users/verified-users.service.ts:670`) does the same for verified users.\n- `AppealsService.liftSuspensionByPhoneNumber` (`src/appeals/appeals.service.ts:172`) tries the verified-user service first and then the regular-user service (`:176-199`). If neither finds the phone number, it returns `success: false` (`:201`).\n\n**What calls them:**\n- **Automatic:** `JobsService.handleRestoreSuspendedUsers` (`src/jobs/jobs.service.ts:537`) runs from the cron job set up at `:160`.\n  - It only queries regular and verified users (`:546-554`) and lifts them at `:564-575`.\n  - Eligibility comes from `getSuspendedUsersExceedNumberOfDays` (`regular-users.service.ts:411`, `verified-users.service.ts:709`). It requires `suspendedAt < now - N days`, so permanent suspensions (`suspendedAt = null`) never match.\n- **Appeal:** `AppealsService.updateStatus` (`src/appeals/appeals.service.ts:110-114`) lifts the suspension when the appeal is `APPROVED`, looking the user up by `appeal.appellantPhoneNumber`. If the lift fails, the appeal is set to `DENIED` (`:115-124`).\n\n**Where guest restore would have to be added:**\n1. **`GuestsService`:** add a `liftSuspension` method next to `suspendGuest` (`src/guests/guests.service.ts:242`). It would set `GuestStatus.ACTIVE` and clear the suspension fields.\n2. **Cron path:** add a `getSuspendedGuestsExceedNumberOfDays` method to `GuestsService`, then call both new guest methods from `handleRestoreSuspendedUsers` (`src/jobs/jobs.service.ts:546-575`). Inject `GuestsService` into `JobsService` if it isn't already.\n3. **Appeal path:** `AppealsService.liftSuspensionByPhoneNumber` (`:172`) can't reach guests, because it looks users up by phone number and I'm assuming guests don't have one. I didn't open the Appeal or Guest entities to confirm. Guest appeals would need a guest identifier on the appeal, plus a guest branch in `updateStatus` (`:110`) and in that lookup.",
+ "ttft_ms": 4383,
+ "type": "result",
+ "duration_ms": 25993,
+ "uuid": "f3ccbf0a-12a4-4323-b36e-005838c84d8c",
+ "ttft_stream_ms": 4203,
+ "time_to_request_ms": 2866,
+ "first_content_frame_ms": 4203,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r2_judge_07_M_c",
+ "_wall_s": 55.2,
+ "_variant": "judge",
+ "_seq": 7
+}

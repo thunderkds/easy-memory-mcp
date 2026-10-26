@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 22261,
+ "stop_reason": "end_turn",
+ "session_id": "b519d266-4ee0-4d6d-bfce-18bf91512e9b",
+ "total_cost_usd": 0.0816039,
+ "usage": {
+  "input_tokens": 18,
+  "cache_creation_input_tokens": 11870,
+  "cache_read_input_tokens": 97479,
+  "output_tokens": 2434,
+  "output_tokens_details": {
+   "thinking_tokens": 27
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 11870,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 750,
+    "cache_read_input_tokens": 16874,
+    "cache_creation_input_tokens": 328,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 328
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 18,
+   "outputTokens": 2434,
+   "cacheReadInputTokens": 97479,
+   "cacheCreationInputTokens": 11870,
+   "webSearchRequests": 0,
+   "costUSD": 0.0816039,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 27,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 11,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Mostly prevented for sequential retries, but not race-safe.**\n\n**What prevents it:** `handleCheckoutCompleted` in `src/payment/pay-in/pay-in.service.ts:225-233` is an idempotency check. It looks up a transaction by `externalPaymentId`, which is the PaymentIntent id (`pay-in.service.ts:343`). If one exists, it logs \"Duplicate checkout event ignored\" and returns before any credit. The transaction row, with `paymentId`, is written only at the end (`pay-in.service.ts:305-318`). A retry that arrives after the first delivery finished therefore does nothing.\n\n**Where it can still double-credit:**\n1. **Race.** The check at `:225` and the insert at `:305` are separate steps. The balance update (`:260-281`) and the history record (`:289`) both happen before the insert. Two concurrent deliveries, such as a Stripe retry after a slow response, or `payment_intent.succeeded` arriving alongside another `payment_intent.*` event, can both pass the check and both credit.\n2. **No database uniqueness.** `payment_id` is a plain nullable column (`src/transactions/entities/transaction.entity.ts:29`). There's no `@Unique` or index on it, so the database wouldn't reject a second row.\n3. **No partial-failure protection.** The credit, history record and transaction insert aren't in one transaction. The balance is in DynamoDB and the transaction row is in SQL. If the insert at `:305` throws after the credit, the webhook errors, Stripe retries, and the check finds no row. The user is then credited again.\n4. **No Stripe event-id dedup.** `_processWebhookEvent` (`src/payment-processor/processors/stripe.processor.ts:286-305`) passes every `payment_intent.*` event to the handler without recording `event.id`. A related issue is that a `processing` or `canceled` event for the same intent writes a non-COMPLETED transaction (`pay-in.service.ts:335-340`). A later `succeeded` event for that intent would then be ignored as a duplicate, so the user wouldn't be credited at all.\n\nThe balance update at `:272-277` is also a read-modify-write, so concurrent credits can race there too.",
+ "ttft_ms": 2015,
+ "type": "result",
+ "duration_ms": 22481,
+ "uuid": "777a7803-0555-43af-b378-ccf34c891664",
+ "ttft_stream_ms": 1106,
+ "time_to_request_ms": 98,
+ "first_content_frame_ms": 1107,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_cold_08_P_c",
+ "_wall_s": 34.9,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r3/repo_cold",
+ "_mode": "off",
+ "_seq": 8
+}

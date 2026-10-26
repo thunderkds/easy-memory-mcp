@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 23047,
+ "stop_reason": "end_turn",
+ "session_id": "e09d881a-60f4-4b74-8f9a-38e443e728e4",
+ "total_cost_usd": 0.147112,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 26866,
+  "cache_read_input_tokens": 70880,
+  "output_tokens": 3254,
+  "output_tokens_details": {
+   "thinking_tokens": 103
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 26866,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1663,
+    "cache_read_input_tokens": 30959,
+    "cache_creation_input_tokens": 1228,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1228
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 3254,
+   "cacheReadInputTokens": 70880,
+   "cacheCreationInputTokens": 26866,
+   "webSearchRequests": 0,
+   "costUSD": 0.147112,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 103,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "The inbound path is `ParseInvoiceEmailsJob.java:22`, which calls `InvoiceEmailService.handleUnparsedEmails` (`InvoiceEmailService.java:90`). That method reads raw emails from the S3 `invoices/` prefix. I did not read the SES or S3 delivery side, or `EmailParser.java` and `InvoiceRecipientResolver.java` beyond a grep for errors and throws. The first reason below is therefore only inferred from the code.\n\n| # | Reason | Where it's recorded |\n|---|---|---|\n| 1 | The email never reached S3. This covers a wrong address, an SES or MX rule problem, or the sender's mail bounced. | Not recorded in this code. It would show only in SES or S3 logs, and the app has no `EmailReceivingRecord` for it. |\n| 2 | The job is skipped in dev (`InvoiceEmailService.java:91-93`), so nothing is processed there. | Nowhere. |\n| 3 | The MIME message is unparsable (`FallbackMimeParser.java:40,50`). The file is moved to `unparsable/` (`InvoiceEmailService.java:181-183`). | `orderlyLogger.logException`, tagged `InvoiceEmail`, with the `s3Key`. No DB record. |\n| 4 | Any other exception in `handleEmail` (`:167-170`, `EmailParser.java:51`). The file stays in `invoices/` and is retried on every run. | `logException` with `failedEmailFile`, then `:185`, which logs the `s3Key`. No DB record. |\n| 5 | No address looked like `<id>@invoices.gotorderly.com`. This also applies if the sender used the wrong domain for the environment (`InvoiceRecipientResolver.java:34-38`). The file goes to `noLocalPart/` (`:162-163`). | `EmailReceivingRecord.errors` (saved at `:166`). |\n| 6 | The local part is not a known restaurant ID. `getRestaurantFromAddresses` swallows the lookup exceptions (`:200-202`). The file goes to `unknown/<localPart>/` (`:157-160`). | `EmailReceivingRecord.errors`. |\n| 7 | An exception while resolving the to, cc or bcc addresses (`InvoiceRecipientResolver.java:76`). | `EmailReceivingRecord.errors`. |\n| 8 | The restaurant is inactive: \"Restaurant was not marked active\" (`:124-127`). | `EmailReceivingRecord.errors`. |\n| 9 | The attachment was dropped by the extractor, so `allAttachmentNames` never contained it (`EmailAttachmentExtractor.java:78-117`). The causes are listed below. | Nowhere. The drop is silent, with no error, log or record. |\n| 10 | Saving the attachment threw (`:130`, `:143-145`). | `EmailReceivingRecord.errors`, as `\"<name> -- <message>\"`. |\n| 11 | A non-image, non-text file type: \"was not image or text type file\" (`:140-142`). | `EmailReceivingRecord.errors`. |\n| 12 | A CSV or TXT file from a sender whose domain has no supplier mapping (`:133-138`). Only `rnc.sysco.com` is mapped, at `:69`. | `EmailReceivingRecord.errors`. |\n\n**Why the extractor drops an attachment (reason 9)**\n- **Wrong type:** it is not a PDF, image or text file, or the filename has no allowed suffix (`:129-150`, `:316-326`).\n- **Signature file:** it is a signature such as `.p7s` or `.asc` (`:152-157`).\n- **Small image:** a small image is treated as a logo or banner (`:159`, `:216-260`).\n- **Inline image:** an inline or HTML-referenced image is under 15 KB, or its name looks like a logo or signature (`:262-295`).\n\nA PDF is not filtered as junk. It is lost only through the type or suffix checks, a name with no extension, or a TNEF-wrapped (`winmail.dat`) file whose inner name is bad (`:86-95`).\n\n**Where to look**\n- Query `EmailReceivingRecord` through `getErrors` (`:243`), `findByLocalPartAndCreatedTime` (`:255`) or `findLocalParts` (`:259`).\n- Check the S3 prefixes `parsed/<restId>/`, `unknown/`, `noLocalPart/`, `unparsable/` and `invoices/`. A file still in `invoices/` is a failure from reason 4.\n- Search the logs for the tag `InvoiceEmail`.\n\n**Gap:** when the restaurant is not resolved (reasons 5 and 6), the attachment loop does nothing (`:119`). The record still lists `allAttachmentNames`, but `attachmentsMoved` is empty.",
+ "ttft_ms": 2850,
+ "type": "result",
+ "duration_ms": 24623,
+ "uuid": "1d7e7a83-7e06-4aec-a6cb-c3f07b91946e",
+ "ttft_stream_ms": 2153,
+ "time_to_request_ms": 1404,
+ "first_content_frame_ms": 2153,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r3_auto_06_E_b",
+ "_wall_s": 38.9,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/orderly_r3/repo_auto",
+ "_mode": "auto",
+ "_seq": 6
+}

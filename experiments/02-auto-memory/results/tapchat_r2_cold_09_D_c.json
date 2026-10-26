@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 8865,
+ "stop_reason": "end_turn",
+ "session_id": "2ce032cd-2f39-4676-9bf8-cfce0cd8130e",
+ "total_cost_usd": 0.040065,
+ "usage": {
+  "input_tokens": 6,
+  "cache_creation_input_tokens": 6796,
+  "cache_read_input_tokens": 18890,
+  "output_tokens": 1098,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 6796,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 625,
+    "cache_read_input_tokens": 8316,
+    "cache_creation_input_tokens": 3339,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 3339
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 6,
+   "outputTokens": 1098,
+   "cacheReadInputTokens": 18890,
+   "cacheCreationInputTokens": 6796,
+   "webSearchRequests": 0,
+   "costUSD": 0.040065,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 0,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 4,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**How it's sent**\n- `calling-status.handler.ts:138-139` calls `notificationService.sendMissedCallNotifications(...)` when a call is missed.\n- `in-call-notification.service.ts:100` calls `fcmService.sendMissedCallNotificationToUser(calleeId)`.\n- `fcm.service.ts:326-333` builds a data-only payload, `{ event: EventTypes.MISSED_CALL }` (`'missed_call'`, defined in `src/fcm/enums/event-types.enum.ts:3`). It passes that to `sendNotificationToUser`.\n- `fcm.service.ts:177-187` loads the callee's active token with `findOne({ userId, isActive: true })` (`fcm.service.ts:158-163`). It then sends via `firebaseApp.messaging().send({ token, data })` (`fcm.service.ts:255-260`).\n- After the FCM push, the same method sends an SMS through Twilio (`in-call-notification.service.ts:103-111`). The SMS links to the regular or verified app, depending on which side the callee is.\n\n**If the callee has no device token**\n- `fcm.service.ts:179-182` logs a warning (\"No active device tokens found\u2026\") and returns `{ success: false }`. It does not throw.\n- `in-call-notification.service.ts:100` ignores the return value. The flow continues, and the SMS is still sent at line 108.\n- So a missing token only skips the push. The SMS fallback still goes out.\n\n**Errors are different**\n- If the token exists but the send fails (Firebase not initialized, or `send` errors), `sendNotificationToUser` throws `BadRequestException` (`fcm.service.ts:189-193`).\n- That exception propagates through the `catch` at `in-call-notification.service.ts:116-120`, which logs and rethrows. In that case the SMS is not sent.",
+ "ttft_ms": 1778,
+ "type": "result",
+ "duration_ms": 9019,
+ "uuid": "2ea0d68a-8922-4320-ad83-d9c649766a89",
+ "ttft_stream_ms": 900,
+ "time_to_request_ms": 111,
+ "first_content_frame_ms": 900,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r2_cold_09_D_c",
+ "_wall_s": 29.3,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r2/repo_cold",
+ "_mode": "off",
+ "_seq": 9
+}

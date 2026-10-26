@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 22731,
+ "stop_reason": "end_turn",
+ "session_id": "52b43c0d-c4ee-4a2e-8929-9c13d15f0a23",
+ "total_cost_usd": 0.0970059,
+ "usage": {
+  "input_tokens": 12,
+  "cache_creation_input_tokens": 15352,
+  "cache_read_input_tokens": 60339,
+  "output_tokens": 2954,
+  "output_tokens_details": {
+   "thinking_tokens": 473
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 15352,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1565,
+    "cache_read_input_tokens": 17967,
+    "cache_creation_input_tokens": 2760,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 2760
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 12,
+   "outputTokens": 2954,
+   "cacheReadInputTokens": 60339,
+   "cacheCreationInputTokens": 15352,
+   "webSearchRequests": 0,
+   "costUSD": 0.0970059,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 473,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Quick status: I've read the send path and the failure handling, and I'm writing up the answer now. I didn't edit any files.\n\n**Short answer:** the failure is logged but not recorded against the order, and it is never retried. In the order flow, the failure usually surfaces as a `NullPointerException`.\n\n**What happens on a MailJet failure**\n\n1. `MailJetEmailSender.sendAsHtmlPlainTextMessage` wraps the call in try/catch (`MailJetEmailSender.java:53-80`). Any exception goes to `orderlyLogger.logException` (`:77-78`), and the method then **returns `null`** (`:80`). There is no retry or queue.\n   - `MailJetEmailSentResponse.parse` throws a `RuntimeException` if the response has no `To` data (`MailJetEmailSentResponse.java:26-27`). That includes a Mailjet error body, and it ends up in the same catch.\n2. `EmailSenderImpl.sendAsHtmlPlainTextMessage` (`EmailSenderImpl.java:41-52`) returns `mailJetEmailSender...` directly at `:47`, so the `null` passes straight through. Its own catch returns an empty list (`:51`), but that only covers exceptions thrown before the MailJet call.\n3. In `RestaurantOrderV3EmailSender.sendBySupplier`, `mailJetResponses.stream()` is called inside the `forEach` over the to-emails (`RestaurantOrderV3EmailSender.java:140-146`). With a `null` result this throws an NPE.\n   - The to-list always contains the sender's address (`:128`), so this should happen on every failure.\n   - This is inferred from reading the code. I didn't run it.\n\n**Effect on the order**\n\n- `finalize` sets `finishedTime` and saves the samples before it sends the email (`RestaurantOrderService.java:189-193`). Whether those changes persist depends on whether the call is transactional. I didn't check that.\n- The NPE propagates out of `sendOrderEmail` (`:213`), so `OrderFinalizedEvent` is never fired (`:194`).\n- The suppliers after the failing one in the loop (`RestaurantOrderV3EmailSender.java:59-62`) are skipped, and the SMS block (`:149-156`) is skipped for the failing supplier. Only the SMS has its own try/catch.\n- The master email to the user goes out first (`:57`). If that send is the one that fails, it only returns `null` and is ignored, so the supplier loop still runs.\n\n**What's recorded**\n\n- The only record is the log entry from `logException`.\n- A `SentSimpleOrderSupplierEmail` row is created only when a MailJet response matches the address (`RestaurantOrderService.java:216-219`, called from `RestaurantOrderV3EmailSender.java:146`). A failed send therefore leaves no row, and nothing marks the order as \"email failed\".\n- `Opened` and `Clicked` tracking is keyed on `mailJetMessageId`, so the webhooks will never update anything for that supplier.\n\n**Retry**\n\n- There is no automatic retry.\n- The only recovery is a manual resend. `finalizeOrResend` takes the resend path when `finishedTime` is already set (`RestaurantOrderService.java:174-182`). That resend path calls `sendOrderEmail` again and does not fire `OrderFinalizedEvent`.\n\n**Missing-email case**\n\nIf the supplier's email is simply missing or blocked rather than failing in MailJet, `EmailSenderImpl` may drop it. It returns an empty list when no addresses remain (`:44-45`). Non-production environments also filter addresses (`MailJetEmailSender.java:141-149`). Both cases are silent and leave no row.",
+ "ttft_ms": 1871,
+ "type": "result",
+ "duration_ms": 23006,
+ "uuid": "a7c48238-8ce4-438c-8b49-d90be3eacd56",
+ "ttft_stream_ms": 1039,
+ "time_to_request_ms": 160,
+ "first_content_frame_ms": 1039,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r1_index_05_O_b",
+ "_wall_s": 52.7,
+ "_variant": "index",
+ "_seq": 5
+}

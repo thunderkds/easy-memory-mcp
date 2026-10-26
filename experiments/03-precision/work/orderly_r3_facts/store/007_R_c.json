@@ -1,0 +1,9 @@
+{
+ "seq": 7,
+ "label": "R_c",
+ "prompt": "If the recurring AP invoice job runs twice on the same day, can it create a duplicate invoice for the same date? Name the method that prevents or allows it.\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**Short answer:** In the normal sequential case, a second run on the same day won't create a duplicate. The guard is the config's `nextPostDate` advancing, not a duplicate check. A concurrent or stale-read race could still allow one.\n\n**What prevents it:**\n- `RecurringAPInvoiceService.java:406` selects only configs where `findByNextPostDateLessThanEqualAndStatus(referenceDate, Active)` matches.\n- `RecurringAPInvoiceGenerationService.processRecurringConfig` (`:56`) loops on `isDueForGeneration` (`:73-80`), which returns false once `nextPostDate` is after `referenceDate`.\n- After an invoice is created, `config.setNextPostDate(...determineNextPostDate...)` (`:62`) advances the date. `saveAndFlush` (`:70`) persists it. A second run therefore finds the config not due.\n\n**What does not prevent it:**\n- `existsByRecurringAPInvoiceConfigIdAndInvoiceId` (`:123`) is not a same-date guard. It is keyed on the config ID and the newly saved invoice's ID, which is always new. It only avoids a duplicate link row.\n- The invoice number `\"REC-\" + configId + \"-\" + invoiceDate` (`:170`) is deterministic. I didn't check for a unique constraint on it, so I can't say whether it blocks a duplicate.\n- The job's ShedLock (3600s) only stops overlapping concurrent runs. It doesn't stop a later run on the same day.\n\n**Failure case:** If `createInvoiceFromConfig` returns false (`:58`), the loop breaks before `nextPostDate` advances. No invoice is saved in that case, so no duplicate results.",
+ "files": {
+  "SiftOrder/src/main/java/com/siftit/domain/accountsPayable/RecurringAPInvoiceService.java": "a6222e9582920f7865bf8a37da03fb44b49511fd8b4fa7a768c639be281a3fdd"
+ }
+}

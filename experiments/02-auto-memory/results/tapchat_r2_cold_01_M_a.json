@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 24689,
+ "stop_reason": "end_turn",
+ "session_id": "6b8fdf71-df81-4e41-a1f7-76301ab7b1c0",
+ "total_cost_usd": 0.12810549999999998,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 22348,
+  "cache_read_input_tokens": 52535,
+  "output_tokens": 3344,
+  "output_tokens_details": {
+   "thinking_tokens": 320
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 22348,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1599,
+    "cache_read_input_tokens": 22357,
+    "cache_creation_input_tokens": 3214,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 3214
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 3344,
+   "cacheReadInputTokens": 52535,
+   "cacheCreationInputTokens": 22348,
+   "webSearchRequests": 0,
+   "costUSD": 0.12810549999999998,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 320,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 12,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Suspension (moderator decision)**\n1. `POST :id/decision` in `src/moderation/moderation.controller.ts:80` calls `moderationService.makeDecision` (`:112`).\n2. `makeDecision` (`src/moderation/moderation.service.ts:721`) records the decision, time and moderator (`:731-733`). It then handles each user type if the DTO carries an action for it:\n   - Regular users: `regularUsersService.suspendByModeration` (`:735-744`).\n   - Verified users: `verifiedUsersService.suspendByModeration` (`:761-766`).\n   - Guests: `guestsService.suspendGuest` (`:788-792`).\n3. For regular and verified users, it also sets a description such as \"suspended for 24 hours\" (`:745-748`, `:772-775`). It pushes an SSE `notifyStatusChanged` with `newStatus: 'suspended'` (`:750`, `:777`, `:806`). It logs the decision in the activity log (`:818-823`).\n4. `suspendByModeration` is inherited from the base class at `src/base/base-user.service.ts:307`.\n   - It always sets `status: 'suspended'`, `suspendedType` and `suspendedRefId` (the moderation case).\n   - For `SUSPEND_24H` it sets `suspendedAt = new Date()` (`:318-323`).\n   - Otherwise it sets `suspendedAt = null` (`:327-330`), which makes the suspension indefinite.\n5. Guests are handled separately in `src/guests/guests.service.ts:216-237`, with the same `suspendedAt` set-or-null logic.\n\n**Automatic lift (cron)**\n- `JobsService.setupRestoreSuspendedUsersCronJob` (`src/jobs/jobs.service.ts:160`) schedules the job. It only runs if `RESTORE_SUSPENDED_USERS_CRON_JOB_SCHEDULE_ENABLED` is true (`:161-175`).\n- `handleRestoreSuspendedUsers` (`:537`) reads `RESTORE_SUSPENDED_USERS_AFTER_DAYS` (`:539`). It fetches regular and verified users who exceed that age (`:546-554`), then restores each by phone number (`:565-573`).\n- The query (`src/regular-users/regular-users.service.ts:411-428`) selects `status = SUSPENDED AND suspendedAt < now - N days`. The verified-users version is at `src/verified-users/verified-users.service.ts:709`.\n- Restoring sets the status back to `ACTIVE` and clears the suspended fields (`regular-users.service.ts:372-385`; verified: `verified-users.service.ts:670`).\n- The cron never touches guests.\n- Because a null `suspendedAt` never satisfies `< date`, indefinite suspensions are never auto-lifted. Only the 24h type is picked up, after the configured number of days rather than literally 24 hours.\n\n**Lift via appeal**\n1. The user submits a Typeform appeal form. `typeform.service.ts:42-47` routes it to `handleAppealForm`, which calls `appealsService.create` (`typeform.service.ts:122`; `appeals.service.ts:39`).\n2. An admin calls `POST :id/status` (`src/appeals/appeals.controller.ts:122-138`), which calls `AppealsService.updateStatus` (`src/appeals/appeals.service.ts:100`).\n3. If the status is `APPROVED` (`:110`), it calls `restoreSuspendedUserByPhoneNumber` (`:172`).\n   - It tries a verified user first (`:176-187`), then a regular user (`:189-199`). Each uses the same restore methods as the cron.\n   - If no user is found, or the restore errors, the appeal is saved as `DENIED` and `{success: false}` is returned (`:115-124`).\n4. Otherwise `makeDecision` (`:151-165`) stores the appeal status and `decidedAt`.\n5. Guests aren't restored through appeals either, since the lookup only covers verified and regular users.",
+ "ttft_ms": 2087,
+ "type": "result",
+ "duration_ms": 24964,
+ "uuid": "a963f4bb-6322-4da1-9461-de2685fcbd0a",
+ "ttft_stream_ms": 1165,
+ "time_to_request_ms": 165,
+ "first_content_frame_ms": 1166,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r2_cold_01_M_a",
+ "_wall_s": 26.3,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r2/repo_cold",
+ "_mode": "off",
+ "_seq": 1
+}

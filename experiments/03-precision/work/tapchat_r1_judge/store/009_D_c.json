@@ -1,0 +1,11 @@
+{
+ "seq": 9,
+ "label": "D_c",
+ "prompt": "When a callee misses a call, how is the missed-call push sent, and what happens if the callee has no device token?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**How the push is sent**\n- `CallingStatusHandler` calls `notificationService.sendMissedCallNotifications(...)` at `src/websockets/in-call-websocket/handlers/calling-status.handler.ts:139`.\n- That method (`in-call-notification.service.ts:93-122`) first calls `fcmService.sendMissedCallNotificationToUser(calleeId)` (line 100). It then sends an SMS through Twilio (lines 103-111) with the missed-call text and an app link. The link depends on whether the callee is the regular or verified user.\n- `sendMissedCallNotificationToUser` (`src/fcm/fcm.service.ts:326-334`) delegates to `sendNotificationToUser`. The payload is a data-only message: `{ event: EventTypes.MISSED_CALL }`.\n- `sendNotificationToUser` (`fcm.service.ts:172-195`) looks up the user's device token. It then calls `sendNotificationToToken` (`fcm.service.ts:234-277`), which sends through `firebaseApp.messaging().send`.\n\n**If the callee has no device token**\n- `sendNotificationToUser` logs a warning and returns `{ success: false }` (`fcm.service.ts:179-183`). It doesn't throw.\n- `sendMissedCallNotifications` (`in-call-notification.service.ts:100`) ignores the returned value. So the SMS is still sent (lines 108-111), and the \"notifications sent\" log still appears (lines 113-115).\n- Errors behave differently. If the FCM send itself throws, `sendNotificationToUser` wraps it in a `BadRequestException` (`fcm.service.ts:188-193`). `sendMissedCallNotifications` then logs and rethrows (lines 116-121), so the SMS is skipped in that case.",
+ "files": {
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34",
+  "src/websockets/in-call-websocket/handlers/calling-status.handler.ts": "8c3baedfbb961139bfca834db9875e1f47ea700240f4f11cbb6dbceb90bb2bc8",
+  "src/websockets/in-call-websocket/services/in-call-notification.service.ts": "676f4575778ea04e8b946c799b889a1e5824e57e60b721565bf832b3376f73ad"
+ }
+}

@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 24427,
+ "stop_reason": "end_turn",
+ "session_id": "c8833269-f44a-43d1-ad79-d298b817f08a",
+ "total_cost_usd": 0.10083260000000001,
+ "usage": {
+  "input_tokens": 12,
+  "cache_creation_input_tokens": 15384,
+  "cache_read_input_tokens": 71826,
+  "output_tokens": 3209,
+  "output_tokens_details": {
+   "thinking_tokens": 469
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 15384,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1346,
+    "cache_read_input_tokens": 18313,
+    "cache_creation_input_tokens": 1930,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1930
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 12,
+   "outputTokens": 3209,
+   "cacheReadInputTokens": 71826,
+   "cacheCreationInputTokens": 15384,
+   "webSearchRequests": 0,
+   "costUSD": 0.10083260000000001,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 469,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 10,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "I was checking the failure path. I've now read the sender, the response parser and the finalize code, so here's the answer.\n\n**Short answer:** a failed MailJet send is logged but not recorded against the order, and it is not retried. The order is still finalized. A failure can also cause an exception that stops the remaining suppliers from being emailed.\n\n**What happens on failure**\n- `MailJetEmailSender.sendAsHtmlPlainTextMessage` catches every exception, calls `orderlyLogger.logException`, and returns `null` (`MailJetEmailSender.java:77-80`). A non-success Mailjet reply also lands here. `MailJetEmailSentResponse.parse` throws a `RuntimeException` when the expected `To` array is missing (`MailJetEmailSentResponse.java:26-27`).\n- `EmailSenderImpl` passes that `null` straight back (`EmailSenderImpl.java:47`). Its own catch returns an empty list (`:48-51`), but that doesn't apply here because the inner call doesn't throw.\n- In `RestaurantOrderV3EmailSender.sendBySupplier`, the result is used as `mailJetResponses.stream()` (`:143`). The `to` list always includes the sender (`:128`), so this should throw a `NullPointerException`. I haven't run it.\n- Nothing catches that exception in `send` (`:59-62`). Suppliers later in the loop are not emailed, and the SMS for that supplier (`:149-156`) is skipped too.\n- The exception goes up through `sendOrderEmail` to `finalize` (`RestaurantOrderService.java:193`). There the `OrderFinalizedEvent` (`:194`) is never fired. `setFinishedTime` (`:189`) and the `SentSample` saves (`:192`) have already run. I found no `@Transactional` in that file. I didn't check the controller or other layers for one, so I can't say whether those writes roll back.\n- If the order was already finalized (a resend), the exception goes up to the endpoint through `finalizeOrResend` (`:182`).\n\n**Recorded?**\n- The only record is a log entry. The `SentSimpleOrderSupplierEmail` row is only created after a successful response (`RestaurantOrderV3EmailSender.java:142-147`, `RestaurantOrderService.java:216-219`). A failed send leaves no row and no status.\n- A row is also skipped if the response has no entry for an address (`.ifPresent` at `:146`). That matters for your case. Mailjet can accept a request and still drop or bounce one recipient, and the code won't flag it.\n\n**Retried?**\n- No. There is no `@Retryable`, `@Scheduled` job or queue in `RestaurantOrderService`.\n- The only recovery is a user manually hitting the resend path (`finalizeOrResend`, `:181-182`). That resends to all suppliers.\n\n**Checking your supplier's case**\n- Look for a `SentSimpleOrderSupplierEmail` row for that supplier and address. If there is none, either the send failed or Mailjet's response had no entry for that address.\n- If there is a row, the request reached Mailjet. Check its status for open and click events, and check Mailjet's own logs for bounces or blocks.\n- In non-production environments, addresses are filtered to an allow-list (`MailJetEmailSender.java:144`). Those emails are silently never sent.",
+ "ttft_ms": 1462,
+ "type": "result",
+ "duration_ms": 24875,
+ "uuid": "c7d2a873-31a3-4fda-aa21-9147cbae66fe",
+ "ttft_stream_ms": 1016,
+ "time_to_request_ms": 263,
+ "first_content_frame_ms": 1016,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r1_auto_05_O_b",
+ "_wall_s": 26.2,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/orderly_r1/repo_auto",
+ "_mode": "auto",
+ "_seq": 5
+}

@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 17220,
+ "stop_reason": "end_turn",
+ "session_id": "9a71f753-6494-4f63-9ba0-27c07139c07f",
+ "total_cost_usd": 0.0829073,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 13764,
+  "cache_read_input_tokens": 45613,
+  "output_tokens": 2327,
+  "output_tokens_details": {
+   "thinking_tokens": 33
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 13764,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1013,
+    "cache_read_input_tokens": 14679,
+    "cache_creation_input_tokens": 2308,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 2308
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2327,
+   "cacheReadInputTokens": 45613,
+   "cacheCreationInputTokens": 13764,
+   "webSearchRequests": 0,
+   "costUSD": 0.0829073,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 33,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Yes. The support team can see most failed inbound invoice emails through admin endpoints, but not all of them.\n\n**Endpoint**\n- `GET /data/admin/emailReceiving/invoice/errors/{start}/{end}` returns the failed emails (`AdminEmailReceivingWebService.java:30-35`). It calls `InvoiceEmailService.getErrors` (`InvoiceEmailService.java:243-244`).\n- `getErrors` runs the repository query `findAnyWithErrors` (`InternalEmailReceivingRecordRepository.java:14`). That query selects `EmailReceivingRecord` rows where `length(e.errors) > 1` and `createdTime` falls in the date range. The end date is made inclusive by adding one day.\n- The related `/invoice/rest/{restId}/{start}/{end}` endpoint (`:37-43`) lists all records for one restaurant, with or without errors.\n\n**How an email counts as failed**\n- `handleEmail` collects a list of error strings and saves it with the `EmailReceivingRecord` (`InvoiceEmailService.java:166`). The record stores them as one joined string (`EmailReceivingRecord.java:40`). An email counts as failed when that string is longer than 1 character.\n- The error strings are added in these cases:\n  - The restaurant is inactive (`:125`).\n  - A text attachment has no supplier mapping (`:138`).\n  - An attachment is neither an image nor a text file (`:141`).\n  - Saving or parsing an attachment throws (`:144`).\n  - The address's local part is not a known restaurant id (`:160`).\n  - No address looks like it was sent to us (`:163`).\n  - Recipient-resolution errors from `InvoiceRecipientResolver` also land in this list (`:110`).\n\n**Failures the errors endpoint doesn't show**\n- **Unparsable emails:** `UnparsableMessageException` is caught in `handleEmailFromUnparsed` (`:181-183`). The email is moved to S3 `unparsable/<key>` and logged, and no DB record is saved. It is missing from `/invoice/errors`. Support can only find it by browsing S3 with `GET /invoice/{prefix}/{nextToken}` and `unparsable/` as the prefix (`AdminEmailReceivingWebService.java:24-28`, `InvoiceEmailService.java:72-88`).\n- **Other exceptions in `handleEmail`:** these are logged (`:168`) and rethrown. The outer catch (`:184-186`) logs again and leaves the file in `invoices/`. There is no record, so the email will be retried on every run.\n- **Emails with no attachments:** if the email has no attachments, nothing is flagged unless the recipient is unresolved.\n- **Non-prod runs:** `handleUnparsedEmails` returns silently in dev (`:91`).\n- **Default `invoices/` listing:** the S3 listing endpoint fails for the whole page if any one email in it can't be parsed (`:80-82`).",
+ "ttft_ms": 2592,
+ "type": "result",
+ "duration_ms": 17977,
+ "uuid": "f29beb62-2c70-40e0-85d5-944924361a68",
+ "ttft_stream_ms": 1552,
+ "time_to_request_ms": 682,
+ "first_content_frame_ms": 1553,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r2_facts_09_E_c",
+ "_wall_s": 19.6,
+ "_variant": "facts",
+ "_seq": 9
+}

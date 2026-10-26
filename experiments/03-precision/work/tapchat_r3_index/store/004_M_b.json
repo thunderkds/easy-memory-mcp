@@ -1,0 +1,13 @@
+{
+ "seq": 4,
+ "label": "M_b",
+ "prompt": "Product wants a push notification sent to a regular or verified user when a moderator suspends them. Where exactly should the call go, and which existing method should it call to send the push?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**Where the call goes:** `ModerationService.makeDecision` in `src/moderation/moderation.service.ts`. Add one push in each of the two suspension branches, right after the existing `sseService.notifyStatusChanged(...)` call:\n- Regular user: after `src/moderation/moderation.service.ts:750-758`, using `moderation.regularUserId`.\n- Verified user: after `src/moderation/moderation.service.ts:776-785`, using `moderation.verifiedUserId`.\n\nThe guest branch (`:788`) is out of scope, since the request covers only regular and verified users.\n\n**Which method to call:** `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` (`src/fcm/fcm.service.ts:172`).\n- It looks up the user's active device token and sends a data-only push.\n- It returns `{success:false}` when the user has no token, and throws `BadRequestException` on other failures. Wrap the call in try/catch so a push failure doesn't abort the decision save.\n- `sendKYCNotificationToUser` (`:203`) is the closest existing wrapper to copy. It calls `sendNotificationToUser` with an `EventTypes` value as the `event`.\n\n**Two things to add:**\n1. `ModerationService` doesn't use `FcmService` today (my grep of that file found no reference). You'd need to inject it and import `FcmModule` into the moderation module. I didn't open `moderation.module.ts` or the constructor.\n2. There's no suspension event yet. Add one to `EventTypes`, for example `USER_SUSPENDED`. I didn't open the `EventTypes` file.\n\nI also read two earlier session notes (`.agent-memory/001_M_a.md` and `.agent-memory/003_D_a.md`) and checked their line numbers against the current code.",
+ "files": {
+  ".agent-memory/001_M_a.md": "d3b47cb94db89365ff9633bd4f694f0acc4fb339d876af549247d7c293dbf36f",
+  ".agent-memory/003_D_a.md": "087a96317917d4d498294784ac4cd48058b4ff16ebde224d405029bfdf131c49",
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34",
+  "src/moderation/moderation.module.ts": "978743c7cdd42527ff29b9a3e0b4b30dda08ded861a2e82d7380fbc44ab49468",
+  "src/moderation/moderation.service.ts": "72511e7128f7a5ef8ee10a2231c4ec2512032befb37407eae5025d7f573fcf84"
+ }
+}

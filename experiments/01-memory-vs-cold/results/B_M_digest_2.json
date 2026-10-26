@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 18402,
+ "stop_reason": "end_turn",
+ "session_id": "5cfec8da-0f8e-44e9-a1db-b9b047918640",
+ "total_cost_usd": 0.059678300000000004,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 7790,
+  "cache_read_input_tokens": 50983,
+  "output_tokens": 2340,
+  "output_tokens_details": {
+   "thinking_tokens": 67
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 7790,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 831,
+    "cache_read_input_tokens": 14164,
+    "cache_creation_input_tokens": 430,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 430
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2340,
+   "cacheReadInputTokens": 50983,
+   "cacheCreationInputTokens": 7790,
+   "webSearchRequests": 0,
+   "costUSD": 0.059678300000000004,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 67,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 7,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where the call goes:** `makeDecision` in `src/moderation/moderation.service.ts`, inside the two existing branches. I re-read the code and the notes' line numbers still hold.\n\n- **Regular users:** in the `if (decisionActionDto.regularAction)` block (`:735-759`). Put it right after the `sseService.notifyStatusChanged(moderation.regularUserId, \u2026)` call at `:750-758`.\n- **Verified users:** in the `if (decisionActionDto.verifiedAction)` block (`:761-786`). Put it right after `notifyStatusChanged(moderation.verifiedUserId, \u2026)` at `:776-785`.\n- **Guests:** leave the guest branch (`:788-814`) alone, since product only asked for regular and verified users.\n\nBoth spots come after `suspendByModeration` has succeeded, so users are only notified once the suspension is saved.\n\n**Method to call:** `FcmService.sendNotificationToUser(userId, notification: SendNotificationDto)` at `src/fcm/fcm.service.ts:172`.\n\n- It looks up the user's active device token and sends via `sendNotificationToToken`.\n- It returns `{ success: false }` if the user has no token. It throws `BadRequestException` on other failures.\n- Wrap the call in its own try/catch and log the error. Otherwise a push failure would throw out of `makeDecision` before `moderationRepository.save` at `:816`, and the moderation decision wouldn't be saved.\n- The existing KYC push at `fcm.service.ts:203-213` is the pattern to copy. It passes `data: { event: EventTypes.\u2026 }` using the enum in `src/fcm/enums/event-types.enum.ts`.\n- I didn't find a suspension event type in `EventTypes`, so you'd add one, for example `USER_SUSPENDED`. Include the suspension type and whether it is 24h or permanent in `data`.\n\n**Wiring needed:**\n\n- `ModerationService` doesn't inject `FcmService`. Add it to the constructor (`:102-116`).\n- Import `FcmModule` in `moderation.module.ts`. `FcmModule` already exports `FcmService` (`src/fcm/fcm.module.ts:12`). I didn't find an existing `FcmModule` import in the moderation module, so check for a circular dependency when you add it.\n\nI didn't check the fields of `SendNotificationDto`. Look at it to see whether it takes `title` and `body` alongside `data`.",
+ "ttft_ms": 1020,
+ "type": "result",
+ "duration_ms": 18546,
+ "uuid": "e66c9b28-d05a-45f1-8c89-0d3676a447fc",
+ "ttft_stream_ms": 851,
+ "time_to_request_ms": 92,
+ "first_content_frame_ms": 852,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "B_M_digest_2",
+ "_wall_s": 19.6,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_clean"
+}

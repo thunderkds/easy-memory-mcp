@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 13774,
+ "stop_reason": "end_turn",
+ "session_id": "8b52fc7d-555b-49a2-95cc-f4316d516b28",
+ "total_cost_usd": 0.0586771,
+ "usage": {
+  "input_tokens": 6,
+  "cache_creation_input_tokens": 9352,
+  "cache_read_input_tokens": 17771,
+  "output_tokens": 1948,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 9352,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1237,
+    "cache_read_input_tokens": 6764,
+    "cache_creation_input_tokens": 7891,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 7891
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 6,
+   "outputTokens": 1948,
+   "cacheReadInputTokens": 17771,
+   "cacheCreationInputTokens": 9352,
+   "webSearchRequests": 0,
+   "costUSD": 0.0586771,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 0,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 6,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "## Registration\n- `POST /fcm/register-token` (`src/fcm/fcm.controller.ts:30-49`) is protected by `JwtAuthGuard`. It takes the user id from `@CurrentUser()` and the body `RegisterDeviceTokenDto` (`deviceId`, `fcmToken`).\n- `FcmService.registerDeviceToken` (`src/fcm/fcm.service.ts:91-120`) allows only one active token per user:\n  - If the user has any existing row, it calls `unregisterAllDeviceTokens` (`:146-151`). That soft-deactivates every row by setting `isActive=false` and `deletedAt=now`.\n  - It then inserts a new row (`:106-112`).\n  - Any failure is rethrown as `BadRequestException`.\n- `DELETE /fcm/unregister-token/:deviceId` (`fcm.controller.ts:51-66`) calls `unregisterDeviceToken` (`fcm.service.ts:127-140`). That deactivates the row for that `userId` and `deviceId`.\n\n## Storage\n- The `DeviceToken` entity is in `src/fcm/entities/device-token.entity.ts:11-39`. The table is `device_tokens`.\n- Columns: uuid `id`, `user_id`, `device_id`, `fcm_token` (text), `is_active` (default true), `created_at`, `updated_at` and `deleted_at`.\n- Indexes: `user_id`, `device_id`, and a composite `(userId, isActive)` (`:12`).\n- Related migrations are `1753262876986-add-device-token-table.ts` and `1754380262420-update-device-tokens-tables.ts`.\n\n## Sending\n- Firebase Admin is initialized in the `FcmService` constructor (`fcm.service.ts:39-83`). It parses the `FIREBASE_SERVICE_ACCOUNT_KEY` env JSON and fixes the `\\n` escapes in the private key.\n  - If the key is missing, it only logs a warning (`:47-52`). `firebaseApp` stays unset, so later sends throw \"Firebase service not available\" (`:238-241`).\n- `sendNotificationToUser` (`:172-195`) does the following:\n  - It looks up the single active token via `getUserDeviceToken` (`:158-164`).\n  - If there is none, it logs a warning and returns `{success:false}`.\n  - Otherwise it calls `sendNotificationToToken` (`:234-277`).\n- `sendNotificationToToken` sends a **data-only** message, `{token, data}`, with `firebaseApp.messaging().send` (`:255-260`). There is no `notification` payload.\n- `removeInvalidTokens` (`:283`) is private and never called, so stale tokens are never cleaned up on FCM errors.\n\n## Callers\n- `calls.service.ts:114` sends the incoming-call push (`sendCallingNotificationToUser`, `fcm.service.ts:305`, event `INCOMING_CALL`).\n- `in-call-notification.service.ts:100` sends the missed-call push (`fcm.service.ts:326`).\n- `vouched.service.ts:245` sends the KYC-passed push (`fcm.service.ts:203`). A failed KYC sends nothing.\n- `POST /fcm/send-to-user/:userId` (`fcm.controller.ts:68-81`) is an admin endpoint behind `RolesGuard`.\n- `auth.service.ts:230, 273, 501` read the token with `getDeviceTokenByUserId` (`fcm.service.ts:292`), presumably to return it in the user and guest profile responses. I didn't open those lines.",
+ "ttft_ms": 2028,
+ "type": "result",
+ "duration_ms": 13956,
+ "uuid": "4e35cbae-f29b-483b-af79-5d0404db1c64",
+ "ttft_stream_ms": 1063,
+ "time_to_request_ms": 113,
+ "first_content_frame_ms": 1063,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_cold_03_D_a",
+ "_wall_s": 19.3,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r3/repo_cold",
+ "_mode": "off",
+ "_seq": 3
+}

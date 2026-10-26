@@ -1,0 +1,10 @@
+{
+ "seq": 9,
+ "label": "D_c",
+ "prompt": "When a callee misses a call, how is the missed-call push sent, and what happens if the callee has no device token?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**How it's sent**\n- `InCallNotificationService.sendMissedCallNotifications` (`src/websockets/in-call-websocket/services/in-call-notification.service.ts:93-100`) calls `fcmService.sendMissedCallNotificationToUser(calleeId)`.\n- That method (`src/fcm/fcm.service.ts:326-334`) calls `sendNotificationToUser` with `data: { event: EventTypes.MISSED_CALL }`.\n- `sendNotificationToUser` (`:172-187`) loads the callee's active device token and passes it to `sendNotificationToToken`.\n- `sendNotificationToToken` (`:255-260`) sends a data-only FCM message through Firebase Admin, `messaging().send({token, data})`. There is no `notification` block, so the client has to render it.\n\n**If the callee has no device token**\n- `sendNotificationToUser` logs a warning, \"No active device tokens found\" (`fcm.service.ts:179-182`).\n- It returns `{ success: false }` and does not throw.\n- The caller at `in-call-notification.service.ts:100` ignores the return value. Execution continues to the SMS fallback (`:103-111`), which sends the missed-call text through Twilio to `calleePhoneNumber`. The callee still gets notified by SMS.\n\n**Failures that throw**\n- If Firebase isn't initialized, or the FCM send fails, `sendNotificationToUser` throws `BadRequestException('Failed to send notification')` (`fcm.service.ts:188-193`).\n- That exception skips the SMS, because it's caught and rethrown at `in-call-notification.service.ts:116-120`.",
+ "files": {
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34",
+  "src/websockets/in-call-websocket/services/in-call-notification.service.ts": "676f4575778ea04e8b946c799b889a1e5824e57e60b721565bf832b3376f73ad"
+ }
+}

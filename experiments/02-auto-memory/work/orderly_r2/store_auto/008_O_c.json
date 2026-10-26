@@ -1,0 +1,10 @@
+{
+ "seq": 8,
+ "label": "O_c",
+ "prompt": "When a restaurant re-sends an order that was already sent, who gets emailed? In particular, are the restaurant's order-email subscribers emailed again?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**No. On a resend, the restaurant's order-email subscribers are not emailed.** They only get the order email on the first finalize. I read the code and didn't run it.\n\n- `finalizeOrResend` checks whether the order already has a finished time (`RestaurantOrderService.java:176`). If it does, it calls `sendOrderEmail(order, false)` (line 182). A first-time finalize goes through `finalize`, which calls `sendOrderEmail(existingOrder, true)` (line 193).\n- In `sendOrderEmail`, both subscriber lookups (FoodOrder and BarOrder) are guarded by `includeSubscribers &&` (lines 201 and 207). With `false`, `subscriberEmails` stays empty. The method then calls `emailSender.send(currentUserEmail, subscriberEmails, order)` (line 213).\n\n**Who is emailed on a resend**\n- **The current user** gets the master order email, with the CSV attached. The code sends it to them at `RestaurantOrderV3EmailSender.java:57` and `:86-95`. The CC list is empty.\n- **Each supplier with items or samples** gets their own email. The code sends these in the loop at `RestaurantOrderV3EmailSender.java:59-62`. The recipients come from `getSupplierEmailLists` (line 103).\n- **Suppliers' SMS contacts** are also texted, as before.\n\nThe `ccEmails` argument is the only place subscribers appear in `RestaurantOrderV3EmailSender`. I only confirmed that for the master email, where it is used at line 93. I didn't read the rest of `sendBySupplier`, so I haven't ruled out another use there.",
+ "files": {
+  "SiftOrder/src/main/java/com/siftit/domain/ordering/RestaurantOrderService.java": "cfd23b8f690a10c1efb68f11b2c7dc267c26950c14dfb248ea8038305c26110c",
+  "SiftOrder/src/main/java/com/siftit/interactions/externalcommunication/RestaurantOrderV3EmailSender.java": "2eede109e6256e1636cbe5d53c6023bf90b461910b32f87650e6d33daa5afa97"
+ }
+}

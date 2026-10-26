@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 16069,
+ "stop_reason": "end_turn",
+ "session_id": "e64c24fd-c1a3-4d61-ad6b-fb64128227d1",
+ "total_cost_usd": 0.08203659999999999,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 13406,
+  "cache_read_input_tokens": 51726,
+  "output_tokens": 2322,
+  "output_tokens_details": {
+   "thinking_tokens": 53
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 13406,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 826,
+    "cache_read_input_tokens": 17839,
+    "cache_creation_input_tokens": 949,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 949
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2322,
+   "cacheReadInputTokens": 51726,
+   "cacheCreationInputTokens": 13406,
+   "webSearchRequests": 0,
+   "costUSD": 0.08203659999999999,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 53,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 10,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where the call goes**\n\nThe moderator suspend path is in `src/admin/admin.service.ts`. It has two methods, one per user type.\n\n- **Regular users:** `updateRegularUserStatusById` (`:306`). Add the push inside the existing `[SUSPENDED, DELETED]` block (`:376-391`), next to `sseService.notifyStatusChanged` (`:384`). Gate it with `if (statusUpdated === RegularUserStatus.SUSPENDED)`. Place it after `updateAndReturn` (`:371`) so the push only goes out once the status is saved.\n- **Verified users:** `updateVerifiedUserStatusById` (`:563`). Do the same in the block at `:668-683`, next to `notifyStatusChanged` (`:676`). Gate it with `statusUpdated === VerifiedUserStatus.SUSPENDED`.\n\n**Which method to call**\n\nCall `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` (`src/fcm/fcm.service.ts:172`). It looks up the user's active device token and returns `{success:false}` if there isn't one. Otherwise it delegates to `sendNotificationToToken` (`:234`).\n\n`sendKYCNotificationToUser` (`:203-214`) is a good model to copy. It calls `sendNotificationToUser` with `data: { event: EventTypes.KYC_PASSED }`.\n\n**Wiring still needed**\n\n- `AdminService` doesn't inject `FcmService` today. Its constructor is at `src/admin/admin.service.ts:60`, and the only push-related dependency is `SseService`.\n- `AdminModule` (`src/admin/admin.module.ts:15-25`) doesn't import `FcmModule`. Add it. Per the earlier-session notes, `FcmModule` exports `FcmService`. I didn't re-check that export.\n- `EventTypes` (`src/fcm/enums/event-types.enum.ts:1-6`) has no suspension value. Add one, such as `ACCOUNT_SUSPENDED = 'account_suspended'`. You could also add a `sendSuspendedNotificationToUser` wrapper in `fcm.service.ts`, like the KYC one.\n\n**Error handling**\n\n`sendNotificationToUser` throws `BadRequestException` on failure (`:193`). Wrap the call in try/catch, or don't await it, so a push failure doesn't fail the suspension.",
+ "ttft_ms": 1791,
+ "type": "result",
+ "duration_ms": 16639,
+ "uuid": "e6bc2515-2bbb-4e30-8565-dfc6469a5bb7",
+ "ttft_stream_ms": 1307,
+ "time_to_request_ms": 544,
+ "first_content_frame_ms": 1308,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_facts_04_M_b",
+ "_wall_s": 19.5,
+ "_variant": "facts",
+ "_seq": 4
+}

@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 65581,
+ "stop_reason": "end_turn",
+ "session_id": "9267babb-c994-40f7-af65-639237e4fd7a",
+ "total_cost_usd": 0.2455737,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 5473,
+  "cache_read_input_tokens": 136888,
+  "output_tokens": 2368,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 5473,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 893,
+    "cache_read_input_tokens": 37099,
+    "cache_creation_input_tokens": 1002,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1002
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 28,
+   "outputTokens": 8690,
+   "thinkingTokens": 304,
+   "cacheReadInputTokens": 305737,
+   "cacheCreationInputTokens": 32011,
+   "webSearchRequests": 0,
+   "costUSD": 0.2455737,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where the call goes**\n\nPut it in `ModerationService.makeDecision`, in `src/moderation/moderation.service.ts`. Add one call in each of two blocks, right after the existing `sseService.notifyStatusChanged(...)` call:\n\n- Regular users: after `:750-758`, inside the `if (decisionActionDto.regularAction)` block that starts at `:735`. The user id is `moderation.regularUserId`.\n- Verified users: after `:776-785`, inside the `if (decisionActionDto.verifiedAction)` block that starts at `:761`. The user id is `moderation.verifiedUserId`.\n\nBoth spots come after `suspendByModeration` has succeeded (`:739` and `:765`). The push therefore only goes out once the suspension is saved. `suspendByModeration` itself (`src/base/base-user.service.ts:307`) is shared by other code, so it isn't the right place.\n\n**Which method to call**\n\nCall `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` (`src/fcm/fcm.service.ts:172`). It looks up the user's device token and sends the push through `sendNotificationToToken` (`:234`). If the user has no token it logs a warning and returns `{ success: false }` (`:179-182`). Any other failure throws `BadRequestException` (`:193`).\n\nFor the payload, copy the pattern in `sendKYCNotificationToUser` (`:203-213`). It passes `data: { event: EventTypes.X }`. You'll probably want a new `EventTypes` value such as `ACCOUNT_SUSPENDED` in `src/fcm/enums/event-types.enum.ts:1-6`. You could also add a small wrapper like `sendSuspendedNotificationToUser` in `fcm.service.ts`, next to the KYC and missed-call wrappers (`:203`, `:326`).\n\n**Wiring needed**\n\n- `ModerationModule` doesn't import `FcmModule` (`src/moderation/moderation.module.ts:22-34`). Add it there. `FcmModule` already exports `FcmService` (`src/fcm/fcm.module.ts:12`).\n- Inject `FcmService` into the `ModerationService` constructor.\n- Wrap the push in its own try/catch, or don't await it. `sendNotificationToUser` throws on failure. Unguarded, a push error would land in `makeDecision`'s outer catch (`:831`) and fail the moderator's request after the suspension was already applied.\n- `moderation.service.spec.ts` will need an `FcmService` mock.\n\nI didn't touch the guest block at `:788`. The request only covers regular and verified users.",
+ "ttft_ms": 2528,
+ "type": "result",
+ "duration_ms": 18654,
+ "uuid": "d633ba73-fe3d-485b-9984-98e90b76a7ba",
+ "ttft_stream_ms": 1067,
+ "time_to_request_ms": 82,
+ "first_content_frame_ms": 1067,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "S_M_resume_2",
+ "_wall_s": 19.7,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_A_M"
+}

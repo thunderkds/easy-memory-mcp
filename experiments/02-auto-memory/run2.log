@@ -1,0 +1,104 @@
+repair: dropped memory 005_O_b.json (orderly_r1)
+repair: dropped memory 006_E_b.json (orderly_r1)
+repair: dropped memory 007_R_c.json (orderly_r1)
+repair: dropped memory 008_O_c.json (orderly_r1)
+repair: dropped memory 009_E_c.json (orderly_r1)
+repair: dropped memory 005_O_b.json (orderly_r2)
+repair: dropped memory 006_D_b.json (tapchat_r1)
+repair: dropped memory 006_D_b.json (tapchat_r2)
+repair: dropped memory 006_D_b.json (tapchat_r3)
+repair: dropped memory 007_M_c.json (tapchat_r1)
+repair: dropped memory 006_E_b.json (orderly_r2)
+repair: dropped memory 005_O_b.json (orderly_r3)
+repair: dropped memory 007_R_c.json (orderly_r2)
+repair: dropped memory 006_E_b.json (orderly_r3)
+repair: dropped memory 007_M_c.json (tapchat_r3)
+repair: dropped memory 007_M_c.json (tapchat_r2)
+repair: dropped memory 008_O_c.json (orderly_r2)
+repair: dropped memory 008_P_c.json (tapchat_r1)
+repair: dropped memory 008_P_c.json (tapchat_r3)
+repair: dropped memory 008_P_c.json (tapchat_r2)
+repair: dropped memory 007_R_c.json (orderly_r3)
+repair: dropped memory 009_E_c.json (orderly_r2)
+repair: dropped memory 009_D_c.json (tapchat_r1)
+repair: dropped memory 009_D_c.json (tapchat_r2)
+repair: dropped memory 008_O_c.json (orderly_r3)
+repair: dropped memory 009_D_c.json (tapchat_r3)
+repair: dropped memory 009_E_c.json (orderly_r3)
+repair: recopied unchanged repo_cold (tapchat_r2)
+repair: recopied unchanged repo_cold (tapchat_r3)
+repair: recopied unchanged repo_cold (tapchat_r1)
+repair: recopied unchanged repo_auto (tapchat_r1)
+repair: recopied unchanged repo_auto (tapchat_r2)
+repair: recopied unchanged repo_auto (tapchat_r3)
+repair: recopied unchanged repo_cold (orderly_r1)
+repair: recopied unchanged repo_cold (orderly_r2)
+repair: recopied unchanged repo_cold (orderly_r3)
+repair: recopied unchanged repo_auto (orderly_r1)
+repair: recopied unchanged repo_auto (orderly_r3)
+repair: recopied unchanged repo_auto (orderly_r2)
+done tapchat_r3_auto_06_D_b: in=16044 out=884 turns=2 err=False
+done tapchat_r2_auto_06_D_b: in=27010 out=1275 turns=4 err=False
+done tapchat_r3_cold_06_D_b: in=32307 out=1655 turns=7 err=False
+done orderly_r2_cold_05_O_b: in=79434 out=2610 turns=8 err=False
+done tapchat_r1_cold_05_P_b: in=155807 out=3543 turns=13 err=False
+done orderly_r3_cold_05_O_b: in=60219 out=2515 turns=8 err=False
+done orderly_r1_auto_05_O_b: in=87222 out=3209 turns=10 err=False
+done orderly_r3_auto_05_O_b: in=96168 out=3375 turns=12 err=False
+done tapchat_r2_auto_07_M_c: in=63829 out=2430 turns=7 err=False
+done orderly_r2_auto_05_O_b: in=135079 out=3277 turns=10 err=False
+done tapchat_r2_cold_07_M_c: in=166251 out=3633 turns=14 err=False
+done tapchat_r1_auto_06_D_b: in=27491 out=1005 turns=3 err=False
+done tapchat_r2_noflag_07_M_c: in=57430 out=2572 turns=7 err=False
+done tapchat_r1_cold_06_D_b: in=32687 out=1857 turns=7 err=False
+done tapchat_r3_auto_07_M_c: in=81529 out=2867 turns=9 err=False
+done tapchat_r3_cold_07_M_c: in=95834 out=3239 turns=10 err=False
+done tapchat_r3_noflag_07_M_c: in=87024 out=3209 turns=12 err=False
+done orderly_r1_cold_06_E_b: in=82437 out=2938 turns=9 err=False
+done orderly_r3_cold_06_E_b: in=81283 out=2236 turns=8 err=False
+done orderly_r1_auto_06_E_b: in=94409 out=3254 turns=10 err=False
+done orderly_r2_auto_06_E_b: in=30965 out=1850 turns=3 err=False
+done tapchat_r2_auto_08_P_c: in=46883 out=1728 turns=5 err=False
+done tapchat_r2_noflag_08_P_c: in=35395 out=1439 turns=4 err=False
+done orderly_r2_cold_06_E_b: in=58679 out=2447 turns=7 err=False
+done orderly_r3_auto_06_E_b: in=97756 out=3254 turns=9 err=False
+done tapchat_r2_cold_08_P_c: in=75919 out=2088 turns=8 err=False
+done tapchat_r1_auto_07_M_c: in=58080 out=2380 turns=8 err=False
+done tapchat_r1_cold_07_M_c: in=71198 out=2815 turns=10 err=False
+done tapchat_r3_auto_08_P_c: in=46692 out=1457 turns=5 err=False
+done tapchat_r1_noflag_07_M_c: in=55001 out=2268 turns=7 err=False
+done tapchat_r3_noflag_08_P_c: in=45446 out=1572 turns=4 err=False
+done orderly_r1_cold_07_R_c: in=70419 out=1782 turns=7 err=False
+done tapchat_r3_cold_08_P_c: in=109367 out=2434 turns=11 err=False
+done orderly_r1_auto_07_R_c: in=76155 out=2376 turns=7 err=False
+done orderly_r2_cold_07_R_c: in=83791 out=1955 turns=8 err=False
+done orderly_r2_auto_07_R_c: in=74848 out=1945 turns=6 err=False
+done orderly_r3_cold_07_R_c: in=65112 out=1744 turns=6 err=False
+done orderly_r1_noflag_07_R_c: in=75666 out=2425 turns=8 err=False
+done orderly_r2_noflag_07_R_c: in=77277 out=2201 turns=7 err=False
+done tapchat_r2_cold_09_D_c: in=25692 out=1098 turns=4 err=False
+done tapchat_r2_auto_09_D_c: in=29605 out=1117 turns=4 err=False
+done orderly_r3_noflag_07_R_c: in=59130 out=2224 turns=7 err=False
+done tapchat_r3_cold_09_D_c: in=25748 out=1013 turns=4 err=False
+done tapchat_r1_noflag_08_P_c: in=34600 out=1438 turns=4 err=False
+done orderly_r3_auto_07_R_c: in=150151 out=3248 turns=12 err=False
+done tapchat_r1_auto_08_P_c: in=47401 out=1816 turns=6 err=False
+done tapchat_r3_auto_09_D_c: in=27555 out=1458 turns=5 err=False
+done orderly_r1_cold_08_O_c: in=69430 out=1364 turns=6 err=False
+done tapchat_r1_cold_08_P_c: in=67985 out=2428 turns=10 err=False
+done orderly_r2_cold_08_O_c: in=44248 out=948 turns=4 err=False
+done orderly_r1_noflag_08_O_c: in=56793 out=1510 turns=6 err=False
+done orderly_r1_auto_08_O_c: in=56993 out=1225 turns=5 err=False
+done orderly_r2_auto_08_O_c: in=41846 out=1249 turns=4 err=False
+done orderly_r2_noflag_08_O_c: in=50515 out=1451 turns=5 err=False
+done orderly_r3_cold_08_O_c: in=56348 out=1395 turns=5 err=False
+done tapchat_r1_cold_09_D_c: in=26928 out=1102 turns=4 err=False
+done tapchat_r1_auto_09_D_c: in=32498 out=1142 turns=4 err=False
+done orderly_r3_auto_08_O_c: in=62499 out=1543 turns=6 err=False
+done orderly_r3_noflag_08_O_c: in=91389 out=1963 turns=7 err=False
+done orderly_r1_auto_09_E_c: in=92987 out=2638 turns=8 err=False
+done orderly_r2_cold_09_E_c: in=77241 out=2604 turns=9 err=False
+done orderly_r1_cold_09_E_c: in=117907 out=3170 turns=13 err=False
+done orderly_r2_auto_09_E_c: in=87207 out=3200 turns=10 err=False
+done orderly_r3_auto_09_E_c: in=64018 out=2583 turns=8 err=False
+done orderly_r3_cold_09_E_c: in=76708 out=2656 turns=10 err=False

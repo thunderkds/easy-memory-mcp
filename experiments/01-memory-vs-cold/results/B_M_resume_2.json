@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 67346,
+ "stop_reason": "end_turn",
+ "session_id": "726c39a8-9d1a-449c-9108-8c54ffc7881b",
+ "total_cost_usd": 0.2994565,
+ "usage": {
+  "input_tokens": 8,
+  "cache_creation_input_tokens": 18476,
+  "cache_read_input_tokens": 149696,
+  "output_tokens": 2427,
+  "output_tokens_details": {
+   "thinking_tokens": 50
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 18476,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 896,
+    "cache_read_input_tokens": 49623,
+    "cache_creation_input_tokens": 1481,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1481
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 28,
+   "outputTokens": 8749,
+   "thinkingTokens": 354,
+   "cacheReadInputTokens": 318545,
+   "cacheCreationInputTokens": 45014,
+   "webSearchRequests": 0,
+   "costUSD": 0.2994565,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where the call goes:** `ModerationService.makeDecision` in `src/moderation/moderation.service.ts`. Put one call in each of these two blocks, right after the existing `sseService.notifyStatusChanged(...)` call:\n- Regular user: `if (decisionActionDto.regularAction)`, after `:750-758`. Use `moderation.regularUserId`.\n- Verified user: `if (decisionActionDto.verifiedAction)`, after `:776-785`. Use `moderation.verifiedUserId`.\n\nDon't add it to the guest block (`:788-814`). Product only asked for regular and verified users, and guests don't have a device-token path here.\n\nPutting it right after the SSE call keeps the push next to the existing real-time notification. It also runs only after `suspendByModeration` has succeeded (`:739` and `:765`), so a failed suspension sends no push. Both user ids are also the ids the FCM device-token lookup uses (`src/fcm/fcm.service.ts:158`).\n\n**Which method to call:** `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` (`src/fcm/fcm.service.ts:172`).\n- It looks up the user's device token (`:177`) and returns `{ success: false }` if there is none (`:179-182`).\n- Other call sites already use it the same way, for example the KYC push at `:209-213`.\n\n**Wiring needed:**\n1. Inject `FcmService` into the `ModerationService` constructor (`moderation.service.ts:102-117`).\n2. Add `FcmModule` to the `imports` in `src/moderation/moderation.module.ts:22-34`. `FcmModule` already exports `FcmService` (`src/fcm/fcm.module.ts:12`).\n3. Add an event such as `USER_SUSPENDED = 'user_suspended'` to `EventTypes` (`src/fcm/enums/event-types.enum.ts:1-6`). There is no suspension event today.\n4. Optionally add a `sendSuspensionNotificationToUser` helper next to `sendKYCNotificationToUser` (`fcm.service.ts:203`), so `makeDecision` doesn't build the payload itself.\n\n**Failure handling:** `sendNotificationToUser` throws `BadRequestException` on failure (`fcm.service.ts:193`). The surrounding `try/catch` in `makeDecision` (`:829-834`) would turn that into a 500 and skip `moderationRepository.save` (`:816`). That would happen after the user was already suspended. Wrap each push in its own `try/catch` that only logs the error, as `in-call-notification.service.ts:100` may already do.",
+ "ttft_ms": 2882,
+ "type": "result",
+ "duration_ms": 21046,
+ "uuid": "8e46d20b-ce09-4dbc-9698-cb90bd0d981b",
+ "ttft_stream_ms": 1391,
+ "time_to_request_ms": 368,
+ "first_content_frame_ms": 1391,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "B_M_resume_2",
+ "_wall_s": 22.1,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_A_M"
+}

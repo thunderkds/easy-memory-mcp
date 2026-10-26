@@ -1,0 +1,11 @@
+{
+ "seq": 6,
+ "label": "D_b",
+ "prompt": "When a user logs out of the app, is their FCM device token removed on the server? If not, what removes it today, and where?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**No. Logging out does not remove the FCM token on the server.** I found no logout endpoint or handler anywhere in `src/`. A case-insensitive search for `logout` returned nothing, and the auth code never calls `FcmService`.\n\n**What removes a token today:**\n1. **The client calls `DELETE /fcm/unregister-token/:deviceId` explicitly.** The controller method is at `src/fcm/fcm.controller.ts:59-64`. It calls `FcmService.unregisterDeviceToken` (`src/fcm/fcm.service.ts:127`), which soft-deactivates the row by setting `isActive=false` and `deletedAt`. Nothing on the server triggers this, so it only happens if the app calls it during logout.\n2. **The same user registers a token again.** `registerDeviceToken` calls `unregisterAllDeviceTokens(userId)` at `src/fcm/fcm.service.ts:102`. The method is defined at `:146`. It deactivates all of that user's earlier tokens.\n\n**What doesn't clean up:** `removeInvalidTokens` (`src/fcm/fcm.service.ts:283`) is private and has no callers. Only its spec references it (`src/fcm/fcm.service.spec.ts:570-584`). A token that FCM rejects as invalid or expired is never removed.\n\n**Consequence:** if the app doesn't call unregister on logout, the token stays active. Pushes such as incoming-call or missed-call keep going to that device until the same user registers again.\n\nThe one case I haven't covered is a different user logging in on the same device. Their registration only deactivates their own old tokens (it filters by `userId`), so the previous user's token would stay active.",
+ "files": {
+  "src/fcm/fcm.controller.ts": "4c4603247693d8360f782980a7ed8cea4a410dadbd39bdaf87a93ff1bdabfb37",
+  "src/fcm/fcm.service.spec.ts": "3e34f9b3d6c9877561f954ad9c2f3a2c7805d705501c62c645b55ebd35543637",
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34"
+ }
+}

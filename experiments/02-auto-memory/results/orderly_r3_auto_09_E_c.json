@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 18484,
+ "stop_reason": "end_turn",
+ "session_id": "a400d7eb-b4a0-478a-bda8-8928ce826546",
+ "total_cost_usd": 0.0800882,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 12266,
+  "cache_read_input_tokens": 51742,
+  "output_tokens": 2583,
+  "output_tokens_details": {
+   "thinking_tokens": 61
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 12266,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1226,
+    "cache_read_input_tokens": 15822,
+    "cache_creation_input_tokens": 1777,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1777
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2583,
+   "cacheReadInputTokens": 51742,
+   "cacheCreationInputTokens": 12266,
+   "webSearchRequests": 0,
+   "costUSD": 0.0800882,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 61,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Yes, partly.** The admin app's Invoice Emails page (`invoiceEmails.component.ts:67`) shows failed inbound invoice emails, but only those that produced a DB record with errors. Failures that leave no record never appear.\n\n**Endpoint**\n- `GET /data/admin/emailReceiving/invoice/errors/{start}/{end}` returns the failures (`AdminEmailReceivingWebService.java:30-35`). The UI calls it from `EmailReceivingRepo.service.ts:11`.\n- It calls `InvoiceEmailService.getErrors` (`InvoiceEmailService.java:243-244`), which runs `findAnyWithErrors`.\n- Each record includes the S3 key, the `errors` list, the attachments and the local part.\n- The UI can also download the raw `.eml` file through `/download/{key}` (`AdminEmailReceivingWebService.java:51-56`).\n- Other admin endpoints:\n  - `/invoice/rest/{restId}/{start}/{end}` lists records for one restaurant.\n  - `/invoice/{prefix}/{nextToken}` lists raw S3 files under a prefix.\n  - The UI service has no call for the prefix endpoint, so I couldn't confirm it is reachable from the admin UI.\n\n**How it decides an email failed**\n- The query is `length(e.errors) > 1` within a created-time range (`InternalEmailReceivingRecordRepository.java:14`).\n- A record counts as failed if its joined `errors` string is non-empty.\n- The `errors` list is filled in `handleEmail`, and the record is saved at `InvoiceEmailService.java:166`.\n- The error causes it records are:\n  - Recipient resolution errors (`:110`).\n  - The restaurant is inactive (`:125`).\n  - No supplier mapping for a text attachment (`:138`).\n  - An attachment that is not an image or text file (`:141`).\n  - An exception while saving an attachment (`:144`).\n  - An unknown restaurant ID (`:160`).\n  - No address that looks like ours (`:163`).\n\n**Failures missing from it**\n- **Unparsable MIME:** `UnparsableMessageException` is caught at `:181-183`. The file is moved to `unparsable/` and only logged, so no record is saved.\n- **Any other exception:** `handleEmail` rethrows at `:167-170`, and `:184-186` only logs it. No record is saved, and the file stays in `invoices/` and is retried on every run. You can see it only through the raw-prefix endpoint (`AdminEmailReceivingWebService.java:24-28`) with prefix `invoices`.\n- **Dev environment:** `handleUnparsedEmails` returns immediately in dev (`:91-93`), so nothing is processed or recorded there.\n- **Silently dropped attachments:** `allAttachmentNames` only holds attachments the parser returned (`:115-118`). One dropped earlier by `EmailAttachmentExtractor`, such as a small image or a signature file, never gets an error. I know this from a previous session's notes and didn't re-check it here.\n- **Never delivered:** an email that never reached S3 has no record in this code.\n- **Swallowed lookup errors:** `getRestaurantFromAddresses` swallows lookup exceptions (`:200-202`). Those cases show up as \"not a known rest id\", not as the real error.\n- **Error overwritten when the restaurant doesn't resolve:** the attachment loop does nothing when no restaurant is found (`:119`). The record then lists the attachments but `attachmentsMoved` is empty, with only the \"unknown\" or \"no local part\" error.",
+ "ttft_ms": 1789,
+ "type": "result",
+ "duration_ms": 18772,
+ "uuid": "bed91b11-f887-480e-b456-edc21614c453",
+ "ttft_stream_ms": 1078,
+ "time_to_request_ms": 190,
+ "first_content_frame_ms": 1078,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r3_auto_09_E_c",
+ "_wall_s": 19.9,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/orderly_r3/repo_auto",
+ "_mode": "auto",
+ "_seq": 9
+}

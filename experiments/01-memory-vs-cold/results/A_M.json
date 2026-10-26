@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 47042,
+ "stop_reason": "end_turn",
+ "session_id": "29543d94-03fd-58d4-8cdd-f67da3478a56",
+ "total_cost_usd": 0.18629690000000002,
+ "usage": {
+  "input_tokens": 20,
+  "cache_creation_input_tokens": 26538,
+  "cache_read_input_tokens": 168849,
+  "output_tokens": 6322,
+  "output_tokens_details": {
+   "thinking_tokens": 304
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 26538,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1832,
+    "cache_read_input_tokens": 29738,
+    "cache_creation_input_tokens": 942,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 942
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 20,
+   "outputTokens": 6322,
+   "cacheReadInputTokens": 168849,
+   "cacheCreationInputTokens": 26538,
+   "webSearchRequests": 0,
+   "costUSD": 0.18629690000000002,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 304,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 21,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Suspension after a moderator decision**\n\n1. The moderator calls the decision endpoint, `updateModerationDecision`. It passes the moderation id, the `DecisionActionDto` and the moderator's id to `makeDecision` (`src/moderation/moderation.controller.ts:107-116`).\n2. `makeDecision` writes `decision`, `decisionAt` and `decisionBy` onto the moderation record (`src/moderation/moderation.service.ts:731-733`). It then branches on the action fields in the DTO:\n   - `regularAction` calls `regularUsersService.suspendByModeration` (`:735-739`).\n   - `verifiedAction` calls `verifiedUsersService.suspendByModeration` (`:761-765`).\n   - `guestAction` calls `guestsService.suspendGuest` (`:788-792`).\n3. For regular and verified users, `suspendByModeration` is shared in `src/base/base-user.service.ts:307-332`.\n   - It sets `status='suspended'`, `suspendedType` and `suspendedRefId` (the moderation case).\n   - For `SUSPEND_24H` it sets `suspendedAt = new Date()` (`:318-324`).\n   - For a plain `SUSPEND` it sets `suspendedAt = null` (`:326-331`).\n4. Guests are handled in `src/guests/guests.service.ts:216-237`. It sets `GuestStatus.SUSPENDED` and stores `suspendedAt`, which is null for a permanent suspension.\n5. `makeDecision` also stores a description such as \"suspended for 24 hours\" on the moderation record (`moderation.service.ts:745-748`). The decision is then written to the activity log (`:819`).\n\n**Lifting the suspension automatically**\n\n6. `JobsService` sets up a cron job (`src/jobs/jobs.service.ts:160-169`, called from `:36`). It only runs if `RESTORE_SUSPENDED_USERS_CRON_JOB_SCHEDULE_ENABLED` is true. The default is false. The schedule comes from `RESTORE_SUSPENDED_USERS_CRON_JOB_SCHEDULE` and defaults to daily at 2am.\n7. `handleRestoreSuspendedUsers` (`jobs.service.ts:537`) reads `RESTORE_SUSPENDED_USERS_AFTER_DAYS` (default 1). It then loads the suspended users older than that (`:546-554`):\n   - Regular users come from `getSuspendedUsersExceedNumberOfDays` (`src/regular-users/regular-users.service.ts:411-429`).\n   - Verified users come from the matching method in `src/verified-users/verified-users.service.ts` (around `:723`).\n   - Both query `status = SUSPENDED AND suspendedAt < cutoff`. A `NULL` `suspendedAt` never matches, so permanent suspensions are not lifted.\n8. The job calls `restoreSuspendedUserByPhoneNumber` for each user (`jobs.service.ts:564-575`). That sets `status=ACTIVE` and clears the `suspended*` fields (`regular-users.service.ts:372-385`). The verified-user version is at `verified-users.service.ts:670`.\n9. The job does not touch guests. I found no code that restores them.\n\n**Lifting the suspension through an appeal**\n\n10. An admin calls the appeals controller, which delegates to `appealsService.updateStatus(id, status)` (`src/appeals/appeals.controller.ts:134-138`).\n11. If the status is `APPROVED`, `updateStatus` calls `restoreSuspendedUserByPhoneNumber` (`src/appeals/appeals.service.ts:110-114`). That method tries `verifiedUsersService` first and falls back to `regularUsersService`, matching on the appellant's phone number (`:172-197`). Both do the same restore as step 8.\n12. If the restore fails, the appeal is recorded as `DENIED` and the call returns `success: false` (`:115-124`). Otherwise `makeDecision` saves the appeal status (`:130`, defined at `:151`).\n\n**NOTES FOR LATER**\n- Restore by phone number only handles verified and regular users: `src/appeals/appeals.service.ts:172-197`.\n- Guests can be suspended but never restored, either by the cron job or by an appeal: `src/guests/guests.service.ts:216`.\n- The auto-restore cron is off unless `RESTORE_SUSPENDED_USERS_CRON_JOB_SCHEDULE_ENABLED=true`: `src/jobs/jobs.service.ts:163`.\n- Lifting a suspension uses a day-granularity threshold (`RESTORE_SUSPENDED_USERS_AFTER_DAYS`), not an exact 24h: `src/jobs/jobs.service.ts:538`.\n- Admin status updates also set or clear the `suspended*` fields, and set `suspendedAt` to null: `src/admin/admin.service.ts:355-368`.\n- The restore methods pass `undefined` rather than `null` to TypeORM `update`, which skips those columns, so the `suspended*` fields may not actually be cleared. I haven't verified this: `src/regular-users/regular-users.service.ts:380-383`.\n- Suspension state changes are broadcast over SSE: `src/sse/sse.service.ts:179`.",
+ "ttft_ms": 2874,
+ "type": "result",
+ "duration_ms": 48104,
+ "uuid": "2e3562ed-6af9-4528-9579-1a9831bf37ac",
+ "ttft_stream_ms": 1787,
+ "time_to_request_ms": 955,
+ "first_content_frame_ms": 1787,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "A_M",
+ "_wall_s": 49.2,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_A_M"
+}

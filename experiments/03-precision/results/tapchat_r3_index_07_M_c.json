@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 23464,
+ "stop_reason": "end_turn",
+ "session_id": "424508fb-b662-4c4d-acc1-ba170437228a",
+ "total_cost_usd": 0.0856889,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 12519,
+  "cache_read_input_tokens": 47229,
+  "output_tokens": 3087,
+  "output_tokens_details": {
+   "thinking_tokens": 279
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 12519,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1349,
+    "cache_read_input_tokens": 14098,
+    "cache_creation_input_tokens": 3280,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 3280
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 3087,
+   "cacheReadInputTokens": 47229,
+   "cacheCreationInputTokens": 12519,
+   "webSearchRequests": 0,
+   "costUSD": 0.0856889,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 279,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**No. Nothing today restores a suspended guest, either automatically or through an appeal.**\n\n**Guest suspension:**\n- `ModerationService.makeDecision` calls `guestsService.suspendGuest` at `src/moderation/moderation.service.ts:792`.\n- `suspendGuest` (`src/guests/guests.service.ts:216-236`) sets `status = SUSPENDED` plus `suspendedAt`, `suspendedType` and `suspendedRefId`.\n- A permanent suspension has `suspendedAt = null`.\n- `GuestsService` has no method that sets the status back to `ACTIVE`. The only `GuestStatus.ACTIVE` assignment is at creation (`guests.service.ts:48`).\n\n**Methods that restore suspended users today (regular and verified only):**\n- `RegularUsersService.liftSuspensionByPhoneNumber` (`src/regular-users/regular-users.service.ts:372`) sets the status to `ACTIVE` and clears the suspend fields.\n- `VerifiedUsersService.liftSuspensionByPhoneNumber` (`src/verified-users/verified-users.service.ts`, doc comment at `:666`) is the verified-user equivalent. I didn't read its body.\n- `AppealsService.liftSuspensionByPhoneNumber` (`src/appeals/appeals.service.ts:172`) is the appeal path. It looks up a verified user, then a regular user, by phone number (`:176-199`). If neither exists it returns \"Appellant phone number not found\" (`:201-204`). It is called from `updateStatus` when the status is `APPROVED` (`:110-114`). If it fails, the appeal is set to `DENIED` (`:119`).\n- `JobsService.handleRestoreSuspendedUsers` (`src/jobs/jobs.service.ts:537`) is the cron path.\n  - It fetches regular and verified users with `getSuspendedUsersExceedNumberOfDays` (`:547-554`). That method is at `regular-users.service.ts:411` and `verified-users.service.ts:709`.\n  - It then calls each service's `liftSuspensionByPhoneNumber` (`:566`, `:571`).\n  - Guests are never fetched, and permanent suspensions (null `suspendedAt`) never match.\n- `AdminService` status updates (`src/admin/admin.service.ts:317-367` for regular users, `:574-` for verified users) can move a user out of `SUSPENDED` manually and clear the suspend fields. I only read the regular-user branch. I saw no guest equivalent.\n\n**Where guest restore would have to be added:**\n1. **Guest service:** add `liftSuspension(guestId)` next to `suspendGuest` in `src/guests/guests.service.ts:216`. It should set `GuestStatus.ACTIVE` and clear `suspendedAt`, `suspendedType` and `suspendedRefId`.\n2. **Cron:** add a `getSuspendedGuestsExceedNumberOfDays` query to the guest service. Call it and the new method from `handleRestoreSuspendedUsers` (`jobs.service.ts:546-575`), and extend the \"nothing to restore\" check at `:556`.\n3. **Appeals:** `AppealsService.liftSuspensionByPhoneNumber` (`appeals.service.ts:172-204`) is keyed on phone number. I didn't check whether the guest entity has a phone number or what the appeal form collects. If it doesn't, the appeal flow would need a guest identifier, such as a guest ID, in the appeal data. Then add a guest branch after the regular-user branch at `:199`.",
+ "ttft_ms": 2950,
+ "type": "result",
+ "duration_ms": 23848,
+ "uuid": "89f6c036-45e5-4e73-81f2-bdc613d7b07a",
+ "ttft_stream_ms": 2405,
+ "time_to_request_ms": 325,
+ "first_content_frame_ms": 2405,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_index_07_M_c",
+ "_wall_s": 47.9,
+ "_variant": "index",
+ "_seq": 7
+}

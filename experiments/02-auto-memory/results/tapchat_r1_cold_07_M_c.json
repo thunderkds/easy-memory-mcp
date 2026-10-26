@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 19880,
+ "stop_reason": "end_turn",
+ "session_id": "d5f42763-5b5f-4a51-a4dc-84b93d19551b",
+ "total_cost_usd": 0.10310980000000002,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 17390,
+  "cache_read_input_tokens": 53798,
+  "output_tokens": 2815,
+  "output_tokens_details": {
+   "thinking_tokens": 33
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 17390,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1425,
+    "cache_read_input_tokens": 19219,
+    "cache_creation_input_tokens": 3517,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 3517
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2815,
+   "cacheReadInputTokens": 53798,
+   "cacheCreationInputTokens": 17390,
+   "webSearchRequests": 0,
+   "costUSD": 0.10310980000000002,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 33,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 10,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**No. Today a suspended guest can't be restored, either automatically or by appeal.** Guests can only be suspended, and nothing in the code lifts that.\n\n**What suspends a guest**\n- `GuestsService.suspendGuest` (`src/guests/guests.service.ts:216-239`) sets `status = SUSPENDED` plus `suspendedAt`, `suspendedType` and `suspendedRefId`. For a permanent suspension it sets `suspendedAt` to null.\n- The moderation decision calls it at `src/moderation/moderation.service.ts:788-810`.\n- The guest entity has `suspendedAt`, `suspendedType` and `suspendedRefId` (`src/guests/entities/guest.entity.ts:78-87`). It has no `suspendedReason` field.\n\n**Methods that restore suspended users today (regular and verified only)**\n- `RegularUsersService.liftSuspensionByPhoneNumber` (`src/regular-users/regular-users.service.ts:372`) sets the status back to `ACTIVE` and clears the suspension fields.\n- `VerifiedUsersService.liftSuspensionByPhoneNumber` (`src/verified-users/verified-users.service.ts:670`) does the same for verified users.\n- `getSuspendedUsersExceedNumberOfDays` finds users whose suspension is old enough. The regular version is at `regular-users.service.ts:411` and the verified one at `verified-users.service.ts:709`.\n- `JobsService.handleRestoreSuspendedUsers` (`src/jobs/jobs.service.ts:537-584`) is the automatic route. It uses the two finder methods above, then calls the two lift methods. It's scheduled at `jobs.service.ts:160-190` and only runs when `RESTORE_SUSPENDED_USERS_CRON_JOB_SCHEDULE_ENABLED=true`. The age cutoff is `RESTORE_SUSPENDED_USERS_AFTER_DAYS`, which defaults to 1.\n- `AppealsService.liftSuspensionByPhoneNumber` (`src/appeals/appeals.service.ts:172-195`) is the appeal route. `updateStatus` calls it at `:110-112` when an appeal is approved. It looks the user up by phone number, first among verified users and then among regular users (`:177-192`). There is no guest branch, and guests aren't looked up by phone number anyway.\n- The admin status update (`src/admin/admin.service.ts:355-367` for regular users, `:629-641` for verified users) clears the suspension fields when an admin moves a user out of suspended. This is a manual route, and it also has no guest equivalent.\n\n**Where guest restore would have to be added**\n1. **`src/guests/guests.service.ts`**\n   - Add a `liftSuspension(guestId)` method next to `suspendGuest`. It would set the status to `ACTIVE` and null out `suspendedAt`, `suspendedType` and `suspendedRefId`.\n   - Add a `getSuspendedGuestsExceedNumberOfDays` finder.\n   - Guests have no phone number, so lookups have to be by guest id or device id.\n2. **`src/jobs/jobs.service.ts:546-575`**\n   - Add the guest finder and lift calls to `handleRestoreSuspendedUsers`.\n   - Inject `GuestsService` into `JobsService` and import `GuestsModule` in the jobs module.\n   - The early return at `:556` also has to count suspended guests.\n3. **Appeals (`src/appeals/appeals.service.ts:172`)**\n   - The appeal is keyed on the appellant's email or phone number, and a guest has neither.\n   - You'd need to link an appeal to a guest id, then add a guest branch in `liftSuspensionByPhoneNumber` and in the approval path at `:110`.\n4. **`src/admin/admin.service.ts`**: add an admin endpoint to lift a guest's suspension manually.\n\nA permanent guest suspension has `suspendedAt` set to null (`guests.service.ts:233`). The age-based finder would skip those, as it does for regular users (`regular-users.service.ts:425`). They would only be restorable by appeal or by an admin.",
+ "ttft_ms": 1906,
+ "type": "result",
+ "duration_ms": 20064,
+ "uuid": "706c7647-ee8c-4da8-a66d-8bb7c8da989d",
+ "ttft_stream_ms": 909,
+ "time_to_request_ms": 107,
+ "first_content_frame_ms": 909,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r1_cold_07_M_c",
+ "_wall_s": 31.4,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r1/repo_cold",
+ "_mode": "off",
+ "_seq": 7
+}

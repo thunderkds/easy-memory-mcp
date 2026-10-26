@@ -1,0 +1,113 @@
+{
+ "duration_api_ms": 13632,
+ "stop_reason": "end_turn",
+ "session_id": "20014f39-eb4b-408b-b948-eb404448cdc4",
+ "total_cost_usd": 0.0466641,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 6325,
+  "cache_read_input_tokens": 38041,
+  "output_tokens": 1754,
+  "output_tokens_details": {
+   "thinking_tokens": 126
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 6325,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 620,
+    "cache_read_input_tokens": 10506,
+    "cache_creation_input_tokens": 678,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 678
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 1754,
+   "cacheReadInputTokens": 38041,
+   "cacheCreationInputTokens": 6325,
+   "webSearchRequests": 0,
+   "costUSD": 0.0466641,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 126,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [
+  {
+   "tool_name": "Read",
+   "tool_use_id": "toolu_01MrLrfe9F8yn5AGXm92xKTX",
+   "tool_input": {
+    "file_path": "/home/hungnguyen/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/03-precision/work/tapchat_r1_index/repo/src/fcm/fcm.service.ts",
+    "offset": 230,
+    "limit": 130
+   }
+  }
+ ],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 6,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**How the push is sent**\n\n- When the call isn't answered, `calling-status.handler.ts:138-139` calls `notificationService.sendMissedCallNotifications(...)`.\n- That method (`in-call-notification.service.ts:93-100`) first calls `fcmService.sendMissedCallNotificationToUser(calleeId)`. It then sends an SMS through Twilio with the app link (`:108-111`).\n- `sendMissedCallNotificationToUser` (`fcm.service.ts:326-334`) calls `sendNotificationToUser` with a data-only payload, `{ event: EventTypes.MISSED_CALL }`. The enum value is `'missed_call'` (`src/fcm/enums/event-types.enum.ts:3`).\n- `sendNotificationToUser` (`fcm.service.ts:172-187`) looks up the user's active device token and passes it to `sendNotificationToToken`. That method (`:234-260`) sends it with `firebaseApp.messaging().send({ token, data })`.\n\n**If the callee has no device token**\n\n- `sendNotificationToUser` logs a warning, \"No active device tokens found\", and returns `{ success: false }` (`fcm.service.ts:179-182`). It doesn't throw.\n- `sendMissedCallNotifications` ignores that return value (`in-call-notification.service.ts:100`). It carries on to the SMS and logs \"Missed call notifications sent\" (`:108-115`). So the SMS is still the fallback, and the log line is misleading because no push went out.\n- Real FCM failures behave differently. `sendNotificationToUser` rethrows them as `BadRequestException` (`fcm.service.ts:188-193`). `sendMissedCallNotifications` logs and rethrows (`in-call-notification.service.ts:116-120`), so the SMS is skipped in that case.",
+ "ttft_ms": 2155,
+ "type": "result",
+ "duration_ms": 13917,
+ "uuid": "ec111669-ce06-4ac4-aceb-e49bde91d42e",
+ "ttft_stream_ms": 921,
+ "time_to_request_ms": 150,
+ "first_content_frame_ms": 921,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r1_index_09_D_c",
+ "_wall_s": 35.1,
+ "_variant": "index",
+ "_seq": 9
+}

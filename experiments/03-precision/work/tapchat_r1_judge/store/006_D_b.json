@@ -1,0 +1,12 @@
+{
+ "seq": 6,
+ "label": "D_b",
+ "prompt": "When a user logs out of the app, is their FCM device token removed on the server? If not, what removes it today, and where?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "**No. The server has no logout handler, and nothing in the backend removes the token on logout.**\n\n- **No logout endpoint:** `src/auth/auth.controller.ts` has no logout route. Its routes are `signup` (58), `guest/signin` (168), `me` (233), the admin password and email routes, `sync-user-status` (429) and `last-activity` (479). A search for \"logout\" or \"signout\" across `src` finds nothing.\n- **Nothing in `AuthService` removes the token:** `src/auth/auth.service.ts` only reads tokens, through `getDeviceTokenByUserId` at lines 230, 273 and 501.\n\n**What removes a token today**\n1. **Client-called unregister:** `DELETE unregister-token/:deviceId` at `src/fcm/fcm.controller.ts:51-65` calls `FcmService.unregisterDeviceToken` (`src/fcm/fcm.service.ts:127-138`). That soft-deletes the row by setting `isActive=false` and `deletedAt`. It only runs if the app calls it on logout, and I couldn't check the app from this repo.\n2. **Re-registration:** `registerDeviceToken` (`src/fcm/fcm.service.ts:96-103`) calls `unregisterAllDeviceTokens` (146-150) when the user already has a token. This soft-deletes all of that user's old tokens, so a user only ever has one active token. A token from a logged-out user stays active until that same user registers again. If someone else logs in on the same device, the previous user's token is not touched.\n\n**Dead code:** `removeInvalidTokens` (`src/fcm/fcm.service.ts:283-285`) would hard-delete tokens by `fcmToken`. Nothing calls it, so tokens that FCM rejects as invalid are never cleaned up.",
+ "files": {
+  "src/auth/auth.controller.ts": "585daf525441e50d73955279774ef4c7da045c180e19f4b12754c5f06bba842a",
+  "src/auth/auth.service.ts": "5df7027a82db2a76ed2de29cf16977e7fb735bb301c1a5a873df422105bc0bc7",
+  "src/fcm/fcm.controller.ts": "4c4603247693d8360f782980a7ed8cea4a410dadbd39bdaf87a93ff1bdabfb37",
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34"
+ }
+}

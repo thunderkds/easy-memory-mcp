@@ -1,0 +1,14 @@
+{
+ "seq": 4,
+ "label": "M_b",
+ "prompt": "Product wants a push notification sent to a regular or verified user when a moderator suspends them. Where exactly should the call go, and which existing method should it call to send the push?\n\nDo not edit files. Answer concisely with file:line references.",
+ "answer": "The push should go in the two admin status-update methods in `src/admin/admin.service.ts`. Both call `FcmService.sendNotificationToUser`.\n\n**Where the call goes**\n- **Regular users:** `updateRegularUserStatusById`. Put it inside the existing `SUSPENDED`/`DELETED` block at `src/admin/admin.service.ts:376-391`, right after `sseService.notifyStatusChanged` (`:384`). Guard it with `statusUpdated === RegularUserStatus.SUSPENDED`, the same check used at `:387`.\n- **Verified users:** `updateVerifiedUserStatusById`. Put it in the matching block at `src/admin/admin.service.ts:668-683`, after `notifyStatusChanged` (`:676`). Guard it with `statusUpdated === VerifiedUserStatus.SUSPENDED`, as at `:679`.\n- **Placement:** both spots run after `updateAndReturn` (`:371` and `:663`), so the push only fires once the suspension is saved.\n\n**Which method to call**\n- Call `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` at `src/fcm/fcm.service.ts:172`.\n- It looks up the user's device token and sends via `sendNotificationToToken` (`:234`).\n- `sendKYCNotificationToUser` (`:203`) is a good model for the payload shape.\n\n**Other changes needed**\n- **Module import:** `AdminService` doesn't have `FcmService` yet. Add `FcmModule` to the imports in `src/admin/admin.module.ts:16-25`. `FcmModule` already exports `FcmService` (`src/fcm/fcm.module.ts:12`). Then inject `FcmService` into the `AdminService` constructor.\n- **Event type:** `src/fcm/enums/event-types.enum.ts:1-6` has no suspension event. Add one, for example `ACCOUNT_SUSPENDED = 'account_suspended'`.\n- **Failure handling:** `sendNotificationToUser` throws a `BadRequestException` on failure (`:193`). A failed push shouldn't make the suspension request fail, so wrap the call in a try/catch that logs the error. Alternatively, don't await it.\n- **Tests:** `src/admin/admin.service.spec.ts` will need an `FcmService` mock.",
+ "files": {
+  "src/admin/admin.module.ts": "dc0c8a6d32e1d7b36b5b2bd2d4b0d23913476ff0d71ee6c998a59b7a94772682",
+  "src/admin/admin.service.spec.ts": "aa8b0b8e60156192b0a199374706a9506b94a71fca14edaa8ae3344f54ca18ad",
+  "src/admin/admin.service.ts": "6b8f7f4ccdb059fc002a36bec979e0a36e6b0cd15e1fbd19d9346e7335999930",
+  "src/fcm/enums/event-types.enum.ts": "e9c86b7403fc3c1b8e40a2c2b4df2365ef23c9f12c47625cb245b78081ee1eac",
+  "src/fcm/fcm.module.ts": "800b6f9a5b34030b045997f2ba9bb6cd3084aea9d966639278bf4a1c640af625",
+  "src/fcm/fcm.service.ts": "ce25763779d8dae3237652912d81eb2c61486497716c89f2d7a22041b5b94c34"
+ }
+}

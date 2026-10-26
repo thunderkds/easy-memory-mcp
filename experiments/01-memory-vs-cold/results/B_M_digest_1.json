@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 19454,
+ "stop_reason": "end_turn",
+ "session_id": "2509bb87-712e-4827-9aaa-47d0d09a1a03",
+ "total_cost_usd": 0.07225110000000001,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 10311,
+  "cache_read_input_tokens": 47471,
+  "output_tokens": 2624,
+  "output_tokens_details": {
+   "thinking_tokens": 29
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 10311,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 848,
+    "cache_read_input_tokens": 14041,
+    "cache_creation_input_tokens": 412,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 412
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2624,
+   "cacheReadInputTokens": 47471,
+   "cacheCreationInputTokens": 10311,
+   "webSearchRequests": 0,
+   "costUSD": 0.07225110000000001,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 29,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where to put the call:** `makeDecision` in `src/moderation/moderation.service.ts`. Add one call in each of two blocks, right after the existing `this.sseService.notifyStatusChanged(...)`:\n- Regular users: after `:750-758`, inside `if (decisionActionDto.regularAction)`, using `moderation.regularUserId`.\n- Verified users: after `:776-785`, inside `if (decisionActionDto.verifiedAction)`, using `moderation.verifiedUserId`.\n\nDon't use the guest block at `:788`. Product only asked for regular and verified users.\n\nDon't put it in the shared `suspendByModeration` (`src/base/base-user.service.ts:307-332`). The admin status update and the appeal restore also touch suspension state, so a push there would fire for non-moderator suspensions. The SSE status broadcast is already sent from `makeDecision`, so the push belongs next to it.\n\n**Which method to call:** `FcmService.sendNotificationToUser(userId, { data: {...} })` at `src/fcm/fcm.service.ts:172`.\n- It looks up the user's device token and sends to it.\n- It returns `{ success: false }` if the user has no token.\n- It throws `BadRequestException` on failure.\n- `SendNotificationDto` (`src/fcm/dtos/send-notification.dto.ts:3-6`) only has a required `data: object`.\n\n**Wiring needed:**\n- `ModerationService` doesn't inject `FcmService` yet. Add it to the constructor (`moderation.service.ts:102-117`).\n- Add `FcmModule` to the imports in `src/moderation/moderation.module.ts:22-34`. `FcmModule` already exports `FcmService` (`src/fcm/fcm.module.ts:12`).\n\n**Failure handling:** wrap each push in its own try/catch, or don't await it. `makeDecision` has an outer `try` at `:726`, so a thrown push error would fail the whole decision even though the suspension was already applied.\n\n**Related methods:** other FCM sends are purpose-built, like `sendKYCNotificationToUser` (`fcm.service.ts:203`) and `sendMissedCallNotificationToUser`. There's no suspension-specific one. You could add `sendSuspensionNotificationToUser` in the same style, or call the generic `sendNotificationToUser` directly. I didn't open the KYC method, so I don't know what `data` shape it builds or what the mobile client expects for suspension. Check that before choosing the payload.",
+ "ttft_ms": 1479,
+ "type": "result",
+ "duration_ms": 19616,
+ "uuid": "32db0740-3d30-4e05-b680-176f4eaecd15",
+ "ttft_stream_ms": 931,
+ "time_to_request_ms": 114,
+ "first_content_frame_ms": 931,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "B_M_digest_1",
+ "_wall_s": 20.8,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_clean"
+}

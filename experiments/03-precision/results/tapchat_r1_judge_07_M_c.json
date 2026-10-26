@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 18035,
+ "stop_reason": "end_turn",
+ "session_id": "fc191a0e-65f1-4e15-9898-1222b3da7606",
+ "total_cost_usd": 0.0658929,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 9938,
+  "cache_read_input_tokens": 48409,
+  "output_tokens": 2128,
+  "output_tokens_details": {
+   "thinking_tokens": 139
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 9938,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1010,
+    "cache_read_input_tokens": 15083,
+    "cache_creation_input_tokens": 251,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 251
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2128,
+   "cacheReadInputTokens": 48409,
+   "cacheCreationInputTokens": 9938,
+   "webSearchRequests": 0,
+   "costUSD": 0.0658929,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 139,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 7,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "No. Today a suspended guest can't be restored, either automatically or through an appeal. I checked this against the current code. The memory notes were stale on the method names: the restore methods are now called `liftSuspensionByPhoneNumber`, not `restoreSuspendedUserByPhoneNumber`.\n\n**Methods that restore suspended users today**\n- `RegularUsersService.liftSuspensionByPhoneNumber` at `src/regular-users/regular-users.service.ts:372`.\n- `VerifiedUsersService.liftSuspensionByPhoneNumber` at `src/verified-users/verified-users.service.ts:670`.\n- `AppealsService.liftSuspensionByPhoneNumber` at `src/appeals/appeals.service.ts:172`. It is a wrapper that tries a verified user and then a regular user, both by phone number (`:176-199`). `updateStatus` calls it on `APPROVED` (`:110-112`). If nothing matches, it returns \"not found\" and the appeal is forced to `DENIED` (`:119`).\n- `JobsService.handleRestoreSuspendedUsers` at `src/jobs/jobs.service.ts:537`. This is the cron job. It uses `getSuspendedUsersExceedNumberOfDays` for regular and verified users only (`:546-554`). It then calls the two `liftSuspensionByPhoneNumber` methods (`:566`, `:571`).\n\n**Why guests are never restored**\n- `ModerationService.makeDecision` suspends a guest through `GuestsService.suspendGuest` (`src/moderation/moderation.service.ts:792`, `src/guests/guests.service.ts:216`). That sets `status=SUSPENDED` and `suspendedAt`.\n- `src/guests/` has no restore method, no `getSuspendedUsersExceedNumberOfDays` equivalent, and no phone number handling at all.\n- The cron job never queries guests.\n- The appeal path looks up users by phone number and never reaches guests (`appeals.service.ts:172-199`).\n\n**Where guest restore would have to be added**\n1. `src/guests/guests.service.ts`: add a `liftSuspension(guestId)` method that mirrors `suspendGuest`. It would set `status=ACTIVE` and clear `suspendedAt`, `suspendedType` and `suspendedRefId`. For the cron job, also add a \"suspended longer than N days\" query.\n2. `src/jobs/jobs.service.ts:546-575`: include suspended guests in `handleRestoreSuspendedUsers`, and in the empty-result check at `:556`.\n3. `src/appeals/appeals.service.ts:172-199`: add a guest branch. Guests have no phone number, so the lookup has to go by `suspendedRefId` or a guest ID. The appeal entity currently carries only `appellantPhoneNumber` and `refId`. The Typeform appeal intake (`src/typeform/typeform.service.ts`) would need to capture that identifier too.",
+ "ttft_ms": 4626,
+ "type": "result",
+ "duration_ms": 21479,
+ "uuid": "5dc47144-091a-4c9b-9b57-f876a5ec293c",
+ "ttft_stream_ms": 4546,
+ "time_to_request_ms": 3365,
+ "first_content_frame_ms": 4546,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r1_judge_07_M_c",
+ "_wall_s": 45.8,
+ "_variant": "judge",
+ "_seq": 7
+}

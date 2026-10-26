@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 24528,
+ "stop_reason": "end_turn",
+ "session_id": "d32118d8-477e-4535-9cde-9a7b536b33b5",
+ "total_cost_usd": 0.0680872,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 8847,
+  "cache_read_input_tokens": 51392,
+  "output_tokens": 2754,
+  "output_tokens_details": {
+   "thinking_tokens": 59
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 8847,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 892,
+    "cache_read_input_tokens": 14002,
+    "cache_creation_input_tokens": 1650,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1650
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2754,
+   "cacheReadInputTokens": 51392,
+   "cacheCreationInputTokens": 8847,
+   "webSearchRequests": 0,
+   "costUSD": 0.0680872,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 59,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where to put the call**\n\nPut it in `decideModeration` in `src/moderation/moderation.service.ts` (the notes call it `makeDecision`, but the method is now named `decideModeration`). Add one call in each of two blocks, right after the existing `sseService.notifyStatusChanged(...)` call:\n\n- Regular users: after `:750-758`, inside `if (decisionActionDto.regularAction)`. Use `moderation.regularUserId`.\n- Verified users: after `:776-785`, inside `if (decisionActionDto.verifiedAction)`. Use `moderation.verifiedUserId`.\n\nBoth spots run after `suspendByModeration` has succeeded. The push is therefore only sent once the suspension is saved. This also avoids touching the shared `suspendByModeration` in `base-user.service.ts`. That method is also used by other callers, and it has no access to the moderation context.\n\nWrap each push in try/catch and log failures. `sendNotificationToUser` throws `BadRequestException` on failure (`fcm.service.ts:193`). Without the catch, a push failure would abort `decideModeration` before the moderation record is saved and the activity log is written.\n\n**Which method to call**\n\nCall `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` (`src/fcm/fcm.service.ts:172`). It looks up the user's device token and sends the push. If the user has no token, it returns `{ success: false }` and doesn't throw (`:179-183`).\n\n`sendKYCNotificationToUser` (`:203`) is the existing example to copy. It calls `sendNotificationToUser` with `data: { event: EventTypes.KYC_PASSED }` (`:209-213`). Don't call it directly. It is specific to KYC and does nothing when the KYC check fails.\n\n**Wiring needed**\n\n- `FcmService` is not injected into `ModerationService` yet. The constructor is at `moderation.service.ts:102`, and it already has `sseService` at `:115`.\n- `ModerationModule` (`src/moderation/moderation.module.ts:22-34`) does not import the FCM module. Add it there. I didn't check the FCM module's file name or whether it exports `FcmService`.\n- `EventTypes` is in `src/fcm/enums/event-types.enum.ts`. I only found `KYC_PASSED`, `KYC_FAILED` and `INCOMING_CALL` in use. I didn't open the enum itself. If it has no suspension value, add one, such as `USER_SUSPENDED`.\n\nGuests (`:788-792`) have no push path in this flow. Product only asked about regular and verified users, so I left them out.",
+ "ttft_ms": 4029,
+ "type": "result",
+ "duration_ms": 24647,
+ "uuid": "985457ae-ffc2-48f9-84bf-9e7ea7e6816d",
+ "ttft_stream_ms": 3893,
+ "time_to_request_ms": 79,
+ "first_content_frame_ms": 3893,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "S_M_digest_2",
+ "_wall_s": 25.7,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_A_M"
+}

@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 18980,
+ "stop_reason": "end_turn",
+ "session_id": "d22699c2-d695-41fa-9320-821d4dd56d84",
+ "total_cost_usd": 0.1292821,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 23996,
+  "cache_read_input_tokens": 68981,
+  "output_tokens": 2638,
+  "output_tokens_details": {
+   "thinking_tokens": 250
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 23996,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1238,
+    "cache_read_input_tokens": 21448,
+    "cache_creation_input_tokens": 7407,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 7407
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2638,
+   "cacheReadInputTokens": 68981,
+   "cacheCreationInputTokens": 23996,
+   "webSearchRequests": 0,
+   "costUSD": 0.1292821,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 250,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Yes, partly.** Support can see failed inbound invoice emails in the admin app, but only the ones that produced an `EmailReceivingRecord` with errors. Some failures never get a record.\n\n**Endpoint**\n- `GET /data/admin/emailReceiving/invoice/errors/{start}/{end}` is `getEmailsWithErrors` (`AdminEmailReceivingWebService.java:30-35`). It calls `InvoiceEmailService.getErrors` (`InvoiceEmailService.java:243-244`) and maps each row to `EmailReceivingRecordDto`. The DTO copies `errors` at `:75`.\n- Two related endpoints:\n  - `/invoice/rest/{restId}/{start}/{end}` (`:37-43`) lists every record for one restaurant, with or without errors.\n  - `/invoice/{prefix}/{nextToken}` (`:24-28`) lists raw S3 emails under a prefix. Support can use it to browse `unparsable/`, `unknown/` and `noLocalPart/`.\n\n**How it decides an email failed**\n- A record counts as failed when `length(e.errors) > 1` and `createdTime` falls in the range (`InternalEmailReceivingRecordRepository.java:14-15`). The end date is inclusive, since the service adds a day (`InvoiceEmailService.java:244`).\n- `errors` is a joined string built from the list that `handleEmail` fills (`EmailReceivingRecord.java:40`). The entries are:\n  - Recipient resolver errors (`InvoiceEmailService.java:110`).\n  - \"Restaurant was not marked active\" (`:125`).\n  - \"did not have a supplier mapping\" (`:138`).\n  - \"was not image or text type file\" (`:141`).\n  - An attachment-save exception (`:144`).\n  - \"was not a known rest id\" (`:160`).\n  - \"could not find an email \u2026 addressed to us\" (`:163`).\n- The record is saved at `:166`.\n\n**Failures missing from the endpoint**\n1. **Unparsable emails.** `UnparsableMessageException` is only logged. The file is moved to `unparsable/` and no record is written (`:181-183`). Support would have to find these through the S3 prefix browser.\n2. **Any other exception in `handleEmail`.** It is rethrown (`:167-170`) and logged again at `:184-185`. No record is saved and the file stays in `invoices/`. It is retried every 5 minutes and fails again each time.\n3. **Inactive restaurant or unmapped sender with no attachments.** These errors are only added inside the per-attachment loop (`:115-127`). An email with no extracted attachments gets a record with empty errors.\n4. **Attachments dropped by the extractor.** `EmailAttachmentExtractor` filters them out before `handleEmail` sees them. That is from an earlier session's notes and I did not re-verify it. The attachment is missing from `allAttachments`, so the email looks clean.\n5. **Dev environment.** `handleUnparsedEmails` returns early when `isDev()` (`:91-93`).\n6. **Emails that never reach S3.** SES or MX problems are outside the app.\n\nI did not run anything.",
+ "ttft_ms": 1546,
+ "type": "result",
+ "duration_ms": 19284,
+ "uuid": "681c5423-6133-4bef-b19b-5d84945d8a57",
+ "ttft_stream_ms": 1099,
+ "time_to_request_ms": 154,
+ "first_content_frame_ms": 1099,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r1_auto_09_E_c",
+ "_wall_s": 20.5,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/orderly_r1/repo_auto",
+ "_mode": "auto",
+ "_seq": 9
+}

@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 19934,
+ "stop_reason": "end_turn",
+ "session_id": "3a7a2225-4083-459d-b070-00fb860aed2d",
+ "total_cost_usd": 0.1035025,
+ "usage": {
+  "input_tokens": 12,
+  "cache_creation_input_tokens": 17229,
+  "cache_read_input_tokens": 76525,
+  "output_tokens": 2691,
+  "output_tokens_details": {
+   "thinking_tokens": 290
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 17229,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1457,
+    "cache_read_input_tokens": 20830,
+    "cache_creation_input_tokens": 1258,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1258
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 12,
+   "outputTokens": 2691,
+   "cacheReadInputTokens": 76525,
+   "cacheCreationInputTokens": 17229,
+   "webSearchRequests": 0,
+   "costUSD": 0.1035025,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 290,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "Yes, support can see most failures. Two kinds of failure don't appear in the errors list. I read the code but didn't run it.\n\n**Endpoint**\n- `GET /data/admin/emailReceiving/invoice/errors/{start}/{end}` is `getEmailsWithErrors` at `webservices/personae/admin/AdminEmailReceivingWebService.java:30-35`.\n- It returns `EmailReceivingRecordDto`s (`:58-78`) with `errors`, `allAttachments`, `attachmentsMoved`, `s3Key`, `fromEmail` and `localPart`.\n- Related endpoints:\n  - Per-restaurant records: `/invoice/rest/{restId}/{start}/{end}` (`:37-43`).\n  - Raw `.eml` download: `/download/{morphedS3Key}` (`:51-56`).\n  - Raw S3 listing by prefix: `/invoice/{prefix}/{nextToken}` (`:24-28`).\n- Paths below are relative to `SiftOrder/src/main/java/com/siftit/`.\n\n**How \"failed\" is decided**\n- The query at `domain/emailReceiving/InternalEmailReceivingRecordRepository.java:14` selects `EmailReceivingRecord` rows with `length(e.errors) > 1` and `createdTime` in the date range. \"Failed\" means the row's joined `errors` string is non-empty (`EmailReceivingRecord.java:40`).\n- `InvoiceEmailService.handleEmail` builds that list and saves the row at `domain/emailReceiving/InvoiceEmailService.java:166`. Errors are added for these cases:\n  - `InvoiceRecipientResolver` errors (`:110`).\n  - Restaurant inactive (`:125`).\n  - No supplier mapping for a TXT/CSV (`:138`).\n  - Attachment is neither an image/PDF nor a TXT/CSV (`:141`).\n  - An exception while saving the attachment (`:144`).\n  - Unknown restaurant id (`:160`).\n  - No address addressed to us (`:163`).\n\n**Failures missing from it**\n1. **Unparsable emails.** `UnparsableMessageException` is only logged and the file is moved to `unparsable/` (`:181-183`). No row is saved.\n2. **Unexpected exceptions in `handleEmail`.** These cover a stream read failure, a non-`UnparsableMessageException` parse failure, and a failed DB save. They are logged (`:168`, `:185`) and rethrown, so no row is saved. The file stays in `invoices/` and is retried every 5 minutes.\n3. **Known, active restaurant with a PDF that is silently dropped.**\n   - No error is added when the checksum duplicates an existing attachment (`domain/filingcabinet/FilingCabinetService.java:311-314`, per my earlier notes).\n   - No error is added when an email has no attachments at all. The loop at `:115` never runs, so the row has an empty `errors` string.\n4. **Failures after the attachment is saved.** These aren't tracked here. For example, an OCR failure after `addInvoiceAttachment` (`:130`) still counts as moved. I didn't trace where OCR failures are recorded.\n5. **Emails that never reach the `invoices/` S3 prefix.** The job also returns early in dev (`:91-93`). Nothing in this repo records either case.\n\nThe raw S3 listing endpoint (`:24-28`) partly covers 1 and 2. Support can browse the `invoices/` and `unparsable/` prefixes, although `unparsable/` keys are built as `\"unparsable/\" + s3ObjKey` (`:183`), so the full path includes `invoices/`.",
+ "ttft_ms": 1743,
+ "type": "result",
+ "duration_ms": 20231,
+ "uuid": "26a1391c-44d5-45eb-8d38-42b75eb953b4",
+ "ttft_stream_ms": 997,
+ "time_to_request_ms": 171,
+ "first_content_frame_ms": 997,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "orderly_r3_index_09_E_c",
+ "_wall_s": 43.4,
+ "_variant": "index",
+ "_seq": 9
+}

@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 21984,
+ "stop_reason": "end_turn",
+ "session_id": "0e5bc39e-00d5-4652-9a42-520f9d89f5c2",
+ "total_cost_usd": 0.0974979,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 15268,
+  "cache_read_input_tokens": 42659,
+  "output_tokens": 3214,
+  "output_tokens_details": {
+   "thinking_tokens": 0
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 15268,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1466,
+    "cache_read_input_tokens": 15719,
+    "cache_creation_input_tokens": 2772,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 2772
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 3214,
+   "cacheReadInputTokens": 42659,
+   "cacheCreationInputTokens": 15268,
+   "webSearchRequests": 0,
+   "costUSD": 0.0974979,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 0,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 13,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Suspension (moderator decision)**\n- `POST /moderations/:id/decision` (`src/moderation/moderation.controller.ts:80`) calls `moderationService.makeDecision` (`:112`).\n- `makeDecision` (`src/moderation/moderation.service.ts:721`) records the decision, `decisionAt` and `decisionBy` (`:731-733`). It then handles each target type that the DTO's action fields name:\n  - Regular user (`:735-759`): calls `regularUsersService.suspendByModeration`, sets `regularDecisionDescription` to \"suspended for 24 hours\" or \"suspended\", and sends an SSE `notifyStatusChanged` event with `newStatus: 'suspended'` (`:750`).\n  - Verified user (`:763-780`): the same flow through `verifiedUsersService.suspendByModeration`.\n  - Guest (`:790-809`): calls `guestsService.suspendGuest` (defined at `src/guests/guests.service.ts:216`).\n- I read only the regular-user branch in full. The verified-user and guest branches are inferred from the grep output.\n- `suspendByModeration` (`src/base/base-user.service.ts:307`) writes `status: 'suspended'`, `suspendedType` (the violation type) and `suspendedRefId` (the moderation case).\n  - For `SUSPEND_24H` it sets `suspendedAt = new Date()` (`:318-324`).\n  - For any other suspend action it sets `suspendedAt = null` (`:326-331`). That makes the suspension indefinite, because the auto-restore query filters on `suspendedAt`.\n\n**Lifting automatically (cron)**\n- `JobsService` registers `setupRestoreSuspendedUsersCronJob` (`src/jobs/jobs.service.ts:36`, defined at `:160`). It is controlled by a config flag and defaults to `EVERY_DAY_AT_2AM` (`:168`). The job runs `handleRestoreSuspendedUsers` (`:186`, defined at `:537`).\n- The handler reads `RESTORE_SUSPENDED_USERS_AFTER_DAYS` (default 1, `:538-541`). It fetches regular and verified users via `getSuspendedUsersExceedNumberOfDays` (`:546-554`).\n  - The regular-user version is at `src/regular-users/regular-users.service.ts:411`. It selects users with `status = SUSPENDED` and `suspendedAt < now - N days` (`:422-427`).\n  - `suspendedAt` is null for indefinite suspensions, so `suspendedAt < ...` never matches them and the cron skips them.\n- It then calls `restoreSuspendedUserByPhoneNumber` for each user (`:565-575`).\n  - The regular-user version (`regular-users.service.ts:372`) sets `status = ACTIVE` and clears the `suspended*` fields (`:376-385`).\n  - The verified-user version is at `src/verified-users/verified-users.service.ts:670`.\n- I didn't find any guest restore in the cron job. Guests don't appear in `handleRestoreSuspendedUsers`.\n- The `suspended*` fields are cleared with `undefined`. TypeORM's `update` normally skips `undefined` values, so those columns may not actually be cleared. Only the `status` change is certain. I haven't verified this.\n\n**Lifting via appeal**\n- `AppealsService.updateStatus` (`src/appeals/appeals.service.ts:100`) handles an appeal decision.\n- When the status is `APPROVED` (`:110`), it calls the local `restoreSuspendedUserByPhoneNumber` (`:112`, defined at `:172`).\n  - It looks up the appellant by `appellantPhoneNumber`, checking verified users first (`:176-187`) and then regular users (`:189-199`).\n  - It delegates to the same per-service restore methods the cron uses.\n  - Guests are not handled here either.\n- If the restore fails, for example because the phone number isn't found, the appeal is marked `DENIED` (`:119`) and the call returns `success: false` (`:120-123`).\n- Otherwise `makeDecision` (`:151`) saves `appealStatus` and `decidedAt` (`:159-161`).\n- I didn't trace which controller route calls `updateStatus`.",
+ "ttft_ms": 1883,
+ "type": "result",
+ "duration_ms": 22325,
+ "uuid": "6857c7a6-568e-4049-9097-a619ee06e315",
+ "ttft_stream_ms": 1018,
+ "time_to_request_ms": 247,
+ "first_content_frame_ms": 1018,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r1_cold_01_M_a",
+ "_wall_s": 23.7,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r1/repo_cold",
+ "_mode": "off",
+ "_seq": 1
+}

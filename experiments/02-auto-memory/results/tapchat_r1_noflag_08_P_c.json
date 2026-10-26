@@ -1,0 +1,104 @@
+{
+ "duration_api_ms": 11216,
+ "stop_reason": "end_turn",
+ "session_id": "6eeb5e45-8f07-420c-b8c0-e51104969c1a",
+ "total_cost_usd": 0.0477839,
+ "usage": {
+  "input_tokens": 6,
+  "cache_creation_input_tokens": 7675,
+  "cache_read_input_tokens": 26919,
+  "output_tokens": 1438,
+  "output_tokens_details": {
+   "thinking_tokens": 57
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 7675,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 819,
+    "cache_read_input_tokens": 12603,
+    "cache_creation_input_tokens": 404,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 404
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 6,
+   "outputTokens": 1438,
+   "cacheReadInputTokens": 26919,
+   "cacheCreationInputTokens": 7675,
+   "webSearchRequests": 0,
+   "costUSD": 0.0477839,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 57,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 4,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Mostly prevented for sequential retries, but not fully safe.** An earlier note said there was no idempotency check. That is out of date, because the check exists now.\n\n**What prevents it**\n- `handleCheckoutCompleted` starts with a dedupe check (`src/payment/pay-in/pay-in.service.ts:225-233`). It calls `transactionsService.findByPaymentId(externalPaymentId)`, which does `findOne({ where: { paymentId } })` (`src/transactions/transactions.service.ts:146-150`). If a transaction row already exists, it logs \"Duplicate checkout event ignored\" and returns before touching the balance.\n- `externalPaymentId` is the Stripe PaymentIntent id (`pay-in.service.ts:343`). It is stored as `paymentId` on the `FUND` transaction (`pay-in.service.ts:313`).\n\n**What still allows a double credit**\n1. **The transaction row is written last** (`pay-in.service.ts:305-318`), after the balance update (`:260-281`) and the history write (`:289`). If `syncBalanceAmount`, `createDiamondHistorical` or `transactions.create` throws after the balance is credited, the webhook returns 5xx. Stripe retries, no row exists, and the diamonds are credited again.\n2. **Check-then-act race.** Two deliveries of the same event arriving concurrently can both pass the check at `:225` before either inserts the row. `payment_id` has no unique constraint (`src/transactions/entities/transaction.entity.ts:29-30`, a plain nullable column), so the database won't reject the second insert.\n3. **Non-atomic balance update.** The new balance is `old + package`, read from DynamoDB and written back (`pay-in.service.ts:260-277`). Concurrent writes can lose or duplicate credit.\n\n**Other gaps**\n- Non-succeeded events also write a transaction row with the same `paymentId` (`:305-318`). For example, `payment_intent.processing` arrives first and creates a PROCESSING row. The later `succeeded` event for the same PaymentIntent then hits the dedupe check and is ignored, so the user is never credited. This is the opposite problem, but it comes from the same check, which doesn't take the status into account.\n\nTo fix it, add a unique index on `payment_id`. Also insert the transaction first, or do it in the same transaction, and key the dedupe on both `paymentId` and a COMPLETED status.",
+ "ttft_ms": 1154,
+ "type": "result",
+ "duration_ms": 11373,
+ "uuid": "90301e4d-505d-48a0-8f92-47153a5c9705",
+ "ttft_stream_ms": 912,
+ "time_to_request_ms": 118,
+ "first_content_frame_ms": 912,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r1_noflag_08_P_c",
+ "_wall_s": 30.5,
+ "_cwd": "/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp/experiments/02-auto-memory/work/tapchat_r1/repo_auto",
+ "_mode": "noflag",
+ "_seq": 8
+}

@@ -1,0 +1,103 @@
+{
+ "duration_api_ms": 26874,
+ "stop_reason": "end_turn",
+ "session_id": "38ca5919-2899-44b1-8173-f77540b6c7fe",
+ "total_cost_usd": 0.0789332,
+ "usage": {
+  "input_tokens": 12,
+  "cache_creation_input_tokens": 9860,
+  "cache_read_input_tokens": 58192,
+  "output_tokens": 3365,
+  "output_tokens_details": {
+   "thinking_tokens": 780
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 9860,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 1833,
+    "cache_read_input_tokens": 13963,
+    "cache_creation_input_tokens": 1272,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1272
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 12,
+   "outputTokens": 3365,
+   "cacheReadInputTokens": 58192,
+   "cacheCreationInputTokens": 9860,
+   "webSearchRequests": 0,
+   "costUSD": 0.0789332,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 780,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 9,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "I've read the pay-in path from the Stripe webhook through to the balance write, and here are the places it can fail or stop silently. Paths are under `src/`. I haven't run anything.\n\n**1. Webhook intake**\n- `payment/gateway/gateway.controller.ts:354-361` passes `req.rawBody` straight through. If raw-body parsing isn't enabled, the payload isn't a Buffer and validation throws (`payment-processor/stripe/stripe.service.ts:178-181`).\n- A missing `STRIPE_PAYMENT_WEBHOOK_SECRET_KEY` or a wrong one throws (`stripe.service.ts:170-173`, `183-194`). Stripe sees an error and retries for a while, then gives up.\n\n**2. Event routing (silent)**\n- `payment-processor/processors/stripe.processor.ts:299-305` handles only events whose type starts with `payment_intent`. Anything else, such as `charge.succeeded` or `checkout.session.completed`, only gets a `console.warn` and returns 200. If the Stripe dashboard sends only those event types, no balance update ever happens.\n\n**3. Status mapping**\n- `payment/pay-in/pay-in.service.ts:325-331` credits diamonds only when `paymentIntent.status === 'succeeded'`.\n- Any other status, such as `requires_action` or `requires_payment_method`, becomes REJECTED. It sends a failure websocket message and records a failed transaction (`pay-in.service.ts:290-292`, `296-309`). No diamonds are added.\n\n**4. Silent early returns in `handleCheckoutCompleted`**\nAll of these return normally, so Stripe gets a 200 and never retries.\n- `regularUserId` missing from the PaymentIntent metadata (`pay-in.service.ts:225-230`, `332`).\n- User not found (`pay-in.service.ts:234-237`).\n- Diamond package not found, or `diamondPackageId` empty (`pay-in.service.ts:243-246`, `333`).\n\n**5. Balance write**\n- `pay-in.service.ts:256-261`: if the user has no DynamoDB balance row, it only creates one. It doesn't write the Postgres `diamondAmount`, so the two stores can disagree.\n- `pay-in.service.ts:251-265` reads the balance, adds the package amount, then writes the result. Two concurrent top-ups can overwrite each other, and one credit is lost.\n- `regular-users/regular-users.service.ts:308-316` updates DynamoDB first, then Postgres, without a transaction. If Postgres fails, it throws a 500 with DynamoDB already updated. `regularUserRepository.update` on a missing id changes 0 rows without an error.\n\n**6. Steps after the credit that can throw**\n- `pay-in.service.ts:274` (websocket), `280` (`createDiamondHistorical`) and `296` (`transactionsService.create`) can each throw after the balance has changed. The user then has diamonds but no history or transaction record. Stripe retries, and because nothing checks `externalPaymentId` for duplicates, the retry credits the balance a second time.\n\nThe most likely silent causes are items 2 and 4: a missing event subscription or missing metadata.",
+ "ttft_ms": 1372,
+ "type": "result",
+ "duration_ms": 27081,
+ "uuid": "eb6f4ec8-74fb-42a8-bc92-1f24f44ecb1f",
+ "ttft_stream_ms": 1243,
+ "time_to_request_ms": 108,
+ "first_content_frame_ms": 1243,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "tapchat_r3_facts_05_P_b",
+ "_wall_s": 48.7,
+ "_variant": "facts",
+ "_seq": 5
+}

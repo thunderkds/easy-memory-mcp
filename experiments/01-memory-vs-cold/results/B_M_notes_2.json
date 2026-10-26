@@ -1,0 +1,102 @@
+{
+ "duration_api_ms": 20049,
+ "stop_reason": "end_turn",
+ "session_id": "1531c334-f623-4c9e-8677-a4be6d695fcb",
+ "total_cost_usd": 0.08146320000000001,
+ "usage": {
+  "input_tokens": 10,
+  "cache_creation_input_tokens": 12750,
+  "cache_read_input_tokens": 48732,
+  "output_tokens": 2557,
+  "output_tokens_details": {
+   "thinking_tokens": 48
+  },
+  "server_tool_use": {
+   "web_search_requests": 0,
+   "web_fetch_requests": 0
+  },
+  "service_tier": "standard",
+  "cache_creation": {
+   "ephemeral_1h_input_tokens": 12750,
+   "ephemeral_5m_input_tokens": 0
+  },
+  "inference_geo": "global",
+  "iterations": [
+   {
+    "input_tokens": 2,
+    "output_tokens": 892,
+    "cache_read_input_tokens": 16747,
+    "cache_creation_input_tokens": 1407,
+    "cache_creation": {
+     "ephemeral_5m_input_tokens": 0,
+     "ephemeral_1h_input_tokens": 1407
+    },
+    "type": "message"
+   }
+  ],
+  "speed": "standard",
+  "fallback_credit": null
+ },
+ "modelUsage": {
+  "claude-sonnet-5-5": {
+   "inputTokens": 10,
+   "outputTokens": 2557,
+   "cacheReadInputTokens": 48732,
+   "cacheCreationInputTokens": 12750,
+   "webSearchRequests": 0,
+   "costUSD": 0.08146320000000001,
+   "contextWindow": 1000000,
+   "maxOutputTokens": 128000,
+   "thinkingTokens": 48,
+   "canonicalModel": "claude-sonnet-5-5",
+   "provider": "firstParty",
+   "costBasis": "list"
+  }
+ },
+ "permission_denials": [],
+ "terminal_reason": "completed",
+ "fast_mode_state": "off",
+ "fast_mode_disabled_reason": "sdk_opt_in_required",
+ "subagent_stats": {
+  "spawned": 0,
+  "requested": {
+   "background": 0,
+   "foreground": 0,
+   "unset": 0
+  },
+  "started_in_background": 0,
+  "max_depth": 0,
+  "spawned_by_subagents": 0,
+  "completed": 0,
+  "failed": 0,
+  "killed": {
+   "parent": 0,
+   "user": 0,
+   "system": 0
+  },
+  "refused": {
+   "depth_limit": 0,
+   "concurrency_limit": 0,
+   "budget": 0
+  },
+  "by_type": {}
+ },
+ "safety_stops": 0,
+ "is_error": false,
+ "num_turns": 8,
+ "subtype": "success",
+ "api_error_status": null,
+ "result": "**Where to put the call:** `ModerationService.makeDecision` in `src/moderation/moderation.service.ts`. It has two branches that suspend users. Add the push right after the existing `sseService.notifyStatusChanged(...)` call in each:\n- Regular users: after `src/moderation/moderation.service.ts:750-758`, using `moderation.regularUserId`.\n- Verified users: after `src/moderation/moderation.service.ts:776-785`, using `moderation.verifiedUserId`.\n\nSkip the guest branch (`:788-814`), since product only asked for regular and verified users. That branch is also the only one where a guest can be suspended but never restored.\n\n**Which method to call:** `FcmService.sendNotificationToUser(userId, { data: { event: ... } })` at `src/fcm/fcm.service.ts:172`.\n- It looks up the user's active device token and sends via `sendNotificationToToken` (`:234`).\n- The existing wrappers `sendKYCNotificationToUser` (`:203`) and `sendMissedCallNotificationToUser` (`:326`) call it the same way, so I'd copy them. A new `sendSuspendedNotificationToUser` wrapper would fit that pattern.\n- The payload is data-only. `sendNotificationToToken` builds `{ token, data }` with no `notification` title or body (`:255-258`), so the app has to render the push from the `event` value.\n- You'd need a new value in the `EventTypes` enum (`src/fcm/enums/event-types.enum.ts`). I didn't open that file, so I haven't checked what it contains. `KYC_PASSED`, `INCOMING_CALL` and `MISSED_CALL` are the existing values the wrappers use.\n\n**Things to handle:**\n- `ModerationService` doesn't inject `FcmService` yet (constructor at `:104-116`). Import `FcmModule` in the moderation module. `FcmModule` already exports the service (`src/fcm/fcm.module.ts:12`). I didn't open `moderation.module.ts`, so I haven't confirmed it doesn't already import `FcmModule`.\n- `sendNotificationToUser` throws `BadRequestException` on failure (`:193`). It returns `{ success: false }` if the user has no device token (`:182`). `makeDecision` wraps everything in a try/catch that rethrows `InternalServerErrorException` (`:829-835`). Without handling, a push failure would turn an already-applied suspension into a 500. Wrap the push in its own try/catch that logs the error, or don't await it.\n- The existing `moderation.service.spec.ts` will need an `FcmService` mock provider.",
+ "ttft_ms": 1303,
+ "type": "result",
+ "duration_ms": 20172,
+ "uuid": "20f8d6f3-0ba9-4f68-89c8-555879b60031",
+ "ttft_stream_ms": 869,
+ "time_to_request_ms": 85,
+ "first_content_frame_ms": 870,
+ "queued_turn_count": 0,
+ "result_index": 0,
+ "_label": "B_M_notes_2",
+ "_wall_s": 21.3,
+ "_cwd": "/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-context-mcp/2c0ad20a-5642-49dd-8e86-f887ed6dec5b/scratchpad/memtest/repo_clean"
+}
