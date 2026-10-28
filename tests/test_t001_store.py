@@ -289,8 +289,8 @@ class SubcommandTableTest(unittest.TestCase):
 
     def test_each_stub_says_not_implemented_and_exits_zero(self):
         for name in self.NAMES:
-            if name in ("hook-stop", "hook-prompt", "install", "uninstall", "report"):
-                continue  # implemented in HUN-75 / HUN-77 / HUN-79 / HUN-80 (tests/test_t002*, t004*, t006*, t007*)
+            if name in ("hook-stop", "hook-prompt", "serve", "install", "uninstall", "report"):
+                continue  # implemented in HUN-75 / HUN-77 / HUN-79 / HUN-80 / HUN-81 (tests/test_t002*, t004*, t006*, t007*, t008*)
             out, err = io.StringIO(), io.StringIO()
             with redirect_stdout(out), redirect_stderr(err):
                 code = easy_memory.main([name])
@@ -309,10 +309,15 @@ class SubcommandTableTest(unittest.TestCase):
         self.assertEqual(out.getvalue(), "")
 
     def test_runs_as_a_script(self):
-        res = subprocess.run([sys.executable, str(ROOT / "easy_memory.py"), "serve"],
-                             capture_output=True, text=True)
-        self.assertEqual(res.returncode, 0)
-        self.assertIn("not implemented", res.stdout + res.stderr)
+        # No stub is left since HUN-81: run `report` (real, read-only) in a temp store instead,
+        # never `serve` or `install` against real stdin or the real home.
+        with tempfile.TemporaryDirectory() as home:
+            env = {**os.environ, "EASY_MEMORY_HOME": home, "HOME": home, "CLAUDE_CONFIG_DIR": home}
+            res = subprocess.run([sys.executable, str(ROOT / "easy_memory.py"), "report",
+                                  "--repo", home], capture_output=True, text=True, env=env,
+                                 stdin=subprocess.DEVNULL)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        self.assertNotIn("not implemented", res.stdout + res.stderr)
 
 
 if __name__ == "__main__":

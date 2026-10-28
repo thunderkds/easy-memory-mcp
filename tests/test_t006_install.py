@@ -23,6 +23,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
 import easy_memory  # noqa: E402
+from tests import fake_claude  # noqa: E402
 
 MODULE = os.path.abspath(easy_memory.__file__)
 STOP_COMMAND = f"{sys.executable} {MODULE} hook-stop"
@@ -60,7 +61,11 @@ class InstallTestCase(unittest.TestCase):
         self.home = self.tmp / ".easy-memory"
         self.fake_home = self.tmp / "home"
         self.fake_home.mkdir()
-        self.env = {**os.environ, "CLAUDE_CONFIG_DIR": str(self.config),
+        # HUN-81: install also runs `claude mcp add`; only a FAKE claude may be reachable.
+        self.bin = self.tmp / "bin"
+        fake = fake_claude.install_fake_claude(self.bin)
+        self.env = {**os.environ, **fake, "PATH": fake_claude.fake_path(self.bin),
+                    "CLAUDE_CONFIG_DIR": str(self.config),
                     "EASY_MEMORY_HOME": str(self.home), "HOME": str(self.fake_home)}
         for patcher in (mock.patch.dict(os.environ, self.env, clear=True),
                         mock.patch.object(easy_memory.Path, "home", return_value=self.fake_home)):
@@ -68,6 +73,7 @@ class InstallTestCase(unittest.TestCase):
             self.addCleanup(patcher.stop)
         # AC9 guard: the file under test is inside this test's temp folder.
         self.assertEqual(easy_memory.settings_path(), self.settings)
+        self.assertEqual(Path(shutil.which("claude")).parent, self.bin)
         self.assertEqual(os.path.commonpath([self.tmp, easy_memory.store_home()]), str(self.tmp))
 
     def write_settings(self, data, indent=2):
@@ -162,6 +168,7 @@ class InstallTest(InstallTestCase):
         self.assertEqual(data["hooks"]["Stop"][0], {"hooks": [OTHER_STOP]})  # appended, not replaced
         data["hooks"]["Stop"].pop()
         del data["hooks"]["UserPromptSubmit"]
+        data["permissions"]["allow"].remove("mcp__easy-memory")  # HUN-81: the MCP allow rule
         self.assertEqual(data, FIXTURE)
 
     def test_moved_module_path_replaces_our_entries(self):  # no duplicates after a move
@@ -181,7 +188,8 @@ class InstallTest(InstallTestCase):
         code, _, _ = self.run_main("install")
         self.assertEqual(code, 0)
         self.assertEqual(self.read_settings(), {"hooks": {"Stop": [{"hooks": [STOP_ENTRY]}],
-                                                          "UserPromptSubmit": [{"hooks": [PROMPT_ENTRY]}]}})
+                                                          "UserPromptSubmit": [{"hooks": [PROMPT_ENTRY]}]},
+                                                "permissions": {"allow": ["mcp__easy-memory"]}})  # HUN-81
         self.assertEqual(self.backups(), [])  # nothing to back up
         self.assertEqual(mode(self.settings), 0o600)
 
