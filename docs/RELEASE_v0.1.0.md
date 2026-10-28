@@ -1,6 +1,6 @@
 # easy-memory-mcp v0.1.0 (prototype)
 
-**Proposed tag:** `v0.1.0` on commit `cf5e31d` (not tagged yet).
+**Proposed tag:** `v0.1.0` on commit `e412e14` (not tagged yet).
 **Verdict:** NO-GO until two items are closed: the production approval, and the live permission check (HUN-81 AC6).
 This page is a plan. The operator runs it. Nothing here was run against your real Claude settings.
 
@@ -80,6 +80,6 @@ Reverse steps, in order:
 | Post-deploy health check with a pass condition | Yes |
 | Deploy command known | Yes (`install`, from PROJECT_SPEC.md target: your machine) |
 | HUN-81 AC6 live check | **Open** (needs your credentials; steps above) |
-| Production approval for v0.1.0 @ cf5e31d | **Open** (asked in chat) |
+| Production approval for v0.1.0 @ e412e14 | **Open** (asked in chat) |
 
 This is a recommendation. You run the steps.

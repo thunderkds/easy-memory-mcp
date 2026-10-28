@@ -73,4 +73,4 @@
 
 | Version / Tag | Date | Scope (Task IDs) | Deployer | Approved (by / when / answer) | Outcome |
 |---------------|------|------------------|----------|-------------------------------|---------|
-| v0.1.0 (planned, commit cf5e31d) | 2026-10-28 | HUN-74 to HUN-82 | not yet installed | pending | Planned |
+| v0.1.0 (planned, commit e412e14) | 2026-10-28 | HUN-74 to HUN-82 | not yet installed | pending | Planned |
