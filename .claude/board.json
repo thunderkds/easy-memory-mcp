@@ -1,0 +1,10 @@
+{
+  "board": "linear",
+  "connection": "api",
+  "team": "e2b97197-4539-452b-b6fa-1ad73b8ffabd",
+  "project": "c243ceeb-8be3-4299-a76d-a904c080340c",
+  "me": "hungnh1110",
+  "status_map": {},
+  "id_pattern": "HUN-\\d+",
+  "git_auto_status": false
+}
