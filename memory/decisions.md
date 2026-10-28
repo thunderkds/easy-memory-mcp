@@ -9,6 +9,11 @@
 **Why**: Building weights on orderly (7,835 files) took 16.5 s and gave a 16 MB file that takes 0.3 s to load; NFR-001 allows 1 s. The `mcp` SDK is not installed, and NFR-005 forbids dependencies. Keeping experiment 03's scorer keeps its evidence (−28% tokens, 0 misled) valid. Rejected: A (SDK port, latency and dependency), B (SQLite FTS5, changes the validated scorer).
 **Files**: `BRAINSTORMING_LOG.md`, `PRD.md`, `experiments/02-auto-memory/memstore.py` (scorer to port), `experiments/03-precision/precision.py` (index to port)
 
+### 2026-10-28 — Word weights keep words found in at least 3 files
+**Decision**: `MIN_FILES_PER_WORD = 3` in `easy_memory.py`, not the guide's 2. On orderly, 2 gave a 3.61 MB `weights.json` (limit 2 MB, AC2); 3 gives 1.69 MB, loads in 0.024 s, and passes the parity check (99.5% of score pairs, 96.3% of top-5 orders).
+**Why**: AC1 says drop words found in one file, AC2 caps the file at 2 MB; only 3 meets both. The 0.12 floor was not changed.
+**Files**: `easy_memory.py`, `tests/parity_t003.py`, `tasks/TASK_GUIDE_HUN-76.md`
+
 ## Infrastructure
 
 ### 2026-10-28 — easy-verifier registered as the scoring MCP (dev tool)
