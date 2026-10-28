@@ -28,3 +28,4 @@
 - [easy-verifier as scoring MCP](decisions.md#infrastructure) — user's container, HTTP :8766, project-scoped .mcp.json; dev tool only
 - [Weights keep words in 3+ files](decisions.md#architecture) — 2 gave 3.6 MB on orderly (limit 2 MB); 3 gives 1.7 MB and passes parity
 - [Prototype open defects D1-D3](learnings.md#patterns) — prompt-hook time grows with notes (~1 ms each); big transcripts; uncapped non-git build
+- [v0.1.0 released to GitHub](../RUNBOOK.md) — tag v0.1.0 at 7916424, main pushed 2026-10-28; install and the AC6 live check are the user's
