@@ -41,12 +41,12 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
-| verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | pass | `tests/test_t009_smoke.py` (29 tests in 9 classes). AC1+AC2+AC6: `FullCycleTest.test_full_cycle`; AC3: `test_full_cycle_with_sockets_disabled` (socket shim) and `test_no_internet_socket_is_ever_opened_by_hooks_server_or_their_children` (strace -f, no AF_INET); `unshare -rn` variant SKIPS here ("write failed /proc/self/uid_map: Operation not permitted"); AC4: `LatencyTest` (opt-in `EASY_MEMORY_BENCH_REPO`); AC5: `HooksNeverBlockTest`; AC7: whole-suite run below. |
+| Verification command run | pass | `python3 -m unittest discover -s tests` (env -i, temp HOME / CLAUDE_CONFIG_DIR / EASY_MEMORY_HOME, fake claude first on PATH), in a fresh `git clone` of commit 45b9185, 2026-10-28T06:14:57Z: `Ran 307 tests in 18.027s` / `OK (skipped=3)`. The 3 skips: unshare variant, orderly latency (opt-in), growth probe (opt-in). |
+| Negative cases hold | pass | Garbage stdin (11 shapes x 2 hooks), bad argv, 5 bad transcripts, unwritable store (3 forms), hostile note text, deleted cwd, bare repo, no-commit repo, non-git folder: all exit 0 with empty stdout (`HooksNeverBlockTest`, `RepoShapeTest`). |
+| verify | N/A | No Skill tool in this agent. Equivalent done by hand: the full cycle was run for real in subprocesses through the installed hook command strings (`sh -c`), pass. |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | pass | Reviewed: all of easy_memory.py (read in full), tests/. Not touched: easy_memory.py, experiments/, PRD, SPEC, KANBAN, memory/. Private repo orderly was only read (see note in report about one `git status`). |
+| Full smoke suite still green (no regression) | pass | Same run: 278 earlier tests + 29 new = 307, `OK (skipped=3)`. |
 | **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
 | **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
 | **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
@@ -74,7 +74,27 @@ OK
 2026-10-28T06:03:58Z
 ```
 
-**AFTER**: see Evidence table below (filled after the test file exists).
+**AFTER** (2026-10-28T06:14:57Z, fresh clone of commit 45b9185):
+
+```
+$ python3 -m unittest discover -s tests          (temp HOME / CLAUDE_CONFIG_DIR / EASY_MEMORY_HOME, fake claude)
+Ran 307 tests in 18.027s
+OK (skipped=3)
+
+$ EASY_MEMORY_BENCH_REPO=<orderly> python3 -m unittest -v tests.test_t009_smoke.LatencyTest    (06:13:11Z)
+[HUN-82 NFR-001] tracked_files=7831 weights_files=11380 weights_bytes=1687839 build_seconds=13.0 notes=200
+[HUN-82 NFR-001] hook-prompt runs=50 p50=0.202s p95=0.212s max=0.214s runs_with_index=50 max_index_chars=2066
+[HUN-82 NFR-001] hook-stop   runs=20 p50=0.061s p95=0.066s max=0.067s
+[HUN-82 NFR-001] repo_unchanged=True hook_log_bytes=0
+Ran 1 test in 24.935s   OK
+
+$ tests/bench_t004.py --repo <orderly> --notes 200 --runs 50      (cross-check, 06:13:46Z)
+notes=200 runs=50 p50=0.202s p95=0.212s max=0.212s mean=0.203s
+
+$ HUN82_GROWTH_PROBE=1 python3 -m unittest tests.test_t009_smoke.StoreGrowthProbeTest     (DEFECT PROBE, fails by design)
+[HUN-82 growth probe] notes=4000 hook-prompt p50=1.384s max=1.416s
+AssertionError: 1.415597881999929 not less than 1.0 : NFR-001: hook-prompt must add at most 1 s
+```
 
 **DELTA**: The owner now has an independent, repeatable end-to-end check of the whole prototype (install, save, inject, MCP read, report, uninstall), of private modes, no network, never-block hooks and an untouched repo, plus measured latency on a 7,835-file private repo.
 
