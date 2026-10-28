@@ -288,6 +288,8 @@ class SubcommandTableTest(unittest.TestCase):
 
     def test_each_stub_says_not_implemented_and_exits_zero(self):
         for name in self.NAMES:
+            if name == "hook-stop":
+                continue  # implemented in HUN-75 (tests/test_t002_hook_stop.py)
             out, err = io.StringIO(), io.StringIO()
             with redirect_stdout(out), redirect_stderr(err):
                 code = easy_memory.main([name])
