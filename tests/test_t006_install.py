@@ -288,9 +288,12 @@ class UninstallTest(InstallTestCase):
     def test_install_then_uninstall_restores_the_original_json(self):  # AC8
         for data in (FIXTURE, {"model": "opus"}, {}):
             self.write_settings(data)
+            original = self.settings.read_bytes()
             self.run_main("install")
             self.run_main("uninstall")
             self.assertEqual(self.read_settings(), data)
+            # a file in Claude Code's own style (2-space indent) comes back byte for byte
+            self.assertEqual(self.settings.read_bytes(), original)
 
     def test_uninstall_backs_up_and_is_a_no_op_when_nothing_is_ours(self):
         self.write_settings(FIXTURE)
