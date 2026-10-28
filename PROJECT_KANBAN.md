@@ -9,7 +9,6 @@
 ## Board
 
 ### Todo
-- [ ] **HUN-77** — Prompt hook injects the index | backend-developer | C2 | Risk: High | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-77.md`
 - [ ] **HUN-78** — Per-repo on/off/auto switch and prompt log | backend-developer | C1 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-78.md`
 - [ ] **HUN-79** — Install and uninstall into user-level Claude Code settings | backend-developer | C2 | Risk: High | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-79.md`
 - [ ] **HUN-80** — Report: memory on vs off from Claude session logs | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-80.md`
@@ -24,6 +23,7 @@
 - [x] **HUN-74** — Package skeleton, repo key and atomic note store | common-infrastructure | C1 | Risk: Low | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-74.md`
 - [x] **HUN-75** — Stop hook saves one note per turn | backend-developer | C2 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-75.md`
 - [x] **HUN-76** — Word weights built in the background, with a parity check | backend-developer | C2 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-76.md`
+- [x] **HUN-77** — Prompt hook injects the index | backend-developer | C2 | Risk: High | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-77.md`
 
 ### Closed (will not do)
 

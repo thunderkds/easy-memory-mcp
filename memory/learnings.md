@@ -12,6 +12,7 @@
 - 2026-10-28 — Hook stubs and later hook handlers must write nothing to stdout (it joins the prompt) and must catch argparse exit 2 to keep exit 0 (NFR-004) (`easy_memory.py`).
 - 2026-10-28 — Stop hook (HUN-75): bare-name citations resolve through `git ls-files` only when unique; paths are `realpath`-checked against the repo root so `..` and escaping symlinks are rejected; citation regex length-capped to avoid quadratic scan (`easy_memory.py` `cited_files`). `hook-stop` swallows argparse exit 2 and always exits 0; p95 0.063 s on 7,000 files.
 - 2026-10-28 — Weights (HUN-76): tests that patch `subprocess.Popen` also patch git calls; use a spy that intercepts only `build-weights` argv. Experiment 03 answers live only in git history (`6452883`); extract them outside the repo and pass `EASY_MEMORY_EXP03_DIR` to `tests/parity_t003.py`. Known gap: two callers can both replace the same stale build lock.
+- 2026-10-28 — Prompt hook (HUN-77): note text is untrusted. Index fields are JSON-quoted, whitespace-collapsed, control/format characters stripped, `<`/`>` replaced by `‹`/`›`, ids and cited paths regex-checked; p95 0.238 s on orderly with 200 notes. A test that calls a hook through `main()` must set a temp `EASY_MEMORY_HOME` and stdin, even for a stub (a stub test wrote to the real `~/.easy-memory/hook.log` once; removed).
 
 ## Gotchas
 
