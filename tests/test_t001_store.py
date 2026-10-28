@@ -289,8 +289,8 @@ class SubcommandTableTest(unittest.TestCase):
 
     def test_each_stub_says_not_implemented_and_exits_zero(self):
         for name in self.NAMES:
-            if name == "hook-stop":
-                continue  # implemented in HUN-75 (tests/test_t002_hook_stop.py)
+            if name in ("hook-stop", "hook-prompt"):
+                continue  # implemented in HUN-75 / HUN-77 (tests/test_t002*, tests/test_t004*)
             out, err = io.StringIO(), io.StringIO()
             with redirect_stdout(out), redirect_stderr(err):
                 code = easy_memory.main([name])
@@ -299,7 +299,12 @@ class SubcommandTableTest(unittest.TestCase):
 
     def test_stub_writes_nothing_to_stdout(self):  # E12: hook stdout is the prompt
         out = io.StringIO()
-        with redirect_stdout(out), redirect_stderr(io.StringIO()):
+        # hook-prompt is real since HUN-77: give it empty stdin and a temp store home,
+        # so its error log line never reaches the real ~/.easy-memory.
+        with tempfile.TemporaryDirectory() as home, \
+                mock.patch.dict(os.environ, {"EASY_MEMORY_HOME": home}), \
+                mock.patch.object(sys, "stdin", io.StringIO("")), \
+                redirect_stdout(out), redirect_stderr(io.StringIO()):
             easy_memory.main(["hook-prompt"])
         self.assertEqual(out.getvalue(), "")
 
