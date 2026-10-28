@@ -7,6 +7,7 @@ worktrees share the main repo's store. Nothing is ever written inside a repo.
 import argparse
 import hashlib
 import json
+import math
 import os
 import posixpath
 import re
@@ -14,6 +15,7 @@ import secrets
 import subprocess
 import sys
 import time
+from collections import Counter
 from pathlib import Path
 
 FORMAT_VERSION = 1
@@ -21,6 +23,22 @@ GIT_TIMEOUT_SECONDS = 5
 MIN_ANSWER_CHARS = 200
 MAX_CITED_FILE_BYTES = 5 * 1024 * 1024
 MAX_STDIN_CHARS = 10 * 1024 * 1024
+WEIGHTS_MAX_AGE_SECONDS = 24 * 60 * 60  # refresh a file older than this if HEAD moved
+WEIGHTS_LOCK_STALE_SECONDS = 10 * 60  # a build lock older than this is a dead build
+# A word found in fewer source files than this is dropped from the weights file.
+# 2 gave 3.6 MB on orderly (limit 2 MB, AC2); 3 gives 1.7 MB and passes parity (HUN-76).
+MIN_FILES_PER_WORD = 3
+MAX_WEIGHTS_SOURCE_BYTES = 300_000  # larger source files are not counted (as in experiment 02)
+SKIP_DIRS = {"node_modules", ".git", "dist", "target", "build", "coverage"}
+CODE_EXT = {".ts", ".tsx", ".js", ".jsx", ".java", ".py", ".kt", ".html",
+            ".md", ".sql", ".xml", ".yml", ".yaml", ".ftl"}
+STOP_WORDS = set("""the and for are but not you all any can had her was one our out
+has his how its may new now see two who did get let put say she too use what
+when where which with this that from have will would there their them then
+than into only also some such more most each other about after before does
+doing done being been were your here just over very should could these those
+code file files line lines repo answer question exactly existing edit
+concisely references""".split())
 # A path-like token that ends in a known extension, with an optional :line suffix.
 # The token length is capped so a long run of word characters cannot make the
 # search quadratic; the lookahead keeps ".js" from matching inside ".json".
@@ -307,6 +325,179 @@ def hook_stop(args):
     return 0
 
 
+def tokens(text):
+    """Lower-case words of text, also split at camelCase and underscores (experiment 02)."""
+    out = []
+    for word in re.findall(r"[A-Za-z][A-Za-z0-9_]*", text):
+        parts = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", word).replace("_", " ")
+        for part in {word.lower(), *parts.lower().split()}:
+            if len(part) >= 3 and part not in STOP_WORDS:
+                out.append(part)
+    return out
+
+
+def score(prompt, text, weights, k1=1.2):
+    """Weighted share of the prompt's words found in text, 0..1 (experiment 02 scorer).
+
+    weights is the dict from a weights file: {"n": files, "df": {word: files with it}}.
+    A word missing from df (never seen, or dropped because only one file has it)
+    gets df 0, the rarest weight.
+    """
+    n, df = weights["n"], weights["df"]
+    weight = {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in set(tokens(prompt))}
+    best = sum(weight.values()) * (k1 + 1)
+    tf = Counter(tokens(text))
+    got = sum(w * tf[t] * (k1 + 1) / (tf[t] + k1) for t, w in weight.items() if tf[t])
+    return got / best if best else 0.0
+
+
+def _head(root):
+    """The repo's HEAD commit hash, or None (not git, or no commit yet)."""
+    try:
+        res = subprocess.run(["git", "-C", root, "rev-parse", "HEAD"],
+                             capture_output=True, text=True, timeout=GIT_TIMEOUT_SECONDS)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return res.stdout.strip() or None if res.returncode == 0 else None
+
+
+def _count_words(root):
+    """(files read, Counter word -> number of files holding it) over the repo's source files."""
+    df, n = Counter(), 0
+    for folder, dirs, names in os.walk(root):
+        dirs[:] = [name for name in dirs if name not in SKIP_DIRS]
+        for name in names:
+            if os.path.splitext(name)[1] not in CODE_EXT:
+                continue
+            full = os.path.join(folder, name)
+            try:
+                if not os.path.isfile(full) or os.path.getsize(full) >= MAX_WEIGHTS_SOURCE_BYTES:
+                    continue
+                with open(full, "rb") as handle:
+                    text = handle.read().decode("utf-8", errors="ignore")
+            except OSError:
+                continue
+            df.update(set(tokens(text)))
+            n += 1
+    return n, df
+
+
+def _weights_dir(repo):
+    return store_home() / repo_key(repo)
+
+
+def build_weights(repo):
+    """Write <store>/weights.json for the repo at path repo; return its path.
+
+    Same files and word counts as experiment 02's build_idf, but a word found in
+    fewer than MIN_FILES_PER_WORD files is dropped, and the file records HEAD and the build time.
+    """
+    root = _repo_root(repo)
+    store = _weights_dir(repo)
+    n, df = _count_words(root)
+    body = {"v": FORMAT_VERSION, "n": n, "head": _head(root), "built_at": time.time(),
+            "df": {word: count for word, count in df.items() if count >= MIN_FILES_PER_WORD}}
+    _private_dir(store)
+    _atomic_write(store, "weights.json", json.dumps(body, separators=(",", ":")))
+    return str(store / "weights.json")
+
+
+def load_weights(path):
+    """The weights dict in file path, or None if it is missing, corrupt or a newer version."""
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    version = data.get("v")
+    if isinstance(version, bool) or not isinstance(version, int) \
+            or not 1 <= version <= FORMAT_VERSION:
+        return None
+    built_at = data.get("built_at")
+    if (isinstance(data.get("n"), bool) or not isinstance(data.get("n"), int)
+            or not isinstance(data.get("df"), dict)
+            or isinstance(built_at, bool) or not isinstance(built_at, (int, float))):
+        return None
+    return data
+
+
+def _take_build_lock(store):
+    """Create <store>/weights.lock with O_EXCL; True if this caller now owns the build.
+
+    A lock older than 10 minutes belongs to a dead build and is replaced.
+    """
+    lock = store / "weights.lock"
+    for _ in range(2):
+        try:
+            os.close(os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
+            return True
+        except FileExistsError:
+            try:
+                if time.time() - os.stat(lock).st_mtime <= WEIGHTS_LOCK_STALE_SECONDS:
+                    return False
+                os.unlink(lock)
+            except FileNotFoundError:
+                pass  # its owner just finished; try to take it
+    return False
+
+
+def _start_background_build(repo):
+    """Start a detached build-weights process unless one is running. Never waits for it."""
+    store = _weights_dir(repo)
+    try:
+        _private_dir(store)
+        if not _take_build_lock(store):
+            return
+        try:
+            subprocess.Popen(
+                [sys.executable, os.path.abspath(__file__), "build-weights", "--repo",
+                 os.path.realpath(repo), "--release-lock"],
+                start_new_session=True, stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        except BaseException:
+            (store / "weights.lock").unlink(missing_ok=True)
+            raise
+    except OSError as err:
+        log_hook_error("ensure-weights", err)
+
+
+def ensure_weights(repo):
+    """Weights dict for the repo at path repo, or None if not ready. Never waits for a build.
+
+    No usable file: start a background build and return None. A file older than
+    one day whose recorded HEAD differs from the repo's HEAD (or any file older
+    than one day in a repo with no git HEAD): start a rebuild and return the old data.
+    """
+    data = load_weights(_weights_dir(repo) / "weights.json")
+    if data is None:
+        _start_background_build(repo)
+        return None
+    if time.time() - data["built_at"] > WEIGHTS_MAX_AGE_SECONDS:
+        head = _head(_repo_root(repo))
+        if head is None or head != data.get("head"):
+            _start_background_build(repo)
+    return data
+
+
+def build_weights_command(args):
+    """build-weights: no stdout. Failures go to hook.log and stderr; always returns 0."""
+    store = None
+    try:
+        store = _weights_dir(args.repo)
+        build_weights(args.repo)
+    except Exception as err:
+        log_hook_error("build-weights", err)
+        print(f"easy-memory build-weights: {err}", file=sys.stderr)
+    finally:
+        if args.release_lock and store is not None:
+            try:
+                (store / "weights.lock").unlink(missing_ok=True)
+            except OSError:
+                pass
+    return 0
+
+
 def _not_implemented(name):
     # stderr: a hook's stdout is added to the prompt, so stubs must not write there.
     def handler(args):
@@ -318,13 +509,17 @@ def _not_implemented(name):
 SUBCOMMANDS = {name: _not_implemented(name) for name in (
     "hook-stop", "hook-prompt", "serve", "report", "install", "uninstall")}
 SUBCOMMANDS["hook-stop"] = hook_stop
+SUBCOMMANDS["build-weights"] = build_weights_command
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(prog="easy_memory")
     sub = parser.add_subparsers(dest="command", required=True)
     for name in SUBCOMMANDS:
-        sub.add_parser(name)
+        command_parser = sub.add_parser(name)
+        if name == "build-weights":
+            command_parser.add_argument("--repo", default=os.getcwd())
+            command_parser.add_argument("--release-lock", action="store_true")
     try:
         args = parser.parse_args(argv)
     except SystemExit:
