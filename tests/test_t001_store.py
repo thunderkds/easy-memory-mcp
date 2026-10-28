@@ -289,8 +289,8 @@ class SubcommandTableTest(unittest.TestCase):
 
     def test_each_stub_says_not_implemented_and_exits_zero(self):
         for name in self.NAMES:
-            if name in ("hook-stop", "hook-prompt"):
-                continue  # implemented in HUN-75 / HUN-77 (tests/test_t002*, tests/test_t004*)
+            if name in ("hook-stop", "hook-prompt", "install", "uninstall"):
+                continue  # implemented in HUN-75 / HUN-77 / HUN-79 (tests/test_t002*, t004*, t006*)
             out, err = io.StringIO(), io.StringIO()
             with redirect_stdout(out), redirect_stderr(err):
                 code = easy_memory.main([name])

@@ -5,6 +5,8 @@ the store folder ~/.easy-memory/<key>/ (override: EASY_MEMORY_HOME). Git
 worktrees share the main repo's store. Nothing is ever written inside a repo.
 """
 import argparse
+import copy
+import difflib
 import hashlib
 import json
 import math
@@ -12,6 +14,9 @@ import os
 import posixpath
 import re
 import secrets
+import shlex
+import shutil
+import stat
 import subprocess
 import sys
 import time
@@ -92,13 +97,13 @@ def _private_dir(path):
     path.chmod(0o700)
 
 
-def _atomic_write(folder, name, text):
-    """Write text to folder/name through a 0600 temp file and an atomic rename."""
+def _atomic_write(folder, name, text, mode=0o600):
+    """Write text to folder/name through a temp file (given mode) and an atomic rename."""
     tmp = Path(folder) / f".{name}.{secrets.token_hex(4)}.tmp"
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     try:
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            os.fchmod(handle.fileno(), 0o600)
+            os.fchmod(handle.fileno(), mode)
             handle.write(text)
             handle.flush()
             os.fsync(handle.fileno())
@@ -716,6 +721,230 @@ def hook_prompt(args):
     return 0
 
 
+HOOK_EVENTS = {"Stop": ("hook-stop", 10), "UserPromptSubmit": ("hook-prompt", 5)}  # timeout s
+OUR_MARKER = "easy_memory.py"  # a hook entry whose command holds this is ours
+
+
+class SettingsError(ValueError):
+    """The settings file cannot be safely edited; nothing was written."""
+
+
+def settings_path():
+    """User-level Claude Code settings: $CLAUDE_CONFIG_DIR/settings.json, else ~/.claude/."""
+    folder = os.environ.get("CLAUDE_CONFIG_DIR")
+    return (Path(folder) if folder else Path.home() / ".claude") / "settings.json"
+
+
+def hook_entries():
+    """{event: hook entry} for our two hooks; python is sys.executable at install time."""
+    base = f"{shlex.quote(sys.executable)} {shlex.quote(os.path.abspath(__file__))}"
+    return {event: {"type": "command", "command": f"{base} {name}", "timeout": timeout}
+            for event, (name, timeout) in HOOK_EVENTS.items()}
+
+
+def _is_ours(hook):
+    return isinstance(hook, dict) and isinstance(hook.get("command"), str) \
+        and OUR_MARKER in hook["command"]
+
+
+def _load_settings(path):
+    """(text or None if missing, settings dict). Raises SettingsError for bad content."""
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return None, {}
+    except (OSError, ValueError) as err:
+        raise SettingsError(f"cannot read {path}: {err}") from err
+    try:
+        data = json.loads(text)
+    except ValueError as err:
+        raise SettingsError(f"{path} is not valid JSON ({err}); nothing was changed") from err
+    hooks = data.get("hooks", {}) if isinstance(data, dict) else None
+    if not isinstance(hooks, dict) or any(
+            not isinstance(hooks.get(event, []), list) for event in HOOK_EVENTS):
+        raise SettingsError(f"{path} has an unexpected shape (settings, 'hooks' or a hook "
+                            "event list is not what Claude Code writes); nothing was changed")
+    return text, data
+
+
+def _set_our_hooks(settings, entries):
+    """Copy of settings with our hook per event set to entries[event], or removed if None.
+
+    An existing entry of ours is replaced in place (a moved module path updates it);
+    duplicates are dropped. Groups, event lists and 'hooks' left empty by a removal are
+    dropped; empty ones that were already there are kept.
+    """
+    new = copy.deepcopy(settings)
+    hooks = new.setdefault("hooks", {})
+    any_emptied = False
+    for event in HOOK_EVENTS:
+        entry, placed, emptied = entries.get(event), False, False
+        groups = hooks.setdefault(event, [])
+        for group in list(groups):
+            if not isinstance(group, dict) or not isinstance(group.get("hooks"), list) \
+                    or not any(_is_ours(hook) for hook in group["hooks"]):
+                continue
+            kept = []
+            for hook in group["hooks"]:
+                if not _is_ours(hook):
+                    kept.append(hook)
+                elif entry is not None and not placed:
+                    kept.append(entry)
+                    placed = True
+            group["hooks"] = kept
+            if not kept:
+                groups.remove(group)
+                emptied = True
+        if entry is not None and not placed:
+            groups.append({"hooks": [entry]})
+        if not groups and (emptied or event not in settings.get("hooks", {})):
+            del hooks[event]
+            any_emptied = any_emptied or emptied
+    if not hooks and (any_emptied or "hooks" not in settings):
+        del new["hooks"]
+    return new
+
+
+def _json_indent(text):
+    """The indent unit of a JSON text: its first indented line's leading space, else 2."""
+    if text is None:
+        return 2
+    if "\n" not in text.strip():
+        return None  # one-line file stays one line
+    match = re.search(r"\n([ \t]+)\S", text)
+    return match.group(1) if match else 2
+
+
+def _render_settings(old_text, data):
+    indent = _json_indent(old_text)
+    text = json.dumps(data, indent=indent, ensure_ascii=False)
+    return text + "\n" if old_text is None or old_text.endswith("\n") else text
+
+
+def _write_settings(path, old_text, new_text):
+    """Back up path (if it exists) to <file>.easy-memory.bak.<UTC time>, then atomically
+    replace the real file (a symlink stays a symlink) keeping its mode. Returns the backup
+    path or None."""
+    target = Path(os.path.realpath(path))
+    backup = None
+    if old_text is not None:
+        current = target.read_bytes()
+        if current != old_text.encode("utf-8"):  # e.g. Claude Code saved it meanwhile
+            raise OSError(f"{path} changed while easy-memory was editing it; run again")
+        file_mode = stat.S_IMODE(os.stat(target).st_mode)
+        stamp = f"{path}.easy-memory.bak.{time.strftime('%Y%m%dT%H%M%SZ', time.gmtime())}"
+        for attempt in range(100):  # never overwrite an earlier backup from the same second
+            backup = Path(stamp if attempt == 0 else f"{stamp}-{attempt}")
+            try:
+                fd = os.open(backup, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                break
+            except FileExistsError:
+                if attempt == 99:
+                    raise
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(current)
+            handle.flush()
+            os.fsync(handle.fileno())
+    else:
+        file_mode = 0o600
+    _atomic_write(target.parent, target.name, new_text, mode=file_mode)
+    return backup
+
+
+def _edit_settings(entries, dry_run, done_word, same_word):
+    """Shared install/uninstall flow. Returns an exit code."""
+    path = settings_path()
+    if not path.parent.is_dir():
+        print(f"easy-memory: settings folder {path.parent} does not exist "
+              "(check CLAUDE_CONFIG_DIR); nothing was changed", file=sys.stderr)
+        return 1
+    try:
+        old_text, data = _load_settings(path)
+    except SettingsError as err:
+        print(f"easy-memory: {err}", file=sys.stderr)
+        return 1
+    new_data = _set_our_hooks(data, entries)
+    if new_data == data:
+        missing = "" if old_text is not None else " (file does not exist)"
+        print(f"settings: {path}{missing}\n{same_word}; nothing was changed")
+        return 0
+    new_text = _render_settings(old_text, new_data)
+    print(f"settings: {path}\npython: {sys.executable}")
+    if dry_run:
+        for line in difflib.unified_diff((old_text or "").splitlines(True),
+                                         new_text.splitlines(True), str(path), str(path)):
+            sys.stdout.write(line if line.endswith("\n") else line + "\n")
+        print("dry run: nothing was written")
+        return 0
+    try:
+        backup = _write_settings(path, old_text, new_text)
+    except OSError as err:
+        print(f"easy-memory: cannot write {path}: {err}; settings file unchanged", file=sys.stderr)
+        return 1
+    print(f"backup: {backup}" if backup else "backup: none (the file did not exist)")
+    print(done_word)
+    return 0
+
+
+def install_command(args):
+    """install [--dry-run]: add our Stop and UserPromptSubmit hooks to user-level settings."""
+    return _edit_settings(hook_entries(), args.dry_run, "installed: Stop and UserPromptSubmit hooks",
+                          "already installed")
+
+
+def _purge_target():
+    """The real store folder to delete, or raise ValueError if deleting it looks unsafe.
+
+    The resolved folder must be named .easy-memory* (the default is ~/.easy-memory), so a
+    repo such as easy-memory-mcp, '/', the home folder or a parent of it is refused.
+    """
+    raw = str(store_home())  # an empty EASY_MEMORY_HOME already means the default
+    real = Path(os.path.realpath(raw))
+    home = Path(os.path.realpath(Path.home()))
+    if real == Path("/") or real == home or real in home.parents \
+            or not real.name.startswith(".easy-memory"):
+        raise ValueError(f"refusing to delete {raw} (resolves to {real}): "
+                         "not an easy-memory store folder")
+    return real
+
+
+def _folder_bytes(folder):
+    total = 0
+    for parent, _, names in os.walk(folder):
+        for name in names:
+            try:
+                total += os.lstat(os.path.join(parent, name)).st_size
+            except OSError:
+                pass
+    return total
+
+
+def uninstall_command(args):
+    """uninstall [--purge]: remove our hooks; --purge also deletes the store (size printed first)."""
+    target = None
+    if args.purge:
+        try:
+            target = _purge_target()
+        except ValueError as err:
+            print(f"easy-memory: {err}; nothing was changed", file=sys.stderr)
+            return 1
+    code = _edit_settings({event: None for event in HOOK_EVENTS}, False,
+                          "uninstalled: easy-memory hooks removed", "not installed")
+    if code != 0 or target is None:
+        return code
+    if not target.is_dir():
+        print(f"store: no store at {target}")
+        return 0
+    print(f"store: {target} holds {_folder_bytes(target)} bytes")
+    try:
+        shutil.rmtree(target)
+    except OSError as err:
+        print(f"easy-memory: cannot delete {target}: {err}", file=sys.stderr)
+        return 1
+    print(f"store: deleted {target}")
+    return 0
+
+
 def _not_implemented(name):
     # stderr: a hook's stdout is added to the prompt, so stubs must not write there.
     def handler(args):
@@ -730,6 +959,8 @@ SUBCOMMANDS["hook-stop"] = hook_stop
 SUBCOMMANDS["hook-prompt"] = hook_prompt
 SUBCOMMANDS["build-weights"] = build_weights_command
 SUBCOMMANDS["switch"] = switch_command
+SUBCOMMANDS["install"] = install_command
+SUBCOMMANDS["uninstall"] = uninstall_command
 
 
 def main(argv=None):
@@ -743,6 +974,10 @@ def main(argv=None):
         elif name == "switch":
             command_parser.add_argument("state", nargs="?", choices=SWITCH_STATES)
             command_parser.add_argument("--repo", default=os.getcwd())
+        elif name == "install":
+            command_parser.add_argument("--dry-run", action="store_true")
+        elif name == "uninstall":
+            command_parser.add_argument("--purge", action="store_true")
     try:
         args = parser.parse_args(argv)
     except SystemExit:
