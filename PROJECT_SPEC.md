@@ -50,6 +50,12 @@ Port from evidence: `experiments/02-auto-memory/memstore.py` (tokens, cited file
 
 ---
 
+## Scoring Tool: easy-verifier
+
+`easy-verifier` (MCP, HTTP, `http://127.0.0.1:8766/mcp`, registered in `.mcp.json`) scores the code and the agents' results at Stage 4/5: `score`, one tool per dimension, `write_report`. It runs as the user's local Docker container `easy-verifier`, read-only on `~/workspace`; reports go to `~/.easy-verifier-reports`, not into this repo. It is a development tool only. It is not part of the product (PRD A7: no integration between the memory tool and its sibling MCPs in v1). The first use in a Claude Code session needs the user's approval of the project-scoped server.
+
+---
+
 ## Known Risk Areas
 
 | Area | Risk Level | Reason | Files |

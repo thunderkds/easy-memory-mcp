@@ -1,1 +1,0 @@
-{"seq": 8, "mode": "auto", "ranked": [[0.409, "O_a"], [0.276, "O_b"], [0.214, "E_a"], [0.163, "R_a"], [0.161, "E_b"], [0.048, "R_b"], [0.032, "R_c"]], "chosen": ["O_a", "O_b"], "changed": {"O_a": ["SiftOrder/src/main/java/com/siftit/domain/ordering/RestaurantOrderService.java"], "O_b": ["SiftOrder/src/main/java/com/siftit/domain/ordering/RestaurantOrderService.java"]}}
