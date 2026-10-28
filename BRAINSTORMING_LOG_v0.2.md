@@ -43,7 +43,7 @@ The question for this round: which parts of the plan are safe to build **now**, 
 ## Questions for the User
 
 1. Confirm the gate: the scorer, decay and vector work wait until the 2-week v0.1 report is in (approved in principle on 2026-10-28: "plan first").
-2. Sync: git-backed `sync` command (opt-in per repo, private remote you own), or Syncthing only with no sync code? Recommendation: decide after R2 and R3 ship; both need them.
+2. ~~Sync: git remote or folder sync only?~~ ANSWERED 2026-10-28: defer the sync feature. No sync work in v0.2. R2 stays, because the portable key also helps clones and is cheapest to migrate now.
 3. A6 changes from "not scrubbed" to "redacted at save". Should a one-time `redact` command also rewrite the notes already saved? Recommendation: yes, with `--dry-run`, because v0.1 notes may already hold secrets.
 
 ---
