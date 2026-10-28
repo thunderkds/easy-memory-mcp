@@ -285,7 +285,7 @@ class SubcommandTableTest(unittest.TestCase):
 
     def test_table_has_all_subcommands(self):
         # build-weights was added by HUN-76 (tests/test_t003_weights.py)
-        self.assertEqual(sorted(easy_memory.SUBCOMMANDS), sorted([*self.NAMES, "build-weights"]))
+        self.assertEqual(sorted(easy_memory.SUBCOMMANDS), sorted([*self.NAMES, "build-weights", "switch"]))
 
     def test_each_stub_says_not_implemented_and_exits_zero(self):
         for name in self.NAMES:

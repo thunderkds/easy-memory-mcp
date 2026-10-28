@@ -17,6 +17,7 @@ import sys
 import time
 import unicodedata
 from collections import Counter
+from datetime import date
 from pathlib import Path
 
 FORMAT_VERSION = 1
@@ -604,19 +605,114 @@ def prompt_index(data):
     return None
 
 
+SWITCH_STATES = ("on", "off", "auto")
+EPOCH_DAY = date(1970, 1, 1).toordinal()
+
+
+def _today():
+    """Today's local calendar date. Tests patch this."""
+    return date.today()
+
+
+def configured_state(config):
+    """The switch state in a config dict; anything unknown counts as auto."""
+    state = config.get("state") if isinstance(config, dict) else None
+    return state if isinstance(state, str) and state in SWITCH_STATES else "auto"
+
+
+def effective_state(config, today):
+    """'on' or 'off' for a config dict and a date. Auto is on when days since 1970-01-01 is even."""
+    state = configured_state(config)
+    if state == "auto":
+        return "on" if (today.toordinal() - EPOCH_DAY) % 2 == 0 else "off"
+    return state
+
+
+def read_config(repo):
+    """The repo's <store>/config.json as a dict, {} if missing or corrupt.
+
+    A state word that is not on, off or auto is logged to hook.log (the caller gets auto).
+    """
+    try:
+        data = json.loads((store_home() / repo_key(repo) / "config.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    if not isinstance(data, dict):
+        return {}
+    if "state" in data and configured_state(data) == "auto" and data["state"] != "auto":
+        log_hook_error("config", ValueError(f"unknown switch state {data['state']!r}, using auto"))
+    return data
+
+
+def write_config(repo, state):
+    """Store the switch state for the repo at path repo, replacing any config. Raises OSError."""
+    store = store_home() / repo_key(repo)
+    _private_dir(store)
+    _atomic_write(store, "config.json", json.dumps({"v": FORMAT_VERSION, "state": state}, indent=2))
+
+
+def switch_command(args):
+    """switch [on|off|auto]: set the repo's switch, then print the state and what it means today."""
+    try:
+        if args.state:
+            write_config(args.repo, args.state)
+        config = read_config(args.repo)
+    except OSError as err:
+        print(f"easy-memory switch: {err}", file=sys.stderr)
+        return 1
+    state, today = configured_state(config), _today()
+    effective = effective_state(config, today)
+    if state == "auto":
+        day = today.toordinal() - EPOCH_DAY
+        why = f"day {day} is {'even' if day % 2 == 0 else 'odd'}"
+    else:
+        why = f"set to {state}"
+    print(f"switch: {state}\ntoday: {effective} ({why})")
+    return 0
+
+
+def _append_prompt_log(repo, entry):
+    """Append one JSON line to <store>/prompts.log (0600)."""
+    store = store_home() / repo_key(repo)
+    _private_dir(store)
+    fd = os.open(store / "prompts.log", os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
+    with os.fdopen(fd, "a", encoding="utf-8") as handle:
+        os.fchmod(handle.fileno(), 0o600)
+        handle.write(json.dumps(entry) + "\n")
+
+
 def hook_prompt(args):
-    """UserPromptSubmit hook: stdout is one JSON object or nothing; always returns 0."""
+    """UserPromptSubmit hook: stdout is one JSON object or nothing; always returns 0.
+
+    The switch decides first: when the effective state is off nothing is scored.
+    One line per run goes to <store>/prompts.log, last, and a failure there is only logged.
+    """
+    log_to, entry = None, None
     try:
         data = json.loads(sys.stdin.read(MAX_STDIN_CHARS))
         if not isinstance(data, dict):
             raise ValueError("UserPromptSubmit input is not a JSON object")
-        text = prompt_index(data)
+        cwd = data.get("cwd")
+        log_to = cwd if isinstance(cwd, str) and cwd else os.getcwd()
+        config = read_config(log_to)
+        session_id = data.get("session_id")
+        entry = {"time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                 "session_id": session_id if isinstance(session_id, str) else "",
+                 "configured": configured_state(config),
+                 "effective": effective_state(config, _today()), "injected": False}
+        text = prompt_index(data) if entry["effective"] == "on" else None
         if text:
             sys.stdout.write(json.dumps({"hookSpecificOutput": {
                 "hookEventName": "UserPromptSubmit", "additionalContext": text}}) + "\n")
             sys.stdout.flush()
+            entry["injected"] = True
     except Exception as err:
         log_hook_error("hook-prompt", err)
+    if entry is not None:
+        try:
+            _append_prompt_log(log_to, entry)
+        except Exception as err:
+            log_hook_error("hook-prompt", err)
     return 0
 
 
@@ -633,6 +729,7 @@ SUBCOMMANDS = {name: _not_implemented(name) for name in (
 SUBCOMMANDS["hook-stop"] = hook_stop
 SUBCOMMANDS["hook-prompt"] = hook_prompt
 SUBCOMMANDS["build-weights"] = build_weights_command
+SUBCOMMANDS["switch"] = switch_command
 
 
 def main(argv=None):
@@ -643,6 +740,9 @@ def main(argv=None):
         if name == "build-weights":
             command_parser.add_argument("--repo", default=os.getcwd())
             command_parser.add_argument("--release-lock", action="store_true")
+        elif name == "switch":
+            command_parser.add_argument("state", nargs="?", choices=SWITCH_STATES)
+            command_parser.add_argument("--repo", default=os.getcwd())
     try:
         args = parser.parse_args(argv)
     except SystemExit:
