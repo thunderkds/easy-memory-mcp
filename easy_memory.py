@@ -12,6 +12,7 @@ import os
 import posixpath
 import re
 import secrets
+import statistics
 import subprocess
 import sys
 import time
@@ -716,6 +717,219 @@ def hook_prompt(args):
     return 0
 
 
+TOO_FEW = "too few sessions to compare"
+REPORT_MIN_SESSIONS = 10  # per group; fewer and the report says the numbers cannot be compared
+USAGE_KEYS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens",
+              "output_tokens")
+SESSION_ID = re.compile(r"[A-Za-z0-9_-]{1,64}")  # also keeps a logged id from leaving projects/
+
+
+def claude_projects_dir():
+    """$CLAUDE_CONFIG_DIR/projects if the variable is set and not empty, else ~/.claude/projects."""
+    override = os.environ.get("CLAUDE_CONFIG_DIR")
+    return (Path(override) if override else Path.home() / ".claude") / "projects"
+
+
+def _int_usage(usage):
+    """{key: int} for the four token counts of a usage dict, or None if one is not an integer."""
+    if not isinstance(usage, dict) or not any(key in usage for key in USAGE_KEYS):
+        return None
+    found = {}
+    for key in USAGE_KEYS:
+        value = usage.get(key, 0)
+        if isinstance(value, bool) or not isinstance(value, int):
+            return None
+        found[key] = value
+    return found
+
+
+def _opens_note(block, notes_dir):
+    """True if a tool_use block is a memory_read call or a Read of a file in notes_dir."""
+    name, args = block.get("name"), block.get("input")
+    if not isinstance(name, str):
+        return False
+    if name == "memory_read" or name.endswith("__memory_read"):
+        return True
+    path = args.get("file_path") if isinstance(args, dict) else None
+    if name != "Read" or not isinstance(path, str):
+        return False
+    return os.path.dirname(os.path.realpath(path)) == os.path.realpath(notes_dir)
+
+
+def read_session_usage(files, notes_dir, session_id):
+    """Token and turn counts of one session from its Claude log files (one line at a time).
+
+    files: the session's main log and its sub-agent logs; sub-agent (sidechain) entries count
+    with the parent session. One API reply is often written as several lines with the same
+    message id: it counts once, with the largest value seen for each token count. An entry
+    with no usable usage is skipped, and so is a line that is not valid JSON, and so is an
+    entry that names another session (a resumed session copies its parent's history).
+    Returns {"tokens_all": input + cache creation + cache read + output, "tokens_io": input +
+    output, "turns": assistant replies, "opened": a listed note was read}.
+    """
+    replies, opened = {}, False
+    for path in files:
+        try:
+            handle = open(path, "r", encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        with handle:
+            for raw in handle:
+                try:
+                    entry = json.loads(raw)
+                except ValueError:
+                    continue
+                message = entry.get("message") if isinstance(entry, dict) else None
+                if not isinstance(message, dict) or entry.get("type") != "assistant":
+                    continue
+                if isinstance(entry.get("sessionId"), str) and entry["sessionId"] != session_id:
+                    continue
+                content = message.get("content")
+                if isinstance(content, list):
+                    opened = opened or any(
+                        isinstance(b, dict) and b.get("type") == "tool_use"
+                        and _opens_note(b, notes_dir) for b in content)
+                counts = _int_usage(message.get("usage"))
+                if counts is None:
+                    continue
+                key = message["id"] if isinstance(message.get("id"), str) else (str(path), raw)
+                seen = replies.setdefault(key, dict.fromkeys(USAGE_KEYS, 0))
+                for name, value in counts.items():
+                    seen[name] = max(seen[name], value)
+    totals = [sum(r.values()) for r in replies.values()]
+    return {"tokens_all": sum(totals),
+            "tokens_io": sum(r["input_tokens"] + r["output_tokens"] for r in replies.values()),
+            "turns": len(replies), "opened": opened}
+
+
+def _first_prompt_lines(log_path):
+    """{session_id: first valid prompts.log line} and the set of session ids that got an index."""
+    first, injected = {}, set()
+    try:
+        handle = open(log_path, "r", encoding="utf-8", errors="replace")
+    except OSError:
+        return first, injected
+    with handle:
+        for raw in handle:
+            try:
+                line = json.loads(raw)
+            except ValueError:
+                continue
+            sid = line.get("session_id") if isinstance(line, dict) else None
+            if not isinstance(sid, str) or not SESSION_ID.fullmatch(sid) \
+                    or line.get("effective") not in ("on", "off"):
+                continue
+            first.setdefault(sid, line)
+            if line.get("injected") is True:
+                injected.add(sid)
+    return first, injected
+
+
+def _session_files(projects, sid):
+    """The session's main log and sub-agent logs, from any project folder; main log first."""
+    main, subs = [], []
+    try:
+        folders = sorted(p for p in projects.iterdir() if p.is_dir())
+    except OSError:
+        return []
+    for folder in folders:
+        if (folder / f"{sid}.jsonl").is_file():
+            main.append(folder / f"{sid}.jsonl")
+        subs.extend(sorted((folder / sid / "subagents").glob("*.jsonl")))
+    return main + subs
+
+
+def _median_text(values):
+    return f"{statistics.median(values):,.0f}" if values else "-"
+
+
+def _store_size(notes_dir):
+    """(number of note files, their total bytes) in notes_dir."""
+    count = size = 0
+    try:
+        for entry in os.scandir(notes_dir):
+            if entry.name.endswith(".json") and entry.is_file():
+                count += 1
+                size += entry.stat().st_size
+    except OSError:
+        pass
+    return count, size
+
+
+def report_command(args):
+    """report: one table per repo, sessions with memory on against off. Read-only; returns 0.
+
+    Sessions come from <store>/prompts.log, grouped by the effective state at their first
+    prompt (G4), and are joined by session id to Claude's logs under projects/. Headline
+    tokens are the four usage counts summed, as experiments 01 to 03 counted them.
+    """
+    root = _repo_root(args.repo)
+    store = store_home() / repo_key(args.repo)
+    notes_dir = store / "notes"
+    projects = claude_projects_dir()
+    first, injected = _first_prompt_lines(store / "prompts.log")
+    groups = {"on": [], "off": []}
+    opened_of_indexed = [0, 0]  # sessions that got an index; of those, sessions that opened a note
+    no_log = 0
+    for sid, line in first.items():
+        files = _session_files(projects, sid)
+        if not files:
+            no_log += 1
+            continue
+        usage = read_session_usage(files, notes_dir, sid)
+        groups[line["effective"]].append(usage)
+        if line["effective"] == "on" and sid in injected:
+            opened_of_indexed[0] += 1
+            opened_of_indexed[1] += usage["opened"]
+    # Sessions in this repo's own project folder that prompts.log never saw: no state, no group.
+    own = projects / re.sub(r"[^A-Za-z0-9]", "-", os.path.realpath(root))
+    try:
+        no_data = sum(1 for p in own.glob("*.jsonl") if p.stem not in first)
+    except OSError:
+        no_data = 0
+    print(f"easy-memory report for {root}")
+    if not first:
+        print("No prompt log for this repo yet: nothing to compare. Use Claude Code here with "
+              "the hooks installed, then run report again.")
+    elif not any(groups.values()):
+        print("No Claude session log found for the logged sessions "
+              f"(looked under {projects}): nothing to compare.")
+    print(f"sessions logged: {len(first)} | no data: {no_data} (log file, no prompts.log line) "
+          f"| no Claude log: {no_log} (prompts.log line, no log file)")
+    few = any(len(groups[state]) < REPORT_MIN_SESSIONS for state in groups)
+    if any(groups.values()):
+        print(f"{'state':<6}{'sessions':>9}{'tokens incl. cache (headline)':>32}"
+              f"{'tokens in+out':>15}{'median turns':>14}  note opened")
+        for state in ("on", "off"):
+            rows = groups[state]
+            if state == "on" and opened_of_indexed[0]:
+                opened, indexed = opened_of_indexed[1], opened_of_indexed[0]
+                rate = f"{opened}/{indexed} ({round(100 * opened / indexed)}%)"
+            else:
+                rate = "-"
+            row = (f"{state:<6}{len(rows):>9}"
+                   f"{_median_text([r['tokens_all'] for r in rows]):>32}"
+                   f"{_median_text([r['tokens_io'] for r in rows]):>15}"
+                   f"{_median_text([r['turns'] for r in rows]):>14}  {rate}")
+            print(row + (f"  {TOO_FEW}" if few else ""))
+        print("Tokens are per session: median over sessions. Headline = tokens including cache "
+              "(input + cache creation + cache read + output), as experiments 01 to 03 counted "
+              "them; 'in+out' is input + output only (PRD FR-007 wording). Sub-agent work counts "
+              "with its session. Note opened = share of on sessions that got an index and then "
+              "ran memory_read or Read on a note.")
+        if few:
+            print(f"{TOO_FEW} (fewer than {REPORT_MIN_SESSIONS} sessions in a group): "
+                  "do not read a result into these numbers yet.")
+        else:
+            on_med = statistics.median(r["tokens_all"] for r in groups["on"])
+            off_med = statistics.median(r["tokens_all"] for r in groups["off"])
+            if off_med:
+                print(f"on vs off, median headline tokens: {100 * (on_med - off_med) / off_med:+.0f}%")
+    count, size = _store_size(notes_dir)
+    print(f"store: {count} notes, {size:,} bytes (notes folder of this repo)")
+    return 0
+
+
 def _not_implemented(name):
     # stderr: a hook's stdout is added to the prompt, so stubs must not write there.
     def handler(args):
@@ -730,6 +944,7 @@ SUBCOMMANDS["hook-stop"] = hook_stop
 SUBCOMMANDS["hook-prompt"] = hook_prompt
 SUBCOMMANDS["build-weights"] = build_weights_command
 SUBCOMMANDS["switch"] = switch_command
+SUBCOMMANDS["report"] = report_command
 
 
 def main(argv=None):
@@ -742,6 +957,8 @@ def main(argv=None):
             command_parser.add_argument("--release-lock", action="store_true")
         elif name == "switch":
             command_parser.add_argument("state", nargs="?", choices=SWITCH_STATES)
+            command_parser.add_argument("--repo", default=os.getcwd())
+        elif name == "report":
             command_parser.add_argument("--repo", default=os.getcwd())
     try:
         args = parser.parse_args(argv)
