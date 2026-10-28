@@ -73,4 +73,4 @@
 
 | Version / Tag | Date | Scope (Task IDs) | Deployer | Approved (by / when / answer) | Outcome |
 |---------------|------|------------------|----------|-------------------------------|---------|
-| v0.1.0 (planned, commit e412e14) | 2026-10-28 | HUN-74 to HUN-82 | not yet installed | pending | Planned |
+| v0.1.0 (commit 7916424, not tagged) | 2026-10-28 | HUN-74 to HUN-82 | not yet installed | user / 2026-10-28 / "Approve v0.1.0 @ 7916424 (Recommended)" | Planned (approved; AC6 live check still open) |
