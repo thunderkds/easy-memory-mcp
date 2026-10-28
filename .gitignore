@@ -2,3 +2,8 @@ __pycache__/
 *.pyc
 .board/
 memory/event-trace/
+
+# raw agent answers quote private client source; keep local (see README.md)
+experiments/*/results/
+experiments/*/work/
+experiments/*/*.log

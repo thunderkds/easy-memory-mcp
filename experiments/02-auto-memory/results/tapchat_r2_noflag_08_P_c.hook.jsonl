@@ -1,1 +1,0 @@
-{"seq": 8, "mode": "noflag", "ranked": [[0.399, "P_a"], [0.391, "P_b"], [0.03, "D_a"], [0.023, "M_a"], [0.023, "M_b"], [0.0, "D_b"], [0.0, "M_c"]], "chosen": ["P_a", "P_b"], "changed": {"P_a": ["src/payment/pay-in/pay-in.service.ts", "src/regular-users/regular-users.service.ts"], "P_b": ["src/payment/pay-in/pay-in.service.ts", "src/regular-users/regular-users.service.ts"]}}
