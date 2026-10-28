@@ -1,6 +1,23 @@
 # easy-memory-mcp
 
-**Status:** experiments only. There is no product code yet. The rule is to test first, then plan.
+**Status:** working prototype (v0.1.0 planned, not yet installed on a real repo). `easy_memory.py` is one file, standard library only. The experiments below came first; the code follows their result.
+
+## Use it
+
+Run these from the main checkout, never from a git worktree. The hook commands keep an absolute path.
+
+```bash
+python3 easy_memory.py install --dry-run   # preview the change to your Claude Code settings
+python3 easy_memory.py install             # add the Stop and prompt hooks, the MCP server and the allow rule
+python3 easy_memory.py switch [on|off|auto]  # per repo; auto is on for even days, off for odd days
+python3 easy_memory.py report              # sessions with memory on against off
+python3 easy_memory.py uninstall [--purge] # remove it; --purge also deletes ~/.easy-memory
+python3 -m unittest discover -s tests      # the test suite
+```
+
+What it does: after each answer of 200 characters or more, the Stop hook saves a note under `~/.easy-memory/`. On your next prompt, the prompt hook adds a short index of matching notes. The agent can open one with the MCP tool `memory_read` (the tools are `memory_search`, `memory_read`, `memory_list` and `memory_forget`). Notes are saved in clear text with mode 0600.
+
+Known limits: the prompt hook gets slower as notes pile up (about 1 ms per note), and the live check that opening a note causes no permission prompt has not run yet. See [the release page](docs/RELEASE_v0.1.0.md) for the install steps, the rollback plan and the full list. [RUNBOOK.md](RUNBOOK.md) has the day-to-day checks.
 
 ## Purpose
 
