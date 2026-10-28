@@ -9,7 +9,6 @@
 ## Board
 
 ### Todo
-- [ ] **HUN-81** — MCP server with search, read, list and forget | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-81.md`
 - [ ] **HUN-82** — End-to-end smoke and NFR checks | qa-expert | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-82.md`
 
 ### In Progress
@@ -24,6 +23,7 @@
 - [x] **HUN-78** — Per-repo on/off/auto switch and prompt log | backend-developer | C1 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-78.md`
 - [x] **HUN-79** — Install and uninstall into user-level Claude Code settings | backend-developer | C2 | Risk: High | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-79.md`
 - [x] **HUN-80** — Report: memory on vs off from Claude session logs | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-80.md`
+- [x] **HUN-81** — MCP server with search, read, list and forget | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-81.md`
 
 ### Closed (will not do)
 
