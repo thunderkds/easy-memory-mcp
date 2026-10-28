@@ -289,8 +289,8 @@ class SubcommandTableTest(unittest.TestCase):
 
     def test_each_stub_says_not_implemented_and_exits_zero(self):
         for name in self.NAMES:
-            if name in ("hook-stop", "hook-prompt", "install", "uninstall"):
-                continue  # implemented in HUN-75 / HUN-77 / HUN-79 (tests/test_t002*, t004*, t006*)
+            if name in ("hook-stop", "hook-prompt", "install", "uninstall", "report"):
+                continue  # implemented in HUN-75 / HUN-77 / HUN-79 / HUN-80 (tests/test_t002*, t004*, t006*, t007*)
             out, err = io.StringIO(), io.StringIO()
             with redirect_stdout(out), redirect_stderr(err):
                 code = easy_memory.main([name])
@@ -309,7 +309,7 @@ class SubcommandTableTest(unittest.TestCase):
         self.assertEqual(out.getvalue(), "")
 
     def test_runs_as_a_script(self):
-        res = subprocess.run([sys.executable, str(ROOT / "easy_memory.py"), "report"],
+        res = subprocess.run([sys.executable, str(ROOT / "easy_memory.py"), "serve"],
                              capture_output=True, text=True)
         self.assertEqual(res.returncode, 0)
         self.assertIn("not implemented", res.stdout + res.stderr)
