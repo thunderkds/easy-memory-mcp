@@ -24,7 +24,7 @@
 - [Path C: single-file stdlib prototype](decisions.md#architecture) — hooks + hand-written MCP; weights built in background (16.5 s on orderly)
 - [Linear is the source of truth](decisions.md#infrastructure) — tasks HUN-74..82; kanban and tasks/ are a pull cache
 - [Board setup without a tty](learnings.md#patterns) — script `init` with a scripted ask; rewrite forward IDs after create
-- [Tracked experiment results may leak private code](learnings.md#gotchas) — no .gitignore; open question for the user
+- [Experiment results were tracked and pushed](learnings.md#gotchas) — untracked in 649903c; remote history still has them; parity check needs local copies
 - [easy-verifier as scoring MCP](decisions.md#infrastructure) — user's container, HTTP :8766, project-scoped .mcp.json; dev tool only
 - [Weights keep words in 3+ files](decisions.md#architecture) — 2 gave 3.6 MB on orderly (limit 2 MB); 3 gives 1.7 MB and passes parity
 - [Prototype open defects D1-D3](learnings.md#patterns) — prompt-hook time grows with notes (~1 ms each); big transcripts; uncapped non-git build
