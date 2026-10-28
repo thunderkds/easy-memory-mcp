@@ -1,118 +1,350 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>easy-memory-mcp v0.1.0</title>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Easy Memory: per-repo session memory for Claude Code</title>
+<meta name="description" content="Easy Memory saves what a Claude Code session concluded and hands the next session a short index. Standard-library Python, local only.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0a12'/%3E%3Cpath d='M8 23 L16 9 L24 23' fill='none' stroke='%2300d4ff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <style>
-body{font:16px/1.6 system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;color:#1a1a1a;background:#fff}
-h1,h2,h3{line-height:1.25} code{background:#f2f2f2;padding:.1em .3em;border-radius:3px;font-size:.92em}
-table{border-collapse:collapse;width:100%;margin:1rem 0} th,td{border:1px solid #ccc;padding:.4rem .6rem;text-align:left;vertical-align:top}
-th{background:#f6f6f6} a{color:#0b57d0}
-@media (prefers-color-scheme:dark){body{background:#121212;color:#e6e6e6}code,th{background:#222}td,th{border-color:#444}a{color:#8ab4f8}}
-</style></head><body>
-<h1>easy-memory-mcp v0.1.0 (prototype)</h1>
-<p><strong>Proposed tag:</strong> <code>v0.1.0</code> on commit <code>7916424</code> (not tagged yet). Production approval recorded 2026-10-28 in <code>RUNBOOK.md</code>.
-<strong>Verdict:</strong> GO to install, with one open item: the live permission check (HUN-81 AC6) runs after install. Roll back if it fails.
-This page is a plan. The operator runs it. Nothing here was run against your real Claude settings.</p>
-<h2>What this release is</h2>
-<p>A single-file Python tool (<code>easy_memory.py</code>, standard library only) that gives Claude Code a memory per repo.</p>
-<ul>
-<li>A <strong>Stop hook</strong> saves one note after each answer of 200 characters or more.</li>
-<li>A <strong>prompt hook</strong> adds a short index of matching notes to your next prompt. The agent can ignore it or open a note.</li>
-<li>An <strong>MCP server</strong> lets the agent search, read, list and forget notes.</li>
-<li>A <strong>switch</strong> turns memory on, off or auto for each repo. Auto is on for even days and off for odd days, so you get a fair comparison.</li>
-<li>A <strong>report</strong> compares sessions with memory on and off, using Claude's own session logs.</li>
-</ul>
-<h2>Release notes</h2>
-<h3>Features</h3>
-<ul>
-<li>HUN-74: repo key (git worktrees share one store) and atomic, versioned note store under <code>~/.easy-memory/</code>. Files are 0600 and folders 0700.</li>
-<li>HUN-75: Stop hook saves one note per turn. It cites only files that exist in the repo.</li>
-<li>HUN-76: word weights are built in the background and never inside a hook.</li>
-<li>HUN-77: prompt hook injects a framed index. Note text is quoted as data and cannot leave the frame.</li>
-<li>HUN-78: <code>switch on|off|auto</code> per repo, and one <code>prompts.log</code> line per prompt.</li>
-<li>HUN-79: <code>install</code> and <code>uninstall</code> edit the user-level Claude Code settings, with a backup.</li>
-<li>HUN-80: <code>report</code> compares memory on and off.</li>
-<li>HUN-81: MCP server with <code>memory_search</code>, <code>memory_read</code>, <code>memory_list</code> and <code>memory_forget</code>.</li>
-</ul>
-<h3>Internal</h3>
-<ul>
-<li>HUN-82: independent end-to-end tests. 307 tests pass (3 skipped: opt-in or host-dependent).</li>
-</ul>
-<h3>Measured</h3>
-<ul>
-<li><code>hook-prompt</code> p95 0.212 s on a 7,831-file repo with 200 notes (limit 1 s).</li>
-<li><code>hook-stop</code> p95 0.066 s (limit 2 s).</li>
-<li>Weights file 1.69 MB, loads in 0.024 s.</li>
-</ul>
-<h3>Known limits</h3>
-<ul>
-<li><strong>D1:</strong> <code>hook-prompt</code> gets about 1 ms slower per saved note. It passes the 1 s limit at roughly 1,000 to 3,000 notes. At about 5 s, Claude Code's hook timeout kills the hook and the index silently disappears.</li>
-<li><strong>D2:</strong> <code>hook-stop</code> reads the whole transcript into memory (a 400 MB transcript used 808 MB).</li>
-<li><strong>D3:</strong> the background weights build has no cap when Claude Code starts in a folder that is not a git repo.</li>
-<li>Answers and prompts are saved in clear text (mode 600). Do not use it on a repo where answers can hold secrets you would not keep on disk.</li>
-<li>The live check that opening a note causes no permission prompt (HUN-81 AC6) has not run.</li>
-</ul>
-<h2>Pre-deploy checks</h2>
-<ol>
-<li>Run from the <strong>main checkout</strong>, never a worktree: <code>cd &lt;your checkout&gt; &amp;&amp; git status --short &amp;&amp; git branch --show-current</code>. Pass: no output except <code>?? .claude/hooks/.state/</code>, and the branch is <code>main</code>.</li>
-<li>Smoke test, defined before the deploy: <code>python3 -m unittest discover -s tests</code>. Pass: <code>OK (skipped=3)</code> with <code>Ran 307 tests</code>.</li>
-<li>Back up your settings by hand as well: <code>cp "$CLAUDE_CONFIG_DIR/settings.json" "$CLAUDE_CONFIG_DIR/settings.json.manual-backup"</code>. Pass: the copy exists.</li>
-</ol>
-<h2>Deploy steps (the operator runs these)</h2>
-<ol>
-<li>Preview: <code>python3 easy_memory.py install --dry-run</code>. Read the diff. Pass: it adds only a <code>Stop</code> entry, a <code>UserPromptSubmit</code> entry and <code>mcp__easy-memory</code> in <code>permissions.allow</code>, and prints the <code>claude mcp add</code> command. Nothing is written.</li>
-<li>Install: <code>python3 easy_memory.py install</code>. Pass: it prints <code>installed</code>, a <code>backup:</code> path, and <code>mcp: registered easy-memory</code>.</li>
-<li>Turn it on for one repo and look: <code>cd &lt;your repo&gt; &amp;&amp; python3 &lt;your checkout&gt;/easy_memory.py switch</code>. Pass: it prints <code>switch: auto</code> and what that means today.</li>
-</ol>
-<h2>Post-deploy health check</h2>
-<ol>
-<li><code>claude mcp list</code>. Pass: <code>easy-memory</code> is listed and connected.</li>
-<li>Use Claude Code in a test repo, ask for a long answer (200 characters or more), then run <code>ls ~/.easy-memory/*/notes</code>. Pass: one new <code>.json</code> note appears.</li>
-<li>Start a new prompt in that repo on a day when the switch is on. Pass: the prompt carries an <code>&lt;easy-memory-index&gt;</code> block, or nothing if no note matches.</li>
-<li>The HUN-81 AC6 procedure (<code>tasks/TASK_REVIEW_HUN-81.md</code>, "Manual A3 procedure"). Pass: the agent opens a note by id and <code>permission_denials</code> is an empty list.</li>
-</ol>
-<h2>Rollback plan</h2>
-<p><strong>Roll back if:</strong> Claude Code fails to start or shows a hook error on every prompt, prompts feel slow (more than about 1 s), the MCP server shows as failed in <code>claude mcp list</code>, or the permission check in step 4 fails.</p>
-<p>Reverse steps, in order:
-1. <code>python3 &lt;your checkout&gt;/easy_memory.py uninstall</code>. Pass: it prints <code>uninstalled</code>, removes both hooks and the allow rule, and your other settings stay.
-2. If <code>claude</code> was missing or the removal printed a manual command, run: <code>claude mcp remove --scope user easy-memory</code>.
-3. If the settings file is still wrong, restore the backup: <code>cp "$CLAUDE_CONFIG_DIR"/settings.json.easy-memory.bak.&lt;timestamp&gt; "$CLAUDE_CONFIG_DIR/settings.json"</code>. Use the oldest backup, or <code>settings.json.manual-backup</code>.
-4. Optional: delete the saved notes with <code>python3 easy_memory.py uninstall --purge</code>. This prints the size first and deletes only <code>~/.easy-memory</code>.
-5. Verify: <code>claude mcp list</code> no longer shows <code>easy-memory</code>, and <code>grep easy_memory "$CLAUDE_CONFIG_DIR/settings.json"</code> prints nothing.</p>
-<h2>GO gate</h2>
-<table>
-<thead>
-<tr>
-<th>Item</th>
-<th>State</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Stage 5 evidence green for all 9 tasks</td>
-<td>Yes (307 tests; each task run by hand in temp folders)</td>
-</tr>
-<tr>
-<td>Rollback plan with triggers and exact reverse steps</td>
-<td>Yes</td>
-</tr>
-<tr>
-<td>Post-deploy health check with a pass condition</td>
-<td>Yes</td>
-</tr>
-<tr>
-<td>Deploy command known</td>
-<td>Yes (<code>install</code>, from PROJECT_SPEC.md target: your machine)</td>
-</tr>
-<tr>
-<td>HUN-81 AC6 live check</td>
-<td><strong>Open</strong> (needs your credentials; steps above)</td>
-</tr>
-<tr>
-<td>Production approval for v0.1.0 @ 7916424</td>
-<td>Recorded in RUNBOOK.md</td>
-</tr>
-</tbody>
-</table>
-<p>This is a recommendation. You run the steps.</p>
-<hr><p><a href="https://github.com/thunderkds/easy-memory-mcp">Source on GitHub</a></p>
-</body></html>
+  :root {
+    --bg:#0a0a12; --surface:#111128; --surface2:#16162e; --border:#1e1e42;
+    --text:#e2e2f0; --muted:#8080b0; --cyan:#00d4ff; --green:#00ff88; --amber:#ffb800;
+    --purple:#a855f7; --purple-text:#ae5ff8; --white:#ffffff;
+    --cyan-dim:rgba(0,212,255,.12); --green-dim:rgba(0,255,136,.12);
+    --amber-dim:rgba(255,184,0,.12); --purple-dim:rgba(168,85,247,.12);
+    --header-shadow:0 0 24px rgba(0,212,255,.08), 0 4px 24px rgba(0,0,0,.5);
+    --sidebar-w:15rem; --measure:72ch;
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+  body { font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; margin:0; color:var(--text); background:var(--bg); font-size:1rem; line-height:1.6; overflow-x:hidden; }
+
+  .layout { display:grid; grid-template-columns:var(--sidebar-w) minmax(0,1fr); gap:2.5rem; max-width:78rem; margin:0 auto; padding:0 1rem; }
+  .content { min-width:0; max-width:var(--measure); padding:2rem 0 0; }
+
+  .sidebar { position:sticky; top:0; align-self:start; max-height:100vh; overflow-y:auto; padding:2rem .5rem 2rem 0; }
+  .sidebar .brand { display:block; color:var(--white); font-weight:700; font-size:.95rem; text-decoration:none; margin-bottom:.15rem; }
+  .sidebar .ver { color:var(--muted); font-size:.75rem; margin-bottom:.75rem; }
+  .nav-group-title { color:var(--muted); font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; font-weight:700; margin:1.1rem 0 .35rem; }
+  .sidebar ul { list-style:none; margin:0; padding:0; }
+  .sidebar a { display:block; padding:.3rem .6rem; border-left:2px solid var(--border); color:var(--muted); text-decoration:none; font-size:.87rem; border-radius:0 4px 4px 0; }
+  .sidebar a:hover { color:var(--text); background:var(--surface); }
+  .sidebar a.active { color:var(--cyan); background:var(--cyan-dim); border-left-color:var(--cyan); font-weight:600; }
+  .nav-toggle { display:none; font:inherit; font-size:.85rem; font-weight:600; background:var(--surface); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:.45rem .8rem; cursor:pointer; }
+  .nav-toggle:hover { border-color:var(--cyan); color:var(--cyan); }
+
+  a { color:var(--cyan); }
+  a:focus-visible, button:focus-visible, summary:focus-visible { outline:2px solid var(--cyan); outline-offset:2px; }
+  .skip-link { position:absolute; left:-9999px; top:0; background:var(--surface); color:var(--cyan); padding:.6rem 1rem; border:1px solid var(--cyan); border-radius:0 0 6px 0; z-index:10; }
+  .skip-link:focus { left:0; }
+
+  h1 { font-size:1.6rem; color:var(--white); letter-spacing:.01em; margin:0 0 .5rem; }
+  h2 { font-size:1.05rem; color:var(--cyan); margin:0 0 1rem; text-transform:uppercase; letter-spacing:.06em; font-weight:700; border-bottom:1px solid var(--border); padding-bottom:.5rem; }
+  h3 { font-size:1rem; color:var(--white); margin:1.4rem 0 .5rem; }
+  p { color:var(--text); }
+  .lead { color:var(--muted); font-size:1.05rem; }
+  .header { background:var(--surface); border:1px solid var(--border); border-top:2px solid var(--cyan); border-radius:10px; padding:2rem; margin-bottom:1rem; box-shadow:var(--header-shadow); }
+  .header .lead:last-child { margin-bottom:0; }
+  section { margin:2.5rem 0; scroll-margin-top:1rem; }
+
+  .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:8px; margin:1rem 0; }
+  table { border-collapse:collapse; width:100%; min-width:28rem; font-size:.9rem; }
+  th, td { text-align:left; padding:.6rem .8rem; border-bottom:1px solid var(--border); vertical-align:top; }
+  th { background:var(--surface2); color:var(--muted); text-transform:uppercase; font-size:.75rem; letter-spacing:.05em; }
+  th:first-child, td:first-child { position:sticky; left:0; background:var(--bg); }
+  th:first-child { background:var(--surface2); }
+  tr:last-child td { border-bottom:none; }
+  code { color:var(--cyan); background:var(--cyan-dim); padding:.1rem .4rem; border-radius:4px; font-size:.85em; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  pre { background:var(--surface2); border:1px solid var(--border); border-radius:8px; padding:1rem; font-size:.85rem; color:var(--green); white-space:pre-wrap; overflow-wrap:anywhere; font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  pre code { background:none; color:inherit; padding:0; font-size:inherit; }
+  .tag { display:inline-block; padding:.1rem .5rem; border-radius:999px; font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap; }
+  .tag-ok { background:var(--green-dim); color:var(--green); }
+  .tag-warn { background:var(--amber-dim); color:var(--amber); }
+  .tag-open { background:var(--purple-dim); color:var(--purple-text); }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:1rem 1.2rem; margin-bottom:1rem; }
+  .card p:first-child { margin-top:0; } .card p:last-child { margin-bottom:0; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(10rem,1fr)); gap:.75rem; margin:1rem 0; }
+  .stat { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:.8rem 1rem; }
+  .stat .n { font-size:1.6rem; font-weight:700; color:var(--cyan); line-height:1.2; }
+  .stat .l { color:var(--muted); font-size:.8rem; }
+  .step h3 .num { color:var(--cyan); }
+  details { border:1px solid var(--border); border-radius:8px; padding:.6rem 1rem; background:var(--surface); margin:.75rem 0; }
+  summary { cursor:pointer; color:var(--cyan); font-weight:600; }
+  details[open] summary { margin-bottom:.5rem; }
+
+  svg.flow { display:block; width:100%; max-width:34rem; height:auto; margin:1rem auto; }
+  svg.flow .node { fill:var(--surface2); stroke:var(--border); stroke-width:1.5; }
+  svg.flow .node-hook { stroke:var(--cyan); }
+  svg.flow .node-store { stroke:var(--green); }
+  svg.flow .t { fill:var(--text); font-size:13px; font-weight:700; text-anchor:middle; }
+  svg.flow .s { fill:var(--muted); font-size:11px; text-anchor:middle; }
+  svg.flow .arrow { stroke:var(--muted); stroke-width:1.5; fill:none; }
+  svg.flow .arrowhead { fill:var(--muted); }
+
+  footer { color:var(--muted); font-size:.8rem; margin:3rem 0 1.5rem; }
+
+  @media (max-width:767px) {
+    .layout { grid-template-columns:minmax(0,1fr); gap:0; }
+    .sidebar { position:static; max-height:none; overflow:visible; padding:1rem 0 .5rem; border-bottom:1px solid var(--border); }
+    .content { padding-top:1.5rem; }
+    .js .nav-toggle { display:inline-block; }
+    .js .nav-groups[data-collapsed="true"] { display:none; }
+    .header { padding:1.25rem; }
+  }
+</style>
+</head>
+<body id="top">
+<a class="skip-link" href="#main">Skip to content</a>
+<div class="layout">
+
+<aside class="sidebar">
+  <a class="brand" href="#top">Easy Memory</a>
+  <div class="ver">memory kit · v0.1.0 prototype</div>
+  <button class="nav-toggle" type="button" aria-expanded="true" aria-controls="site-nav">Menu</button>
+  <nav id="site-nav" class="nav-groups" aria-label="Sections">
+    <p class="nav-group-title">Overview</p>
+    <ul>
+      <li><a href="#what">What it is</a></li>
+      <li><a href="#context">Context</a></li>
+      <li><a href="#how">How it works</a></li>
+    </ul>
+    <p class="nav-group-title">Guide</p>
+    <ul>
+      <li><a href="#run">Install</a></li>
+      <li><a href="#use">Use it</a></li>
+      <li><a href="#rollback">Remove it</a></li>
+    </ul>
+    <p class="nav-group-title">Reference</p>
+    <ul>
+      <li><a href="#numbers">Measured</a></li>
+      <li><a href="#limits">Known limits</a></li>
+      <li><a href="#notes">Release notes</a></li>
+      <li><a href="#built">How it was built</a></li>
+    </ul>
+    <p class="nav-group-title">Family</p>
+    <ul>
+      <li><a href="https://personal-agentic-claude.vercel.app/">Easy Kit</a></li>
+      <li><a href="https://easy-verifier.vercel.app/">Easy Verifier</a></li>
+      <li><a href="https://github.com/thunderkds/easy-memory-mcp">GitHub</a></li>
+    </ul>
+  </nav>
+</aside>
+
+<main id="main" class="content">
+
+<header class="header">
+  <h1>Easy Memory</h1>
+  <p class="lead">Per-repo memory for Claude Code. After each answer it saves a note. Before your next prompt it hands the agent a short index of the notes that match. The agent can ignore the index or open one note.</p>
+  <ul class="lead">
+    <li><strong>Local</strong> — one Python file, standard library only. No model calls, no network, nothing leaves your machine.</li>
+    <li><strong>Hooks and MCP</strong> — a Stop hook, a prompt hook, and a stdio MCP server with four tools.</li>
+    <li><strong>Measured on yourself</strong> — a per-repo switch alternates memory on and off by day, and a report compares the two.</li>
+  </ul>
+  <p class="lead"><a href="https://github.com/thunderkds/easy-memory-mcp" target="_blank" rel="noopener noreferrer">View the source on GitHub</a></p>
+</header>
+
+<section id="what">
+  <h2>What it is</h2>
+  <p>Coding agents pay again for what an earlier session already found out. They read the same files again, and long sessions carry every old tool result forward. Easy Memory saves what a session concluded and gives it to the next session that needs it. The goal is fewer model tokens at the same accuracy.</p>
+  <ul>
+    <li><strong>Notes are data, not instructions.</strong> The index says so, and note text is quoted so it cannot leave its frame.</li>
+    <li><strong>A hook never blocks you.</strong> On any error a hook exits 0, adds nothing and writes one line to a local log.</li>
+    <li><strong>Nothing is written inside your repo.</strong> Notes live under <code>~/.easy-memory/</code> (files 0600, folders 0700).</li>
+  </ul>
+  <p>Terms: a <em>note</em> is one saved answer with its question and the repo files it cited. The <em>index</em> is up to 5 lines about matching notes. The <em>switch</em> is the per-repo state: <code>on</code>, <code>off</code> or <code>auto</code>.</p>
+</section>
+
+<section id="context">
+  <h2>Context</h2>
+  <p>This continues easy-context-mcp, which was retired on 2026-10-23. Code search (vectors plus a symbol graph) did not beat plain grep in any test. Memory between sessions was the first idea that did. Three experiments came before any product code.</p>
+  <div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Question</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>01</td><td>Does memory from the last session cut tokens on a follow-up?</td><td>Yes. The previous final answer cut tokens by 58% at the same accuracy and caught a renamed method. Resume was misled.</td></tr>
+      <tr><td>02</td><td>Does it still work when saving, choosing and delivering memory are automatic?</td><td>Risk. It cut tokens by 35% on one repo and added 4% on the other, about 15% saved overall. Stale memory misled 0 runs. The picker was the weak part.</td></tr>
+      <tr><td>03</td><td>Can more precise injection save tokens on both repos?</td><td>Go for a prototype. The index method (list notes, the agent opens one) cut tokens by 29% and 27%. Accuracy was the same.</td></tr>
+    </tbody>
+  </table></div>
+  <p>The prototype is the index method from experiment 03. Raw agent answers from the experiments stay local, because they quote private source code.</p>
+</section>
+
+<section id="how">
+  <h2>How it works</h2>
+  <svg class="flow" viewBox="0 0 520 250" role="img" aria-label="Flow: an answer ends, the Stop hook saves a note; the next prompt reaches the prompt hook, which scores notes with word weights and adds an index; the agent may open a note through MCP memory_read.">
+    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="arrowhead" d="M0 0 L10 5 L0 10 z"/></marker></defs>
+    <rect class="node node-hook" x="10" y="20" width="150" height="54" rx="8"/><text class="t" x="85" y="44">Stop hook</text><text class="s" x="85" y="62">after an answer ≥ 200 chars</text>
+    <rect class="node node-store" x="185" y="20" width="150" height="54" rx="8"/><text class="t" x="260" y="44">Note store</text><text class="s" x="260" y="62">~/.easy-memory/&lt;repo&gt;</text>
+    <rect class="node" x="360" y="20" width="150" height="54" rx="8"/><text class="t" x="435" y="44">Word weights</text><text class="s" x="435" y="62">built in the background</text>
+    <rect class="node node-hook" x="185" y="120" width="150" height="54" rx="8"/><text class="t" x="260" y="144">Prompt hook</text><text class="s" x="260" y="162">score ≥ 0.12, top 5</text>
+    <rect class="node" x="10" y="120" width="150" height="54" rx="8"/><text class="t" x="85" y="144">Your prompt</text><text class="s" x="85" y="162">+ framed index</text>
+    <rect class="node node-hook" x="360" y="120" width="150" height="54" rx="8"/><text class="t" x="435" y="144">MCP server</text><text class="s" x="435" y="162">memory_read opens one</text>
+    <path class="arrow" d="M160 47 L183 47" marker-end="url(#ah)"/>
+    <path class="arrow" d="M360 47 L337 47" marker-end="url(#ah)"/>
+    <path class="arrow" d="M260 74 L260 118" marker-end="url(#ah)"/>
+    <path class="arrow" d="M185 147 L162 147" marker-end="url(#ah)"/>
+    <path class="arrow" d="M395 120 L325 76" marker-end="url(#ah)"/>
+    <text class="s" x="260" y="214">The prompt hook never builds weights. It starts a background build and adds nothing until the file exists.</text>
+  </svg>
+  <ul>
+    <li><strong>Stop hook</strong> saves one note per turn: the question, the answer, the time, and the sha256 of each repo file the answer cited.</li>
+    <li><strong>Prompt hook</strong> scores each note against your prompt. It adds at most 5 lines in a frame of at most 2,500 characters, and flags cited files as <code>CHANGED:</code> or <code>DELETED:</code>.</li>
+    <li><strong>MCP server</strong> offers <code>memory_search</code>, <code>memory_read</code>, <code>memory_list</code> and <code>memory_forget</code>. Ids are checked, and nothing outside the notes folder can be read or deleted.</li>
+    <li><strong>Repo key</strong>: git worktrees of one repo share one store.</li>
+  </ul>
+</section>
+
+<section id="run">
+  <h2>Install</h2>
+  <p>Clone the repo, then run three commands from that clone. Run them from the main checkout, never from a git worktree. The hook commands keep an absolute path.</p>
+  <div class="step">
+    <h3><span class="num">1.</span> Get the code</h3>
+<pre><code>git clone git@github.com:thunderkds/easy-memory-mcp.git
+cd easy-memory-mcp
+python3 -m unittest discover -s tests</code></pre>
+    <p>Pass: the last line reads <code>OK</code>.</p>
+  </div>
+  <div class="step">
+    <h3><span class="num">2.</span> Preview the change</h3>
+<pre><code>python3 easy_memory.py install --dry-run</code></pre>
+    <p>It prints a diff of your user-level Claude Code settings (<code>$CLAUDE_CONFIG_DIR/settings.json</code>, else <code>~/.claude/</code>) and the <code>claude mcp add</code> command. It writes nothing.</p>
+  </div>
+  <div class="step">
+    <h3><span class="num">3.</span> Install</h3>
+<pre><code>python3 easy_memory.py install</code></pre>
+    <p>It copies the settings file to <code>settings.json.easy-memory.bak.&lt;time&gt;</code>. It then adds a Stop hook (10 s timeout), a prompt hook (5 s timeout) and the allow rule <code>mcp__easy-memory</code>. It registers the MCP server with <code>claude mcp add --scope user</code>. Run it twice and the second run changes nothing.</p>
+  </div>
+  <p>Check: <code>claude mcp list</code> shows <code>easy-memory</code> connected. If <code>claude</code> is not on your PATH, the hooks still install and the manual command is printed.</p>
+</section>
+
+<section id="use">
+  <h2>Use it</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><code>switch</code></td><td>Prints the state for this repo and what it means today.</td></tr>
+      <tr><td><code>switch on|off|auto</code></td><td>Sets it. <code>auto</code> is the default: on for even days, off for odd days since 1970-01-01. The Stop hook saves notes in every state.</td></tr>
+      <tr><td><code>report</code></td><td>Compares sessions with memory on and off from Claude's own session logs: sessions, median tokens, median turns, and how often a listed note was opened.</td></tr>
+      <tr><td><code>install</code> / <code>uninstall</code></td><td>Add or remove the hooks, the allow rule and the MCP server.</td></tr>
+    </tbody>
+  </table></div>
+  <ul>
+    <li>The headline token count is input + cache creation + cache read + output, as the experiments counted it. A second column shows input + output only.</li>
+    <li>With fewer than 10 sessions in either group, the report says <code>too few sessions to compare</code> and prints no percentage.</li>
+    <li>Every prompt leaves one line in <code>~/.easy-memory/&lt;repo key&gt;/prompts.log</code>: time, session id, configured and effective state, and whether an index was added.</li>
+  </ul>
+</section>
+
+<section id="rollback">
+  <h2>Remove it</h2>
+  <p>Roll back if Claude Code shows a hook error on every prompt, prompts feel slow (about 1 s or more), the MCP server fails in <code>claude mcp list</code>, or opening a note triggers a permission prompt.</p>
+<pre><code>python3 easy_memory.py uninstall            # removes both hooks and the allow rule
+claude mcp remove --scope user easy-memory  # only if uninstall printed it as a manual step
+python3 easy_memory.py uninstall --purge    # also deletes ~/.easy-memory (prints the size first)</code></pre>
+  <p>If the settings file is still wrong, copy the newest <code>settings.json.easy-memory.bak.&lt;time&gt;</code> back over it. Check: <code>grep easy_memory "$CLAUDE_CONFIG_DIR/settings.json"</code> prints nothing.</p>
+</section>
+
+<section id="numbers">
+  <h2>Measured</h2>
+  <div class="stats">
+    <div class="stat"><div class="n">0.212 s</div><div class="l">prompt hook p95 · 7,831-file repo, 200 notes (limit 1 s)</div></div>
+    <div class="stat"><div class="n">0.066 s</div><div class="l">Stop hook p95 (limit 2 s)</div></div>
+    <div class="stat"><div class="n">1.69 MB</div><div class="l">word-weights file · loads in 0.024 s</div></div>
+    <div class="stat"><div class="n">307</div><div class="l">tests pass (3 skipped: opt-in or host-dependent)</div></div>
+  </div>
+  <p>An independent QA task checked the full cycle: install, save, index, MCP read, report, uninstall. It also checked file modes, no network traffic (a socket shim and <code>strace</code>), garbage input, and that the repo tree hash does not change.</p>
+</section>
+
+<section id="limits">
+  <h2>Known limits</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Limit</th><th>Detail</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Notes pile up</td><td>The prompt hook gets about 1 ms slower per saved note. It passes the 1 s limit at roughly 1,000 to 3,000 notes. At about 5 s the hook timeout kills it and the index silently disappears.</td><td><span class="tag tag-warn">open</span></td></tr>
+      <tr><td>Big transcripts</td><td>The Stop hook reads the whole transcript into memory. A 400 MB transcript used 808 MB.</td><td><span class="tag tag-warn">open</span></td></tr>
+      <tr><td>Non-git folder</td><td>The background weights build has no cap when Claude Code starts in a folder that is not a git repo.</td><td><span class="tag tag-warn">open</span></td></tr>
+      <tr><td>Clear text</td><td>Answers and prompts are saved unencrypted (mode 0600). Do not use it where answers can hold secrets you would not keep on disk.</td><td><span class="tag tag-ok">accepted</span></td></tr>
+      <tr><td>Permission prompt</td><td>The live check that opening a note causes no permission prompt has not run. It needs your own credentials.</td><td><span class="tag tag-open">to run</span></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="notes">
+  <h2>Release notes · v0.1.0</h2>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Task</th><th>What shipped</th></tr></thead>
+    <tbody>
+      <tr><td>HUN-74</td><td>Repo key (worktrees share a store) and an atomic, versioned note store.</td></tr>
+      <tr><td>HUN-75</td><td>Stop hook saves one note per turn and cites only files that exist in the repo.</td></tr>
+      <tr><td>HUN-76</td><td>Word weights built in the background, with a parity check against full weights.</td></tr>
+      <tr><td>HUN-77</td><td>Prompt hook adds a framed index. Note text cannot leave the frame.</td></tr>
+      <tr><td>HUN-78</td><td>Per-repo <code>on</code>/<code>off</code>/<code>auto</code> switch and a prompt log.</td></tr>
+      <tr><td>HUN-79</td><td><code>install</code> and <code>uninstall</code> for the user-level settings, with a backup.</td></tr>
+      <tr><td>HUN-80</td><td><code>report</code>: memory on against off from Claude session logs.</td></tr>
+      <tr><td>HUN-81</td><td>MCP server with search, read, list and forget.</td></tr>
+      <tr><td>HUN-82</td><td>Independent end-to-end smoke and latency checks.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="built">
+  <h2>How it was built</h2>
+  <p>Easy Memory was built with <a href="https://personal-agentic-claude.vercel.app/">Easy Kit</a>, the supervisor pipeline in this family. The work ran on the extended track, because it was Complexity C2, touched user settings, and needed more than one agent.</p>
+  <ul>
+    <li><strong>Plan</strong> — a PRD, a brainstorm of three paths (the single-file prototype won) and nine task guides, kept in Linear.</li>
+    <li><strong>Build</strong> — one isolated sub-agent per task, test first, each with a before-and-after demonstration.</li>
+    <li><strong>Review and verify</strong> — each task was reviewed and run by hand in temporary folders before it merged. The final task was an independent QA agent.</li>
+    <li><strong>Ship</strong> — a release plan, a rollback plan and a runbook. You run the install steps yourself.</li>
+  </ul>
+  <p>Its sibling, <a href="https://easy-verifier.vercel.app/">Easy Verifier</a>, is the offline scoring MCP the project used as a dev tool.</p>
+</section>
+
+<footer>Easy Memory v0.1.0 prototype · <a href="https://github.com/thunderkds/easy-memory-mcp">source</a> · release plan in <code>docs/RELEASE_v0.1.0.md</code></footer>
+
+</main>
+</div>
+
+<script>
+(function () {
+  document.documentElement.classList.add("js");
+  var nav = document.getElementById("site-nav");
+  var toggle = document.querySelector(".nav-toggle");
+  if (nav && toggle) {
+    nav.setAttribute("data-collapsed", "true");
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.addEventListener("click", function () {
+      var collapsed = nav.getAttribute("data-collapsed") === "true";
+      nav.setAttribute("data-collapsed", collapsed ? "false" : "true");
+      toggle.setAttribute("aria-expanded", collapsed ? "true" : "false");
+    });
+    nav.addEventListener("click", function (event) {
+      if (event.target.tagName === "A" && window.innerWidth < 768) {
+        nav.setAttribute("data-collapsed", "true");
+        toggle.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
+  var sections = [].slice.call(document.querySelectorAll("main > section[id]"));
+  var links = {};
+  [].forEach.call(document.querySelectorAll('#site-nav a[href^="#"]'), function (a) {
+    links[a.getAttribute("href").slice(1)] = a;
+  });
+  if (!("IntersectionObserver" in window) || !sections.length) { return; }
+  var visible = {};
+  function paint() {
+    var first = null;
+    for (var i = 0; i < sections.length; i++) {
+      if (visible[sections[i].id]) { first = sections[i].id; break; }
+    }
+    Object.keys(links).forEach(function (id) { links[id].classList.toggle("active", id === first); });
+  }
+  var observer = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { visible[e.target.id] = e.isIntersecting; });
+    paint();
+  }, { rootMargin: "0px 0px -60% 0px" });
+  sections.forEach(function (s) { observer.observe(s); });
+})();
+</script>
+</body>
+</html>
