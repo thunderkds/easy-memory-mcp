@@ -21,3 +21,8 @@
 <!-- Format: - [Title](cold-file.md#section) — one-line summary.
      Target ≤150 chars/entry. Advisory: reported by the size test, never enforced.
      The enforced gate is the 42,000-character whole-file budget above. -->
+- [Path C: single-file stdlib prototype](decisions.md#architecture) — hooks + hand-written MCP; weights built in background (16.5 s on orderly)
+- [Linear is the source of truth](decisions.md#infrastructure) — tasks HUN-74..82; kanban and tasks/ are a pull cache
+- [Board setup without a tty](learnings.md#patterns) — script `init` with a scripted ask; rewrite forward IDs after create
+- [Tracked experiment results may leak private code](learnings.md#gotchas) — no .gitignore; open question for the user
+- [easy-verifier as scoring MCP](decisions.md#infrastructure) — user's container, HTTP :8766, project-scoped .mcp.json; dev tool only
