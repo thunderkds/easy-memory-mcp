@@ -9,7 +9,6 @@
 ## Board
 
 ### Todo
-- [ ] **HUN-74** — Package skeleton, repo key and atomic note store | common-infrastructure | C1 | Risk: Low | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-74.md`
 - [ ] **HUN-75** — Stop hook saves one note per turn | backend-developer | C2 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-75.md`
 - [ ] **HUN-76** — Word weights built in the background, with a parity check | backend-developer | C2 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-76.md`
 - [ ] **HUN-77** — Prompt hook injects the index | backend-developer | C2 | Risk: High | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-77.md`
@@ -24,6 +23,7 @@
 ### Ready for Review
 
 ### Done
+- [x] **HUN-74** — Package skeleton, repo key and atomic note store | common-infrastructure | C1 | Risk: Low | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-74.md`
 
 ### Closed (will not do)
 

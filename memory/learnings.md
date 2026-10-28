@@ -8,6 +8,8 @@
 
 - 2026-10-28 — Board setup without a terminal: `board_sync.py init` needs `/dev/tty`. Call `board_sync.init(root, ask, make_adapter, env, out, err)` from Python with a scripted `ask`. Create issues in dependency order with `create --guide`, then rewrite forward `Txxx` references to the new IDs and push each with `update --guide` (`scripts/board_sync.py`).
 
+- 2026-10-28 — Store folders: `os.makedirs`/`mkdir(mode=)` obey the umask and race under concurrent writers; create with explicit `chmod` and tolerate `FileExistsError` (`easy_memory.py` `_private_dir`, HUN-74).
+- 2026-10-28 — Hook stubs and later hook handlers must write nothing to stdout (it joins the prompt) and must catch argparse exit 2 to keep exit 0 (NFR-004) (`easy_memory.py`).
 
 ## Gotchas
 
