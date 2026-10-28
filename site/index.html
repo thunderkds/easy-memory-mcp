@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>easy-memory-mcp v0.1.0</title>
+<style>
+body{font:16px/1.6 system-ui,sans-serif;max-width:46rem;margin:2rem auto;padding:0 1rem;color:#1a1a1a;background:#fff}
+h1,h2,h3{line-height:1.25} code{background:#f2f2f2;padding:.1em .3em;border-radius:3px;font-size:.92em}
+table{border-collapse:collapse;width:100%;margin:1rem 0} th,td{border:1px solid #ccc;padding:.4rem .6rem;text-align:left;vertical-align:top}
+th{background:#f6f6f6} a{color:#0b57d0}
+@media (prefers-color-scheme:dark){body{background:#121212;color:#e6e6e6}code,th{background:#222}td,th{border-color:#444}a{color:#8ab4f8}}
+</style></head><body>
+<h1>easy-memory-mcp v0.1.0 (prototype)</h1>
+<p><strong>Proposed tag:</strong> <code>v0.1.0</code> on commit <code>7916424</code> (not tagged yet). Production approval recorded 2026-10-28 in <code>RUNBOOK.md</code>.
+<strong>Verdict:</strong> GO to install, with one open item: the live permission check (HUN-81 AC6) runs after install. Roll back if it fails.
+This page is a plan. The operator runs it. Nothing here was run against your real Claude settings.</p>
+<h2>What this release is</h2>
+<p>A single-file Python tool (<code>easy_memory.py</code>, standard library only) that gives Claude Code a memory per repo.</p>
+<ul>
+<li>A <strong>Stop hook</strong> saves one note after each answer of 200 characters or more.</li>
+<li>A <strong>prompt hook</strong> adds a short index of matching notes to your next prompt. The agent can ignore it or open a note.</li>
+<li>An <strong>MCP server</strong> lets the agent search, read, list and forget notes.</li>
+<li>A <strong>switch</strong> turns memory on, off or auto for each repo. Auto is on for even days and off for odd days, so you get a fair comparison.</li>
+<li>A <strong>report</strong> compares sessions with memory on and off, using Claude's own session logs.</li>
+</ul>
+<h2>Release notes</h2>
+<h3>Features</h3>
+<ul>
+<li>HUN-74: repo key (git worktrees share one store) and atomic, versioned note store under <code>~/.easy-memory/</code>. Files are 0600 and folders 0700.</li>
+<li>HUN-75: Stop hook saves one note per turn. It cites only files that exist in the repo.</li>
+<li>HUN-76: word weights are built in the background and never inside a hook.</li>
+<li>HUN-77: prompt hook injects a framed index. Note text is quoted as data and cannot leave the frame.</li>
+<li>HUN-78: <code>switch on|off|auto</code> per repo, and one <code>prompts.log</code> line per prompt.</li>
+<li>HUN-79: <code>install</code> and <code>uninstall</code> edit the user-level Claude Code settings, with a backup.</li>
+<li>HUN-80: <code>report</code> compares memory on and off.</li>
+<li>HUN-81: MCP server with <code>memory_search</code>, <code>memory_read</code>, <code>memory_list</code> and <code>memory_forget</code>.</li>
+</ul>
+<h3>Internal</h3>
+<ul>
+<li>HUN-82: independent end-to-end tests. 307 tests pass (3 skipped: opt-in or host-dependent).</li>
+</ul>
+<h3>Measured</h3>
+<ul>
+<li><code>hook-prompt</code> p95 0.212 s on a 7,831-file repo with 200 notes (limit 1 s).</li>
+<li><code>hook-stop</code> p95 0.066 s (limit 2 s).</li>
+<li>Weights file 1.69 MB, loads in 0.024 s.</li>
+</ul>
+<h3>Known limits</h3>
+<ul>
+<li><strong>D1:</strong> <code>hook-prompt</code> gets about 1 ms slower per saved note. It passes the 1 s limit at roughly 1,000 to 3,000 notes. At about 5 s, Claude Code's hook timeout kills the hook and the index silently disappears.</li>
+<li><strong>D2:</strong> <code>hook-stop</code> reads the whole transcript into memory (a 400 MB transcript used 808 MB).</li>
+<li><strong>D3:</strong> the background weights build has no cap when Claude Code starts in a folder that is not a git repo.</li>
+<li>Answers and prompts are saved in clear text (mode 600). Do not use it on a repo where answers can hold secrets you would not keep on disk.</li>
+<li>The live check that opening a note causes no permission prompt (HUN-81 AC6) has not run.</li>
+</ul>
+<h2>Pre-deploy checks</h2>
+<ol>
+<li>Run from the <strong>main checkout</strong>, never a worktree: <code>cd &lt;your checkout&gt; &amp;&amp; git status --short &amp;&amp; git branch --show-current</code>. Pass: no output except <code>?? .claude/hooks/.state/</code>, and the branch is <code>main</code>.</li>
+<li>Smoke test, defined before the deploy: <code>python3 -m unittest discover -s tests</code>. Pass: <code>OK (skipped=3)</code> with <code>Ran 307 tests</code>.</li>
+<li>Back up your settings by hand as well: <code>cp "$CLAUDE_CONFIG_DIR/settings.json" "$CLAUDE_CONFIG_DIR/settings.json.manual-backup"</code>. Pass: the copy exists.</li>
+</ol>
+<h2>Deploy steps (the operator runs these)</h2>
+<ol>
+<li>Preview: <code>python3 easy_memory.py install --dry-run</code>. Read the diff. Pass: it adds only a <code>Stop</code> entry, a <code>UserPromptSubmit</code> entry and <code>mcp__easy-memory</code> in <code>permissions.allow</code>, and prints the <code>claude mcp add</code> command. Nothing is written.</li>
+<li>Install: <code>python3 easy_memory.py install</code>. Pass: it prints <code>installed</code>, a <code>backup:</code> path, and <code>mcp: registered easy-memory</code>.</li>
+<li>Turn it on for one repo and look: <code>cd &lt;your repo&gt; &amp;&amp; python3 &lt;your checkout&gt;/easy_memory.py switch</code>. Pass: it prints <code>switch: auto</code> and what that means today.</li>
+</ol>
+<h2>Post-deploy health check</h2>
+<ol>
+<li><code>claude mcp list</code>. Pass: <code>easy-memory</code> is listed and connected.</li>
+<li>Use Claude Code in a test repo, ask for a long answer (200 characters or more), then run <code>ls ~/.easy-memory/*/notes</code>. Pass: one new <code>.json</code> note appears.</li>
+<li>Start a new prompt in that repo on a day when the switch is on. Pass: the prompt carries an <code>&lt;easy-memory-index&gt;</code> block, or nothing if no note matches.</li>
+<li>The HUN-81 AC6 procedure (<code>tasks/TASK_REVIEW_HUN-81.md</code>, "Manual A3 procedure"). Pass: the agent opens a note by id and <code>permission_denials</code> is an empty list.</li>
+</ol>
+<h2>Rollback plan</h2>
+<p><strong>Roll back if:</strong> Claude Code fails to start or shows a hook error on every prompt, prompts feel slow (more than about 1 s), the MCP server shows as failed in <code>claude mcp list</code>, or the permission check in step 4 fails.</p>
+<p>Reverse steps, in order:
+1. <code>python3 &lt;your checkout&gt;/easy_memory.py uninstall</code>. Pass: it prints <code>uninstalled</code>, removes both hooks and the allow rule, and your other settings stay.
+2. If <code>claude</code> was missing or the removal printed a manual command, run: <code>claude mcp remove --scope user easy-memory</code>.
+3. If the settings file is still wrong, restore the backup: <code>cp "$CLAUDE_CONFIG_DIR"/settings.json.easy-memory.bak.&lt;timestamp&gt; "$CLAUDE_CONFIG_DIR/settings.json"</code>. Use the oldest backup, or <code>settings.json.manual-backup</code>.
+4. Optional: delete the saved notes with <code>python3 easy_memory.py uninstall --purge</code>. This prints the size first and deletes only <code>~/.easy-memory</code>.
+5. Verify: <code>claude mcp list</code> no longer shows <code>easy-memory</code>, and <code>grep easy_memory "$CLAUDE_CONFIG_DIR/settings.json"</code> prints nothing.</p>
+<h2>GO gate</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>State</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Stage 5 evidence green for all 9 tasks</td>
+<td>Yes (307 tests; each task run by hand in temp folders)</td>
+</tr>
+<tr>
+<td>Rollback plan with triggers and exact reverse steps</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Post-deploy health check with a pass condition</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Deploy command known</td>
+<td>Yes (<code>install</code>, from PROJECT_SPEC.md target: your machine)</td>
+</tr>
+<tr>
+<td>HUN-81 AC6 live check</td>
+<td><strong>Open</strong> (needs your credentials; steps above)</td>
+</tr>
+<tr>
+<td>Production approval for v0.1.0 @ 7916424</td>
+<td>Recorded in RUNBOOK.md</td>
+</tr>
+</tbody>
+</table>
+<p>This is a recommendation. You run the steps.</p>
+<hr><p><a href="https://github.com/thunderkds/easy-memory-mcp">Source on GitHub</a></p>
+</body></html>
