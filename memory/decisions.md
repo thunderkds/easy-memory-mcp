@@ -18,6 +18,7 @@
 **Decision**: Only FR-009 (secret redaction at save, plus a `redact` command, dry-run by default) ships during the v0.1 on/off measurement. The package split (FR-011, package `easy_memory_core/`) is built in a worktree and merged when Gate 1 opens. The portable store key (FR-010) is deferred with sync. Gate 2 splits into 2a (decay, expiry) and 2b (optional embedder in `memory_search` only). Gate 3 (other clients) is removed.
 **Why**: A three-agent review found the hooks run live from this checkout, so a merge changes the measured hooks on the next prompt. A key change moves `config.json`, `prompts.log` and `weights.json`, which are the measured data. Root-commit keys can merge unrelated forks. The user chose Claude only on 2026-10-28.
 **Files**: `PRD_v0.2.md`, `BRAINSTORMING_LOG_v0.2.md`, `RUNBOOK.md` (commit 109d96e). Confirmed by the user on 2026-10-29.
+**Status**: Gate 0 shipped 2026-10-29T08:03:51Z (merge `0ffe6f2`, HUN-84..87): `redact_text` in `save_stop_note` and the `redact [--repo] [--apply]` command in `easy_memory.py`, tests in `tests/test_t010_redact.py`. Next gate is the sample bar (open item O5 first: `configured == auto` filter in `report`).
 
 ## Infrastructure
 
