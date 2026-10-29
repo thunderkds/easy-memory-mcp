@@ -1586,11 +1586,20 @@ def _redact_note(notes_dir, name, apply):
     """Redact one note file. Returns (hits, status); status is "ok", "skipped" or "failed".
 
     Prints a failure line with the note id and the error type only, never the error text
-    (it could hold note text). Writes only a note whose prompt or answer changed.
+    (it could hold note text). Writes only a note whose prompt or answer changed, and only if
+    the file is still the one that was read (a note deleted or replaced meanwhile is not touched).
     """
     note_id = name[:-len(".json")]
+    if not valid_note_id(note_id):
+        print(f"{ascii(name)}: skipped (bad name)")  # ascii(): no raw terminal escapes
+        return {}, "skipped"
+    path = notes_dir / name
     try:
-        note = json.loads((notes_dir / name).read_text(encoding="utf-8"))
+        if path.is_symlink():
+            print(f"{note_id}: skipped (symlink)")
+            return {}, "skipped"
+        seen = os.lstat(path)
+        note = json.loads(path.read_text(encoding="utf-8"))
         version = note.get("v") if isinstance(note, dict) else None
         if isinstance(version, bool) or not isinstance(version, int) or not 1 <= version <= FORMAT_VERSION:
             raise ValueError("not a note")
@@ -1605,6 +1614,13 @@ def _redact_note(notes_dir, name, apply):
                 for kind, count in found.items():
                     hits[kind] = hits.get(kind, 0) + count
         if hits and apply:
+            try:
+                now = os.lstat(path)
+            except OSError:
+                now = None
+            if now is None or (now.st_ino, now.st_mtime_ns) != (seen.st_ino, seen.st_mtime_ns):
+                print(f"{note_id}: skipped (changed)")
+                return {}, "skipped"
             _atomic_write(notes_dir, name, json.dumps(note, indent=2))  # same encoding as write_note
     except Exception as err:
         print(f"{note_id}: failed ({type(err).__name__})")
@@ -1616,25 +1632,32 @@ def redact_command(args):
     """redact: remove secrets from notes already saved. A dry run unless --apply is given.
 
     Prints one line per note with a hit: note id, then each kind and count. Never prints
-    matched text. Returns 1 if any note could not be redacted or written, else 0.
+    matched text. Returns 1 if the notes folder cannot be read or any note could not be
+    redacted or written, else 0.
     """
     notes_dir = store_home() / repo_key(args.repo) / "notes"
     try:
         names = sorted(name for name in os.listdir(notes_dir) if name.endswith(".json"))
-    except OSError:
+    except FileNotFoundError:
         return 0
-    flagged, failed = 0, 0
+    except OSError as err:
+        print(f"redact: cannot read notes ({type(err).__name__})", file=sys.stderr)
+        return 1
+    flagged, failed, skipped = 0, 0, 0
     for name in names:
         hits, status = _redact_note(notes_dir, name, args.apply)
         failed += status == "failed"
+        skipped += status == "skipped"
         if hits and status == "ok":
             flagged += 1
             print(f"{name[:-len('.json')]}: " + ", ".join(f"{kind} {count}" for kind, count in hits.items()))
-    if names and not flagged and not failed:
+    if names and not flagged and not failed and not skipped:
         print(f"No secrets found in {len(names)} note(s).")
     elif flagged:
         print(f"{'Rewrote' if args.apply else 'Found secrets in'} {flagged} note(s)."
               + ("" if args.apply else " Run again with --apply to rewrite them."))
+    if skipped:
+        print(f"{skipped} skipped (unreadable)")
     return 1 if failed else 0
 
 

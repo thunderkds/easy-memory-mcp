@@ -572,6 +572,79 @@ class RedactCommandTest(unittest.TestCase):
         subprocess.run([*cmd, "--apply"], capture_output=True, text=True, env=env, check=True)
         self.assertNotIn(AWS, note.read_text(encoding="utf-8"))
 
+    def test_note_deleted_during_the_run_is_not_recreated(self):  # F1
+        note = self.save(f"one {AWS}")
+        real = easy_memory.redact_text
+
+        def delete_then_redact(text):
+            if note.exists():
+                note.unlink()
+            return real(text)
+
+        with mock.patch.object(easy_memory, "redact_text", side_effect=delete_then_redact):
+            code, out = self.run_redact("--apply")
+        self.assertEqual(code, 0)
+        self.assertFalse(note.exists())
+        self.assertIn(f"{note.stem}: skipped (changed)", out)
+
+    def test_note_replaced_during_the_run_is_not_overwritten(self):  # F1
+        note = self.save(f"one {AWS}")
+        real = easy_memory.redact_text
+
+        def replace_then_redact(text):
+            other = note.parent / "swap.tmp"
+            other.write_text(note.read_text(encoding="utf-8") + " ", encoding="utf-8")
+            os.replace(other, note)
+            return real(text)
+
+        with mock.patch.object(easy_memory, "redact_text", side_effect=replace_then_redact):
+            _, out = self.run_redact("--apply")
+        self.assertIn("skipped (changed)", out)
+        self.assertIn(AWS, note.read_text(encoding="utf-8"))
+
+    def test_only_skipped_notes_never_say_no_secrets(self):  # F2
+        note = self.save("clean")
+        (note.parent / "20200101T000000000-aaaaaaaa.json").write_text("{not json", encoding="utf-8")
+        for flags in ((), ("--apply",)):
+            _, out = self.run_redact(*flags)
+            self.assertNotIn("No secrets found", out)
+            self.assertIn("1 skipped (unreadable)", out)
+
+    def test_bad_note_names_are_never_printed_raw(self):  # F3
+        note = self.save(f"one {AWS}")
+        evil = note.parent / "evil\x1b[31mRED\n.json"
+        evil.write_text(json.dumps({"v": 1, "prompt": AWS, "answer": ""}), encoding="utf-8")
+        before = evil.read_bytes()
+        code, out = self.run_redact("--apply")
+        self.assertEqual(code, 0)
+        self.assertNotIn("\x1b", out)
+        self.assertNotIn("RED\n", out)
+        self.assertIn("skipped (bad name)", out)
+        self.assertEqual(evil.read_bytes(), before)
+        self.assertNotIn(AWS, note.read_text(encoding="utf-8"))
+
+    def test_unreadable_notes_folder_is_an_error(self):  # F4
+        self.save("clean")
+        notes = self.home / easy_memory.repo_key(str(self.repo)) / "notes"
+        with mock.patch("os.listdir", side_effect=PermissionError("no")):
+            code, out = self.run_redact()
+        self.assertEqual(code, 1)
+        self.assertIn("redact: cannot read notes (PermissionError)", out)
+        shutil.rmtree(notes)
+        notes.write_text("a file", encoding="utf-8")
+        code, out = self.run_redact()
+        self.assertEqual(code, 1)
+        self.assertIn("redact: cannot read notes (NotADirectoryError)", out)
+
+    def test_symlink_note_is_skipped_and_stays_a_symlink(self):  # F5
+        real = self.save(f"one {AWS}")
+        link = real.parent / "20200101T000000000-aaaaaaaa.json"
+        link.symlink_to(real)
+        _, out = self.run_redact("--apply")
+        self.assertTrue(link.is_symlink())
+        self.assertIn(f"{link.stem}: skipped (symlink)", out)
+        self.assertNotIn(AWS, real.read_text(encoding="utf-8"))
+
 
 if __name__ == "__main__":
     unittest.main()
