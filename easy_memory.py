@@ -303,35 +303,42 @@ def last_user_prompt(transcript_path):
 # input makes a match quadratic (NFR-008). The fallback of the key pattern is
 # the second alternative `...BEGIN....*`; the form `|\Z` was quadratic.
 _KEYWORDS = r"(?:SECRET|TOKEN|PASSWORD|PASSWD|API_KEY)"
-_NAME_TAIL = r"""[A-Za-z0-9_.-]{0,64}+["']?[ \t]{0,8}+"""  # possessive: no backtracking in a long name
-_NOT_REDACTED = r"""(?!["']?\[REDACTED:)"""  # keeps a second pass from redacting a placeholder
+_NAME_TAIL = r"""[A-Za-z0-9_.-]{0,64}+["']?[ \t]{0,32}+"""  # possessive: no backtracking in a long name
+# Skips a value that is only a placeholder, so a second pass changes nothing. A placeholder of
+# another kind counts only when it ends the value; `[REDACTED:api_key].tail` is redacted whole.
+_NOT_REDACTED = (r"""(?!["']?(?:\[REDACTED:secret_assignment\]"""
+                 r"""|\[REDACTED:[a-z_]+\](?:[\s"',;)\]}>]|\Z)))""")
 _PRIVATE_KEY_HEAD = r"-----BEGIN [A-Z ]{0,40}PRIVATE KEY"
 _PRIVATE_KEY = re.compile(
     _PRIVATE_KEY_HEAD + r".*?-----END [A-Z ]{0,40}PRIVATE KEY(?: BLOCK)?-----"
     r"|" + _PRIVATE_KEY_HEAD + r".*", re.DOTALL)
-# (kind, pattern, replacement). Order matters: a longer shape runs before the shorter one it contains.
-_REDACT_PATTERNS = (
-    ("bearer_token", re.compile(
-        r"""(?<![A-Za-z0-9_])(?P<pre>Authorization["']?[ \t]{0,8}[:=][ \t]{0,8}["']?"""
-        r"""Bearer[ \t]{1,8})""" + _NOT_REDACTED + r"""[^\s"']+""", re.I), r"\g<pre>[REDACTED:bearer_token]"),
-    ("github_token", re.compile(
-        r"(?<![A-Za-z0-9])(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})"),
-     "[REDACTED:github_token]"),
-    ("slack_token", re.compile(r"(?<![A-Za-z0-9])xox[a-z]-[A-Za-z0-9-]{10,}"), "[REDACTED:slack_token]"),
-    ("aws_access_key", re.compile(r"(?<![A-Z0-9])(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])"),
-     "[REDACTED:aws_access_key]"),
-    ("anthropic_key", re.compile(r"(?<![A-Za-z0-9_-])sk-ant-[A-Za-z0-9_-]{20,}"), "[REDACTED:anthropic_key]"),
-    ("api_key", re.compile(r"(?<![A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}"), "[REDACTED:api_key]"),
-    ("jwt", re.compile(
-        r"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{5,}\.eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*"), "[REDACTED:jwt]"),
-    # NAME=value, any value. NAME: value, only a value of 8 or more characters (keeps `token: string`).
-    ("secret_assignment", re.compile(
-        r"(?P<pre>" + _KEYWORDS + _NAME_TAIL + r"=[ \t]{0,8})(?![=>])" + _NOT_REDACTED
-        + r"""(?:"[^"\n]+"|'[^'\n]+'|[^\s"']+)""", re.I), r"\g<pre>[REDACTED:secret_assignment]"),
-    ("secret_assignment", re.compile(
-        r"(?P<pre>" + _KEYWORDS + _NAME_TAIL + r":[ \t]{0,8})" + _NOT_REDACTED
-        + r"""(?:"[^"\n]{8,}"|'[^'\n]{8,}'|[^\s"']{8,})""", re.I), r"\g<pre>[REDACTED:secret_assignment]"),
-)
+# A quoted value takes escapes (\") and, with no closing quote, runs to the end of the line.
+_QUOTED_ANY = r"""(?:"(?:[^"\\\r\n]|\\.)++"?|'(?:[^'\\\r\n]|\\.)++'?)"""
+_QUOTED_LONG = r"""(?:"(?:[^"\\\r\n]|\\.){8,}+"?|'(?:[^'\\\r\n]|\\.){8,}+'?)"""
+# (kind, needles, pattern, replacement). The pattern runs only when the text holds one of the
+# needles (a plain substring test, fast on 10 MB; upper-case needles are looked up in the
+# upper-cased text), so ordinary text skips it. Order matters: a longer shape runs before the shorter one it contains.
+_REDACT_PATTERNS = tuple((kind, needles, re.compile(pattern, flags), replacement)
+                         for kind, needles, flags, pattern, replacement in (
+    ("bearer_token", ("AUTHORIZATION",), re.I,
+     r"""(?<![A-Za-z0-9_])(?P<pre>Authorization["'\]]{0,2}[ \t]{0,8}+[:=,][ \t]{0,8}+["']?"""
+     r"""Bearer[ \t]{1,8}+["']?)""" + _NOT_REDACTED + r"""[^\s"']+""", r"\g<pre>[REDACTED:bearer_token]"),
+    ("github_token", ("ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_"), 0,
+     r"(?<![A-Za-z0-9])(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})", "[REDACTED:github_token]"),
+    ("slack_token", ("xox",), 0, r"(?<![A-Za-z0-9])xox[a-z]-[A-Za-z0-9-]{10,}", "[REDACTED:slack_token]"),
+    ("aws_access_key", ("AKIA", "ASIA"), 0,
+     r"(?<![A-Z0-9])(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])", "[REDACTED:aws_access_key]"),
+    ("anthropic_key", ("sk-ant-",), 0, r"(?<![A-Za-z0-9_-])sk-ant-[A-Za-z0-9_-]{20,}", "[REDACTED:anthropic_key]"),
+    ("api_key", ("sk-",), 0, r"(?<![A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}", "[REDACTED:api_key]"),
+    ("jwt", ("eyJ",), 0,
+     r"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{5,}\.eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*", "[REDACTED:jwt]"),
+    # NAME=value or NAME:=value, any value. NAME: value, only a value of 8 or more characters
+    # (keeps `token: string`). One pass: the name is scanned once, not once per separator.
+    ("secret_assignment", ("SECRET", "TOKEN", "PASSWORD", "PASSWD", "API_KEY"), re.I,
+     r"(?P<pre>" + _KEYWORDS + _NAME_TAIL + r"(?:(?P<eq>:?=)(?![=>])|:)[ \t]{0,32}+)" + _NOT_REDACTED
+     + r"(?(eq)(?:" + _QUOTED_ANY + r"|[^\s\"']+)|(?:" + _QUOTED_LONG + r"|[^\s\"']{8,}))",
+     r"\g<pre>[REDACTED:secret_assignment]"),
+))
 
 
 def redact_text(text):
@@ -345,10 +352,12 @@ def redact_text(text):
         text, count = _PRIVATE_KEY.subn("[REDACTED:private_key]", text)
         if count:
             hits["private_key"] = count
-    for kind, pattern, replacement in _REDACT_PATTERNS:
-        text, count = pattern.subn(replacement, text)
-        if count:
-            hits[kind] = hits.get(kind, 0) + count
+    for kind, needles, pattern, replacement in _REDACT_PATTERNS:
+        haystack = text.upper() if pattern.flags & re.I else text  # case-insensitive pattern, upper-case needles
+        if any(needle in haystack for needle in needles):
+            text, count = pattern.subn(replacement, text)
+            if count:
+                hits[kind] = hits.get(kind, 0) + count
     return text, hits
 
 

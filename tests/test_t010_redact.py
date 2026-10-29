@@ -117,6 +117,62 @@ class RedactTextTest(unittest.TestCase):
             with self.subTest(text=text):
                 self.assertEqual(easy_memory.redact_text(text)[0], want)
 
+    def test_wide_alignment_before_and_after_the_separator(self):  # review 1
+        cases = {
+            "DB_PASSWORD" + " " * 11 + "= hunter2FAKE": "DB_PASSWORD" + " " * 11 + "= [REDACTED:secret_assignment]",
+            "DB_PASSWORD=" + " " * 10 + "hunter2FAKE": "DB_PASSWORD=" + " " * 10 + "[REDACTED:secret_assignment]",
+            "  password:" + " " * 10 + "hunter2FAKE": "  password:" + " " * 10 + "[REDACTED:secret_assignment]",
+        }
+        for text, want in cases.items():
+            with self.subTest(text=text):
+                self.assertEqual(easy_memory.redact_text(text)[0], want)
+
+    def test_bearer_shapes_in_code(self):  # review 2
+        cases = {
+            'conn.setRequestProperty("Authorization", "Bearer FAKEtoken123");':
+                'conn.setRequestProperty("Authorization", "Bearer [REDACTED:bearer_token]");',
+            "res.setHeader('Authorization', 'Bearer FAKEtoken123')":
+                "res.setHeader('Authorization', 'Bearer [REDACTED:bearer_token]')",
+            'headers["Authorization"] = "Bearer FAKEtoken123"':
+                'headers["Authorization"] = "Bearer [REDACTED:bearer_token]"',
+            'Authorization: Bearer "FAKEtoken123"': 'Authorization: Bearer "[REDACTED:bearer_token]"',
+        }
+        for text, want in cases.items():
+            with self.subTest(text=text):
+                out, hits = easy_memory.redact_text(text)
+                self.assertEqual(out, want)
+                self.assertEqual(easy_memory.redact_text(out), (out, {}))  # idempotent
+
+    def test_no_partial_leak_in_assignment_values(self):  # review 4
+        cases = {
+            r'password = "FAKE\"esc"': "password = [REDACTED:secret_assignment]",
+            r'{"password": "ab\"cdFAKEtail"}': '{"password": [REDACTED:secret_assignment]}',
+            'password="hunter2 FAKE': "password=[REDACTED:secret_assignment]",
+            "password='hunter2 FAKE": "password=[REDACTED:secret_assignment]",
+            "PASSWORD=" + OPENAI[:23] + ".FAKEtail": "PASSWORD=[REDACTED:secret_assignment]",
+        }
+        for text, want in cases.items():
+            with self.subTest(text=text):
+                out, _ = easy_memory.redact_text(text)
+                self.assertEqual(out, want)
+                self.assertEqual(easy_memory.redact_text(out), (out, {}))
+
+    def test_unterminated_quote_stops_at_end_of_line(self):
+        out, _ = easy_memory.redact_text('password="hunter2 FAKE\r\nnext line\n')
+        self.assertEqual(out, "password=[REDACTED:secret_assignment]\r\nnext line\n")
+
+    def test_second_pass_changes_nothing_after_a_quoted_value(self):
+        for text in ('password="abc"/x', 'x = {"password": "abc"}', "PASSWORD=" + OPENAI[:23] + '.tail"'):
+            once, _ = easy_memory.redact_text(text)
+            self.assertEqual(easy_memory.redact_text(once), (once, {}), text)
+
+    def test_empty_quoted_value_is_not_redacted(self):
+        self.assertEqual(easy_memory.redact_text('token = ""'), ('token = ""', {}))
+
+    def test_go_short_assignment(self):  # review 5
+        self.assertEqual(easy_memory.redact_text('password := "hunter2FAKE"')[0],
+                         "password := [REDACTED:secret_assignment]")
+
     def test_assignment_value_already_redacted_is_left_alone(self):
         out, hits = easy_memory.redact_text(f"api_key: {ANTHROPIC}")
         self.assertEqual((out, hits), ("api_key: [REDACTED:anthropic_key]", {"anthropic_key": 1}))
@@ -189,6 +245,10 @@ class RedactTimingTest(unittest.TestCase):
             "one long name line": "A" * mb,
             "name chars then TOKEN": ("A" * 60 + "TOKEN") * (mb // 65),
             "long value": "TOKEN=" + "x" * mb,
+            "SECRET runs": "SECRET" * (mb // 6),
+            "escaped quote runs": 'password="' + '\\"' * (mb // 2),
+            "password then spaces": "password=" + " " * mb,
+            "placeholder tails": "password=[REDACTED:api_key].x " * (mb // 29),
             "long colon value": "token: " + "x" * mb,
             "quote runs": 'TOKEN="' + 'a "' * (mb // 3),
             "sk- runs": "sk-" * (mb // 3),
