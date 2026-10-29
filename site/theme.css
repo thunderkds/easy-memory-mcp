@@ -20,12 +20,20 @@
   --text-muted:    #8C9590;  /* labels, captions, table meta */
   --text-dim:      #6E7772;  /* comments in code, "/ 11" suffixes */
 
-  /* Accent (mint) */
+  /* Accent (soft mint): links, hover */
   --accent:        #7EDDB0;
   --accent-hover:  #B2EDCF;
-  --accent-soft:   rgba(126, 221, 176, 0.09);  /* active nav background */
-  --accent-line:   rgba(126, 221, 176, 0.33);  /* highlighted card border */
-  --on-accent:     #0E100F;                     /* text on a mint button */
+
+  /* Neon (highlights only, see "Neon highlights") */
+  --neon:          #3CF5A8;
+  --neon-soft:     rgba(60, 245, 168, 0.08);   /* active nav / active pill background */
+  --neon-line:     rgba(60, 245, 168, 0.35);   /* active nav ring, highlighted card border */
+  --neon-bar:      rgba(60, 245, 168, 0.30);   /* non-current chart bars */
+  --glow-text:     0 0 12px rgba(60, 245, 168, 0.35);
+  --glow-box:      0 0 0 1px rgba(60, 245, 168, 0.25), 0 0 18px rgba(60, 245, 168, 0.25);
+  --glow-dot:      0 0 8px #3CF5A8;
+  --glow-line:     drop-shadow(0 0 3px rgba(60, 245, 168, 0.6));
+  --on-accent:     #0E100F;                     /* text on a neon button */
   --dot-idle:      #3A413E;                     /* inactive family-nav dot */
 
   /* Agent role colors (Easy Kit only, small dots) */
@@ -71,8 +79,8 @@ a:hover { color: var(--accent-hover); text-decoration: underline; text-underline
 /* Buttons (min height 40px; 44px on touch) */
 .btn { display: inline-flex; align-items: center; height: 40px; padding: 0 18px;
   border-radius: var(--r-sm); font: 500 14px var(--font-sans); cursor: pointer; }
-.btn-primary { background: var(--accent); color: var(--on-accent); border: 0; }
-.btn-primary:hover { background: var(--accent-hover); text-decoration: none; }
+.btn-primary { background: var(--neon); color: var(--on-accent); border: 0; box-shadow: var(--glow-box); }
+.btn-primary:hover { filter: brightness(1.08); text-decoration: none; }
 .btn-secondary { background: transparent; color: var(--text); border: 1px solid var(--line-strong); }
 .btn-secondary:hover { background: var(--bg-hover); color: var(--text-strong); text-decoration: none; }
 
@@ -81,7 +89,7 @@ a:hover { color: var(--accent-hover); text-decoration: underline; text-underline
   padding: 12px 12px 12px 20px; background: var(--bg-sunken);
   border: 1px solid var(--line-strong); border-radius: var(--r-sm);
   font: 400 14px/1.6 var(--font-mono); overflow-x: auto; }
-.codebox .prompt { color: var(--accent); }          /* the "$ " */
+.codebox .prompt { color: var(--neon); }          /* the "$ " */
 .codebox .comment { color: var(--text-dim); }       /* "# 1 pull the image" */
 .codebox .btn { height: 36px; padding: 0 16px; font-size: 13px; }  /* Copy = .btn-primary */
 
@@ -90,19 +98,19 @@ a:hover { color: var(--accent-hover); text-decoration: underline; text-underline
   border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
 .strip > * { padding: 20px 22px; display: flex; flex-direction: column; gap: 6px; }
 .strip > * + * { border-left: 1px solid var(--line); }
-.strip .num { font: 500 28px/1.1 var(--font-mono); color: var(--text-strong); }
+.strip .num { font: 500 28px/1.1 var(--font-mono); color: var(--neon); text-shadow: var(--glow-text); }
 .strip .num small { font-size: 17px; color: var(--text-dim); }
 .strip .label { font-size: 13.5px; color: var(--text-muted); }
 
 /* Step grid: same as .strip, cells padded 16px, with step number */
-.step-no { font: 400 11.5px var(--font-mono); color: var(--accent); }
+.step-no { font: 400 11.5px var(--font-mono); color: var(--neon); text-shadow: var(--glow-text); }
 .step-title { font-size: 15px; font-weight: 600; color: var(--text-strong); }
 .step-meta { font: 400 11.5px/1.5 var(--font-mono); color: var(--text-muted); }
 
 /* Standalone card */
 .card { padding: 18px 20px; border: 1px solid var(--line); border-radius: var(--r-sm);
   display: flex; flex-direction: column; gap: 6px; }
-.card.is-highlight { border-color: var(--accent-line); }   /* at most one per section */
+.card.is-highlight { border-color: var(--neon-line); box-shadow: var(--glow-box); }   /* at most one per section */
 
 /* Chip (dimension names, tags) */
 .chip { display: inline-block; padding: 4px 10px; border: 1px solid var(--line-strong);
@@ -113,7 +121,7 @@ a:hover { color: var(--accent-hover); text-decoration: underline; text-underline
 
 /* Progress bar (scorecard coverage) */
 .bar { height: 6px; border-radius: 3px; background: var(--line-header); overflow: hidden; }
-.bar > span { display: block; height: 100%; background: var(--accent); }
+.bar > span { display: block; height: 100%; background: var(--neon); box-shadow: var(--glow-dot); }
 
 /* Tables (all reference tables on the three sites) */
 .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--r-md); }
