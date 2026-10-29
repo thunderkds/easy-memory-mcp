@@ -29,7 +29,7 @@
 - [Weights keep words in 3+ files](decisions.md#architecture) — 2 gave 3.6 MB on orderly (limit 2 MB); 3 gives 1.7 MB and passes parity
 - [Prototype open defects D1-D3](learnings.md#patterns) — prompt-hook time grows with notes (~1 ms each); big transcripts; uncapped non-git build
 - [v0.1.0 released to GitHub](../RUNBOOK.md) — tag v0.1.0 at 7916424, main pushed 2026-10-28; install and the AC6 live check are the user's
-- [Release page: Graphite Mint family theme](decisions.md#architecture) — HUN-125 spec-driven; `site/theme.css` tokens byte-identical to the spec
+- [Release page: Graphite Mint family theme](decisions.md#architecture) — HUN-125 spec-driven; `site/theme.css` tokens byte-identical to the spec; HUN-127: 1280px container, pictures first, no task IDs
 - [easy-ui-mcp for page checks](learnings.md#patterns) — JSON-RPC over http://localhost:8765/mcp; no viewport tool, use iframes
 - [v0.2 plan: redaction only now](decisions.md#architecture) — Gate 0 (FR-009) shipped 2026-10-29T08:03:51Z; O5 report filter merged (HUN-122); split gated; key deferred; Gate 3 removed
 - [Redaction regex and split test traps](learnings.md#patterns) — `|.*` fallback; patches on the shim pass silently
