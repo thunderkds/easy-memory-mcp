@@ -61,8 +61,20 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured 2026-10-29 08:25:08 UTC (`date -u`), before any implementation commit, on `main` code in worktree `hun-122`. Temp `EASY_MEMORY_HOME` and `CLAUDE_CONFIG_DIR`; `prompts.log` seeded with 2 auto-on, 3 auto-off, 4 forced-on, 1 forced-off sessions, each with a Claude log. Command: `python3 easy_memory.py report --repo <tmp>/repo`.
+
+```
+easy-memory report for <tmp>/repo
+sessions logged: 10 | no data: 0 (log file, no prompts.log line) | no Claude log: 0 (prompts.log line, no log file)
+state  sessions   tokens incl. cache (headline)  tokens in+out  median turns  note opened
+on            6                             116            116             1  -  too few sessions to compare
+off           4                             114            114             1  -  too few sessions to compare
+Tokens are per session: median over sessions. Headline = tokens including cache (input + cache creation + cache read + output), as experiments 01 to 03 counted them; 'in+out' is input + output only (PRD FR-007 wording). Sub-agent work counts with its session. Note opened = share of on sessions that got an index and then ran memory_read or Read on a note.
+too few sessions to compare (fewer than 10 sessions in a group): do not read a result into these numbers yet.
+store: 0 notes, 0 bytes (notes folder of this repo)
+```
+
+Forced sessions sit inside the groups: on shows 6 (2 auto + 4 forced), off shows 4 (3 auto + 1 forced). There is no forced count.
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
