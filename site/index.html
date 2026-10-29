@@ -117,10 +117,10 @@
   .fl-side .fl-node { stroke:var(--line-strong); }
   .fl-line { fill:none; stroke:var(--text-dim); stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
   .fl-main-line { fill:none; stroke:var(--accent); stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
-  .fl-no { font:400 11.5px var(--font-mono); fill:var(--accent); text-anchor:middle; }
-  .fl-title { font:600 14px var(--font-sans); fill:var(--text-strong); text-anchor:middle; }
-  .fl-meta { font:400 11px var(--font-mono); fill:var(--text-muted); text-anchor:middle; }
-  .fl-note { font:400 11px var(--font-mono); fill:var(--text-muted); }
+  .fl-no { font:400 12px var(--font-mono); fill:var(--accent); text-anchor:middle; }
+  .fl-title { font:600 15px var(--font-sans); fill:var(--text-strong); text-anchor:middle; }
+  .fl-meta { font:400 12px var(--font-mono); fill:var(--text-muted); text-anchor:middle; }
+  .fl-note { font:400 12px var(--font-mono); fill:var(--text-muted); }
   .fl-note-end { text-anchor:end; }
 
   /* Install stepper: the three steps are one mint line */
@@ -147,7 +147,7 @@
   /* Use it: day strip and command list */
   .days { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:8px; max-width:none; margin:12px 0 16px; padding:0; list-style:none; }
   .days > li { margin:0; padding:10px 8px; display:flex; flex-direction:column; gap:2px; align-items:center; border:1px solid var(--line); border-radius:var(--r-sm); font:400 12px var(--font-mono); color:var(--text-muted); }
-  .days .d-state { font:500 14px var(--font-mono); color:var(--text-dim); }
+  .days .d-state { font:500 14px var(--font-mono); color:var(--text-muted); }
   .days > li.on { border-color:var(--accent-line); }
   .days > li.on .d-state { color:var(--accent); }
   .fig-label { margin:0; font:400 12px var(--font-mono); color:var(--text-muted); }
@@ -157,7 +157,7 @@
   .cmds li { margin:0; padding:10px 16px; display:grid; grid-template-columns:200px 20px minmax(0,1fr); gap:8px; align-items:baseline; border-bottom:1px solid var(--line); font-size:14px; }
   .cmds li:last-child { border-bottom:0; }
   .cmds code { white-space:normal; justify-self:start; }
-  .cmds .to { font:400 13px var(--font-mono); color:var(--text-dim); }
+  .cmds .to { font:400 13px var(--font-mono); color:var(--text-muted); }
 
   /* Measured: bar chart */
   .chart { display:grid; gap:20px; margin:16px 0 12px; padding:20px; border:1px solid var(--line); border-radius:var(--r-md); }
@@ -201,6 +201,12 @@
     .ver { display:none; }
   }
 
+  /* < 800: the flow switches to its top-to-bottom layout so its text stays readable */
+  @media (max-width:799px) {
+    .flow-wide { display:none; }
+    .flow-tall { display:block; }
+  }
+
   /* < 720: family nav moves into the drawer, one-column grids, 44px targets */
   @media (max-width:719px) {
     .header-inner { padding:0 var(--s-4); }
@@ -217,8 +223,6 @@
     .cards { grid-template-columns:minmax(0,1fr); }
     .codebox { padding-left:16px; }
     .figure, .chart { padding:16px; }
-    .flow-wide { display:none; }
-    .flow-tall { display:block; }
     .stepper { grid-template-columns:minmax(0,1fr); }
     .stepper > li { padding:0 0 24px 20px; border-left:1.5px solid var(--accent); }
     .stepper > li:last-child { padding-bottom:0; border-left-color:var(--line-strong); }
@@ -408,7 +412,7 @@
         <text class="fl-meta" x="539" y="200">built in the</text>
         <text class="fl-meta" x="539" y="214">background</text>
         <path class="fl-line" d="M539 154V101M535 107L539 101L543 107"/>
-        <text class="fl-note" x="549" y="131">side input</text>
+        <text class="fl-note fl-note-end" x="529" y="131">side input</text>
         <rect class="fl-node" x="636" y="156" width="124" height="66" rx="6"/>
         <text class="fl-title" x="698" y="182">MCP server</text>
         <text class="fl-meta" x="698" y="200">memory_read</text>
@@ -738,11 +742,13 @@
   });
   if (!("IntersectionObserver" in window) || !sections.length) { return; }
   var visible = {};
+  var atEnd = false;
   function paint() {
     var first = null;
     for (var i = 0; i < sections.length; i++) {
       if (visible[sections[i].id]) { first = sections[i].id; break; }
     }
+    if (atEnd) { first = sections[sections.length - 1].id; }
     Object.keys(links).forEach(function (id) {
       var on = id === first;
       links[id].classList.toggle("active", on);
@@ -754,6 +760,10 @@
     paint();
   }, { rootMargin: "-64px 0px -60% 0px" });
   sections.forEach(function (s) { observer.observe(s); });
+  window.addEventListener("scroll", function () {
+    var end = window.innerHeight + window.pageYOffset >= document.documentElement.scrollHeight - 2;
+    if (end !== atEnd) { atEnd = end; paint(); }
+  }, { passive: true });
 })();
 </script>
 </body>
