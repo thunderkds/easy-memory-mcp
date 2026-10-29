@@ -1272,6 +1272,10 @@ def report_command(args):
     Sessions come from <store>/prompts.log, grouped by the effective state at their first
     prompt (G4), and are joined by session id to Claude's logs under projects/. Headline
     tokens are the four usage counts summed, as experiments 01 to 03 counted them.
+    Only sessions whose first line has configured == "auto" enter a group, so the day decided
+    their state (HUN-122, O5). Every other session is "forced" and only counted. The counts
+    are disjoint: a forced session is forced even with no Claude log, so "no Claude log"
+    counts auto sessions only.
     """
     root = _repo_root(args.repo)
     store = store_home() / repo_key(args.repo)
@@ -1280,8 +1284,11 @@ def report_command(args):
     first, injected = _first_prompt_lines(store / "prompts.log")
     groups = {"on": [], "off": []}
     opened_of_indexed = [0, 0]  # sessions that got an index; of those, sessions that opened a note
-    no_log = 0
+    no_log = forced = 0
     for sid, line in first.items():
+        if line.get("configured") != "auto":
+            forced += 1
+            continue
         files = _session_files(projects, sid)
         if not files:
             no_log += 1
@@ -1301,13 +1308,14 @@ def report_command(args):
     if not first:
         print("No prompt log for this repo yet: nothing to compare. Use Claude Code here with "
               "the hooks installed, then run report again.")
-    elif not any(groups.values()):
+    elif not any(groups.values()) and no_log:
         print("No Claude session log found for the logged sessions "
               f"(looked under {projects}): nothing to compare.")
     print(f"sessions logged: {len(first)} | no data: {no_data} (log file, no prompts.log line) "
-          f"| no Claude log: {no_log} (prompts.log line, no log file)")
+          f"| no Claude log: {no_log} (prompts.log line, no log file) "
+          f"| forced switch: {forced} (left out of the comparison)")
     few = any(len(groups[state]) < REPORT_MIN_SESSIONS for state in groups)
-    if any(groups.values()):
+    if any(groups.values()) or forced:
         print(f"{'state':<6}{'sessions':>9}{'tokens incl. cache (headline)':>32}"
               f"{'tokens in+out':>15}{'median turns':>14}  note opened")
         for state in ("on", "off"):
@@ -1326,7 +1334,8 @@ def report_command(args):
               "(input + cache creation + cache read + output), as experiments 01 to 03 counted "
               "them; 'in+out' is input + output only (PRD FR-007 wording). Sub-agent work counts "
               "with its session. Note opened = share of on sessions that got an index and then "
-              "ran memory_read or Read on a note.")
+              "ran memory_read or Read on a note. Only sessions where the switch was auto "
+              "(the day decided the state) are compared; forced on/off sessions are not.")
         if few:
             print(f"{TOO_FEW} (fewer than {REPORT_MIN_SESSIONS} sessions in a group): "
                   "do not read a result into these numbers yet.")

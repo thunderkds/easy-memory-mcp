@@ -393,8 +393,9 @@ class FullCycleTest(Sandbox):
         report = res.stdout.decode("utf-8")
         self.assertIn("easy-memory report for", report)
         self.assertIn("sessions logged: 1", report)
-        self.assertRegex(report, r"(?m)^on\s+1\s")
-        self.assertIn("1/1 (100%)", report)
+        # HUN-122: switch_on forces the state, so the session is counted apart, not in a group
+        self.assertIn("forced switch: 1 (left out of the comparison)", report)
+        self.assertRegex(report, r"(?m)^on\s+0\s")
         self.assertIn("too few sessions to compare", report)
         self.assertIn("store: 1 notes", report)
 
