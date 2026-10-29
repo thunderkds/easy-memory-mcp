@@ -11,7 +11,6 @@
 ### Todo
 
 ### In Progress
-- [ ] **HUN-127** — Release page — centred container, visual guide, highlight-only release notes | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-127.md`
 
 ### Ready for Review
 
@@ -32,6 +31,7 @@
 - [x] **HUN-122** — Report compares only auto-switch sessions | backend-developer | C1 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-122.md`
 - [x] **HUN-123** — Release page restyled as a dark indigo dashboard | frontend-developer | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-123.md`
 - [x] **HUN-125** — Release page in the Graphite Mint family theme | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-125.md`
+- [x] **HUN-127** — Release page — centred container, visual guide, highlight-only release notes | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-127.md`
 
 ### Closed (will not do)
 
