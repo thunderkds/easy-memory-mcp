@@ -11,6 +11,7 @@
 ### Todo
 
 ### In Progress
+- [ ] **HUN-125** — Release page in the Graphite Mint family theme | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-125.md`
 
 ### Ready for Review
 
