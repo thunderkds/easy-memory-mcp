@@ -11,6 +11,7 @@
 ### Todo
 
 ### In Progress
+- [ ] **HUN-130** — Release page — Graphite Mint neon highlight layer | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-130.md`
 
 ### Ready for Review
 
