@@ -23,6 +23,7 @@
 
 ## Gotchas
 
+- 2026-10-29 — 19 tests in `tests/test_t004_hook_prompt.py` fail on odd days: they never set the switch, and `auto` is `off` on odd days (`effective_state`, `easy_memory.py:640`), so `hook-prompt` prints nothing. A full-suite failure on an odd day is this, not a regression. Fix is open item O6 in `PRD_v0.2.md`, first step of Gate 0.
 - 2026-10-29 — The prompt hook reads and scores every note each prompt (`_index_lines`), about 1 ms per note, and there is no retention limit. Hook time grows with the store (open item O4 in `PRD_v0.2.md`).
 - 2026-10-29 — Measurement window: install 2026-10-28T07:22:23Z; window start 2026-10-29T02:01:36Z (first `configured: auto` session in a real repo). `report` groups by `effective` only, so forced on/off sessions would pollute it (open item O5). Recorded in `RUNBOOK.md`.
 - 2026-10-28 — `README.md` says raw agent answers stay local (`.gitignore`), but the repo had no `.gitignore` and `experiments/*/results/*.json`, `experiments/*/work/`, run logs and `.pyc` files are tracked and already pushed in commit `6452883`. They may quote orderly/tapchat source. Open: ask the user whether to untrack them (`README.md`, `experiments/`).
