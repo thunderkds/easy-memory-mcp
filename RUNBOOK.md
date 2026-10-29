@@ -73,4 +73,24 @@
 
 | Version / Tag | Date | Scope (Task IDs) | Deployer | Approved (by / when / answer) | Outcome |
 |---------------|------|------------------|----------|-------------------------------|---------|
-| v0.1.0 (commit 7916424, not tagged) | 2026-10-28 | HUN-74 to HUN-82 | not yet installed | user / 2026-10-28 / "Approve v0.1.0 @ 7916424 (Recommended)" | Planned (approved; AC6 live check still open) |
+| v0.1.0 (commit 7916424, not tagged) | 2026-10-28 | HUN-74 to HUN-82 | installer run 2026-10-28T07:22:23Z (settings backup stamp) | user / 2026-10-28 / "Approve v0.1.0 @ 7916424 (Recommended)" | Planned (approved; AC6 live check still open) |
+
+---
+
+## Measurement Window (v0.1 on/off comparison)
+
+Recorded 2026-10-29 from `~/.easy-memory/*/prompts.log` and the settings backup stamp. Times are UTC.
+
+| Event | Time | Evidence |
+|-------|------|----------|
+| Hooks installed in the user settings | 2026-10-28T07:22:23Z | `settings.json.easy-memory.bak.20261028T072223Z` |
+| Forced `on` and `off` sessions (verification, not part of the comparison) | 2026-10-28T07:22Z to 08:05Z and later | store `0e5001d12a9965ce` (43 lines), store `26b799979a291c4c` (3 lines): no `configured: auto` line |
+| First `configured: auto` line in a scratch clone (not a real repo) | 2026-10-28T08:05:17Z | store `57e9c974e7888078` (1 line, path under `/tmp`) |
+| **Window start: first `configured: auto` session in a real repo** | **2026-10-29T02:01:36Z** | store `c5aa0c6dafcc6672` (this repo), session `bf02bb49…` |
+| Redaction (FR-009) shipped | not yet | Gate 0 in `PRD_v0.2.md`; write the date here when it ships |
+
+Sample bar: 10 `configured == auto` sessions per group in one repo (`REPORT_MIN_SESSIONS`, `easy_memory.py:1063`). On 2026-10-29 the count is 1 session, in the `off` group.
+
+Caveats:
+- The window start is the Supervisor's reading of the logs. The user may set a different start.
+- `report` groups by `effective` and does not yet filter on `configured`, so forced `on` and `off` sessions would enter the comparison (open item O5 in `PRD_v0.2.md`).

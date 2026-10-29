@@ -2,7 +2,8 @@
 **Generated**: 2026-10-28
 **Task / Context**: Easy Memory enhancement plan (v0.2 to v0.4), feasibility review against `easy_memory.py` at `36c8ce4`
 **Skill**: `Skill({ skill: "brainstorming" })`
-**Status**: Draft. User approved "plan first" on 2026-10-28. No code changes until this log and `PRD_v0.2.md` are confirmed.
+**Status**: Draft 2 (round 2 review on 2026-10-29, see "Round 2" at the end). User approved "plan first" on 2026-10-28. No code changes until this log and `PRD_v0.2.md` are confirmed.
+**Round 1 below is kept as history.** Where round 2 contradicts it, round 2 wins. Superseded: R1 and R2 as "safe now", the order R1 → R2 → R3, edge case E5, and the claim that the split moves "about 150 lines".
 
 > The v0.1 log (`BRAINSTORMING_LOG.md`) stays as the record of the prototype decision (Option C). This log covers only the next round.
 
@@ -42,9 +43,9 @@ The question for this round: which parts of the plan are safe to build **now**, 
 
 ## Questions for the User
 
-1. Confirm the gate: the scorer, decay and vector work wait until the 2-week v0.1 report is in (approved in principle on 2026-10-28: "plan first").
+1. Confirm the gate: the scorer, decay and vector work wait until the v0.1 report is in. Round 2: the gate is the sample bar (10 `configured==auto` sessions per group), not "2 weeks". ANSWERED yes 2026-10-29 (user confirmed PRD draft 2).
 2. ~~Sync: git remote or folder sync only?~~ ANSWERED 2026-10-28: defer the sync feature. No sync work in v0.2. R2 stays, because the portable key also helps clones and is cheapest to migrate now.
-3. A6 changes from "not scrubbed" to "redacted at save". Should a one-time `redact` command also rewrite the notes already saved? Recommendation: yes, with `--dry-run`, because v0.1 notes may already hold secrets.
+3. A6 changes from "not scrubbed" to "redacted at save". Should a one-time `redact` command also rewrite the notes already saved? Recommendation: yes, with `--dry-run`, because v0.1 notes may already hold secrets. Round 2: dry-run is the default and ANSWERED yes 2026-10-29 (user confirmed PRD draft 2).
 
 ---
 
@@ -140,13 +141,78 @@ Must not be touched: `experiments/` (read-only evidence), the scorer's behaviour
 
 ---
 
-## Recommended Path
+## Recommended Path (round 1, superseded)
 
-**Option B — Foundations first, gated features.** Build R1, R2 and R3 during the 2-week v0.1 measurement. Start the gated features only after the gates in `PRD_v0.2.md` pass.
+Option B: build R1, R2 and R3 during the measurement. Replaced by Option B2 below.
+
+---
+
+# Round 2 (2026-10-29): three-agent review
+
+**Tier**: Deep. FR-010 changes where stores live, and the safe-now claim touched the live measurement.
+**Method**: three read-only agents, one lens each (key, redaction and split, gates and measurement). Their reports are model output. The Supervisor checked the facts marked "checked" against the files.
+
+## Round 2 facts
+
+| # | Fact | Evidence | State |
+|---|---|---|---|
+| F9 | The hooks are live and run this checkout. A merge changes the measured hooks on the next prompt. | `~/.claude-personal/settings.json` lines 56 and 75 | checked |
+| F10 | `RUNBOOK.md` still says "not yet installed", so no window start date exists. | `RUNBOOK.md:76` | checked |
+| F11 | The on/off switch, `prompts.log` and `weights.json` live inside the keyed store. A key change moves the measured data. | `easy_memory.py:394-410`, `:654`, `:668`, `:695` | checked |
+| F12 | `report` groups sessions by `effective`. The lines seen do not filter on `configured`. | `easy_memory.py:1209-1220` | checked (filter absence: agent finding, to verify) |
+| F13 | The sample floor is 10 sessions per group. | `easy_memory.py:1063`, `:1241` | checked |
+| F14 | The 24 patch sites match. 13 patch module attributes. | `tests/` grep: 5+4+3+2+5+3+2 | count checked, the 13 is an agent finding |
+| F15 | The file is 1,567 lines. About 1,500 lines move in the split. | `wc -l`; per-module table from the agent | file size checked, table is an estimate |
+| F16 | `_index_lines` reads and scores every note on every prompt. `memory_forget` is a bare `os.unlink` with no prompt. | `easy_memory.py:581`, `:1399` | checked |
+| F17 | `serve` uses `os.getcwd()`. MCP has no write tool, so notes come only from Claude's Stop hook. | `easy_memory.py:1497`, PRD FR-005 | checked |
+| F18 | Experiment 03's `work/` data is not in the repo. | `ls experiments/03-precision` | checked |
+| F19 | The report's verdict line uses all four usage counts. PRD FR-007 says input + output. | `easy_memory.py:1263-1265`, `PRD.md:52` | checked |
+| F20 | `tests/parity_t003.py` is a parity check of compact against full weights (two candidate sets). An embedder is meant to differ, so it cannot use that bar. | `tests/parity_t003.py` header | read; the 95% figure is an agent finding |
+
+## Round 2 options
+
+| Option | Name | Summary | Regression risk | Recommended? |
+|--------|------|---------|-----------------|--------------|
+| B | Round 1 plan | Split, portable key and redaction all built during the window | Medium: moves the measured data (F11), live hooks run the checkout (F9) | |
+| B2 | Redaction only now | FR-009 ships in the window. Split is built in a worktree and merged at Gate 1. Key is deferred. | Low | ✅ Yes |
+| B3 | Redaction plus split now | As B2 but the split merges at once | Medium: a half-merged split breaks live hooks | |
+
+**B2 cut list** (50% rule): FR-010, `keys.json`, `moved.json`, format v2, A8, the `Retriever` seam until FR-013, Gate 3 and the 4-gate table replaced by Gates 0, 1, 2a and 2b.
+
+## Round 2 adversarial review
+
+- **FR-010 (key)**: worst contamination of the measurement (F11). Unstable after the first commit, after history rewrites and after an `origin` change. Forks and templates share a root commit, so unrelated repos can merge notes. Concurrent hooks may lose log lines during a move. Cut. Cheaper idea kept: an opt-in `alias.json`.
+- **FR-009 (redaction)**: sound. Round 1's E5 was wrong: a private key block is easy to match across lines with one whole-text regex. A `|\Z` fallback was quadratic (7 s at 224 KB). Use `|.*`. The `NAME: value` rule eats lines like `token: string`, so restrict it. The `sk-` rule needs a look-behind. It does not leave the measurement untouched: it removes whole `TOKEN: …` style lines.
+- **FR-011 (split)**: safe to build, unsafe to merge mid-window. Silent test failure is the main risk: a patch left on the shim passes without testing anything. The shim must exit 0 on `ImportError` for hook commands.
+- **Gates**: "passes when user confirms" is circular. "2 weeks" has no anchor (F10). A positive-only Gate 2 blocks the fix when the result is bad. Any automatic expiry changes the candidate set, so it is a ranking change. The "HUN-76 parity bar" cannot apply to an embedder (F20).
+
+## Edge cases: changes
+
+- **E5 (replaces round 1 E5)**: a private key block spans lines and is matched by one whole-text regex. A key split over two lines in any other pattern is a known miss, documented in A6.
+- E1 to E4 belong to FR-010. They are kept for a later sync round.
+- E7 stays: a test patch that points at the shim stops testing silently. Mitigation: a guard test on `vars()` of the target module.
+- **E8**: unterminated `BEGIN PRIVATE KEY` redacts to the end of the text (fail closed).
+- **E9**: redaction raises an error. The hook writes no note and logs it. It never saves unredacted text.
+- **E10**: `redact --apply` run twice. The second run changes no byte.
+- **E11**: `redact` dry-run output never shows matched text.
+- **E12**: the shim cannot import the package. Hook commands exit 0 and the prompt goes through unchanged.
+- **E13**: `__file__` in moved code points at a module, not the shim. The hook respawn path must stay the shim path.
+
+## Surgical Scope (round 2)
+
+- **Gate 0** may change: `easy_memory.py` (redaction function, `save_stop_note`, a `redact` subcommand), `tests/` (new redaction tests), `RUNBOOK.md` (dates).
+- **Gate 0** must not change: the scorer, `INDEX_*` constants, store key and layout, the switch, `report`, any file in `experiments/`.
+- **FR-011** is built on a branch or worktree, not in the live checkout, until Gate 1.
+
+## Recommended Path (round 2)
+
+**Option B2.** Ship FR-009 and the `redact` command during the window. Record the dates. Build the split in a worktree. Open Gates 1, 2a and 2b only when `PRD_v0.2.md` says so.
 
 ## Next Actions for Stage 2
 
-1. User confirms `PRD_v0.2.md` and answers Questions 1 to 3.
-2. Create three Linear issues (team HUN, project easy-memory-mcp) for R1, R2 and R3, then `python3 scripts/board_sync.py pull`.
-3. Order: R1 → R2 → R3. R3 can run in parallel with R2 after R1 merges.
-4. Record the v0.1 measurement window start date (the v0.1.0 install date) in `RUNBOOK.md`.
+1. DONE 2026-10-29: the user confirmed `PRD_v0.2.md` (draft 2), which answers Questions 1 and 3 and the package name.
+2. DONE 2026-10-29: install time and window start are in `RUNBOOK.md` (open item O1).
+3. Create Linear issues (team HUN, project easy-memory-mcp): FR-009 redaction hook plus fixtures plus ReDoS test; the `redact` command; the `configured == auto` report filter (O5). Then `python3 scripts/board_sync.py pull`.
+4. Order: redaction hook → `redact` command. The report filter is independent.
+5. Create the FR-011 split issue now but keep it out of the live checkout until Gate 1.
+6. Ask the user for experiment 03's `work/` data (O2) and the metric column (O3) before Gate 2a.
