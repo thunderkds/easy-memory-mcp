@@ -11,6 +11,7 @@
 ### Todo
 
 ### In Progress
+- [ ] **HUN-123** — Release page restyled as a dark indigo dashboard | frontend-developer | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-123.md`
 
 ### Ready for Review
 
