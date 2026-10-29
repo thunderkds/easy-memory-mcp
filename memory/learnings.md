@@ -23,6 +23,7 @@
 
 ## Gotchas
 
+- 2026-10-29 — The merge hook (`pre_bash_block_unsafe_merge.py`) checks the whole Bash command before any of it runs: a board status push and `git merge` in one command is blocked. Push the status in one call, merge in the next. Headless Chrome `--hide-scrollbars` hides scrollbar styling problems; drive the page over CDP with Node 26 (global `WebSocket`, `google-chrome --remote-debugging-port`) for real clicks, Tab and viewport checks.
 - 2026-10-29 — The built-in `security-review` skill fails here (`git diff origin/HEAD...`: the remote is `github`, not `origin`). Gate 0 used an independent read-only `general-purpose` agent given the diff and the PRD section instead. `/verify` is user-only (disable-model-invocation).
 - 2026-10-29 — Board: Linear has no Ready-for-Review status (`board_sync.py push status` accepts todo, in-progress, ready-for-review, done; ready-for-review fails without `status_map` in `.claude/board.json`). The merge hook blocks while a merged task is In Progress, so mark tasks Done (after the TASK_REVIEW evidence check) before `git merge`. `scripts/lane_check.py` lists guide-predicted files as "unpredicted" (warn-only noise).
 - 2026-10-29 — Spawned agents read only the first 40-60 lines of `agents/<role>.md` (or its frontmatter) despite the Startup reads block. Check the `Startup reads:` line on every hand-back.

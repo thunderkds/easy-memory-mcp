@@ -20,6 +20,11 @@
 **Files**: `PRD_v0.2.md`, `BRAINSTORMING_LOG_v0.2.md`, `RUNBOOK.md` (commit 109d96e). Confirmed by the user on 2026-10-29.
 **Status**: Gate 0 shipped 2026-10-29T08:03:51Z (merge `0ffe6f2`, HUN-84..87): `redact_text` in `save_stop_note` and the `redact [--repo] [--apply]` command in `easy_memory.py`, tests in `tests/test_t010_redact.py`. O5 done by HUN-122 (merge `6f0db14`): `report` groups only sessions whose first `prompts.log` line has `configured == "auto"` and prints `forced switch: N (left out of the comparison)`; the "too few" rule now measures the sample bar directly. Next: wait for the sample bar (10 auto sessions per group in one repo), then Gate 1.
 
+### 2026-10-29 — Release page uses a dark indigo dashboard style
+**Decision**: `site/index.html` (served by Vercel from `site/`) was restyled by HUN-123 (merge `3e5c4f6`) to the user's reference image: purple gradient frame, dark indigo panels, monospace type, `<details>` sidebar groups with coloured dots, gradient rings for the two hook p95 numbers, dark scrollbars. It no longer matches the Easy Kit family look (restyle `36c8ce4`).
+**Why**: user request of 2026-10-29 with a reference image.
+**Files**: `site/index.html`, `tests/test_site_page.py` (colours only as `:root` tokens, in-page links resolve, rings `aria-hidden` with text values, no external resources). The page text still describes v0.1.0.
+
 ## Infrastructure
 
 ### 2026-10-28 — easy-verifier registered as the scoring MCP (dev tool)
