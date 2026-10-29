@@ -1,4 +1,5 @@
-"""HUN-125 / HUN-127: static release page `site/index.html` in the Graphite Mint theme. Standard library only."""
+"""HUN-125 / HUN-127 / HUN-130: static release page `site/index.html` in the Graphite Mint theme (spec rev 25, neon layer). Standard library only."""
+import hashlib
 import re
 import unittest
 from html.parser import HTMLParser
@@ -9,14 +10,19 @@ PAGE = SITE / "index.html"
 THEME = SITE / "theme.css"
 COLOUR = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\(|hsla?\(")
 
-# Spec "Design tokens": name -> value. The values are copied from the spec's :root block.
+# Spec rev 25 "Design tokens": name -> value. The values are copied from the spec's :root block.
 TOKENS = {
     "--bg": "#121413", "--bg-sunken": "#0E100F", "--bg-hover": "#181B1A",
     "--line-subtle": "#1F2321", "--line": "#262B29", "--line-strong": "#2C3230", "--line-header": "#232826",
     "--text-strong": "#EAEDEA", "--text": "#DCE0DD", "--text-2": "#ABB3AE", "--text-nav": "#B5BCB7",
     "--text-muted": "#8C9590", "--text-dim": "#6E7772",
     "--accent": "#7EDDB0", "--accent-hover": "#B2EDCF",
-    "--accent-soft": "rgba(126, 221, 176, 0.09)", "--accent-line": "rgba(126, 221, 176, 0.33)",
+    "--neon": "#3CF5A8", "--neon-soft": "rgba(60, 245, 168, 0.08)", "--neon-line": "rgba(60, 245, 168, 0.35)",
+    "--neon-bar": "rgba(60, 245, 168, 0.30)",
+    "--glow-text": "0 0 12px rgba(60, 245, 168, 0.35)",
+    "--glow-box": "0 0 0 1px rgba(60, 245, 168, 0.25), 0 0 18px rgba(60, 245, 168, 0.25)",
+    "--glow-dot": "0 0 8px #3CF5A8",
+    "--glow-line": "drop-shadow(0 0 3px rgba(60, 245, 168, 0.6))",
     "--on-accent": "#0E100F", "--dot-idle": "#3A413E",
     "--header-h": "64px", "--sidebar-w": "248px", "--content-max": "920px",
 }
@@ -31,6 +37,44 @@ FAMILY = [
     ("Easy Verifier", "https://easy-verifier.vercel.app/"),
 ]
 GITHUB = "https://github.com/thunderkds/easy-memory-mcp"
+# sha256 of the two theme.css blocks as the spec rev 25 export gives them (tokens `:root`, then component CSS).
+SPEC_ROOT_SHA256 = "a7ba10aeab3bc94a5184eab59c5e2574df0a108d8b3d26890883619170e29d45"
+SPEC_COMPONENTS_SHA256 = "730b8e5a36ef56cf87fb2b02288241d93bee292a398b6f22442abf947e7a5e3a"
+# Neon highlights table: the only selectors whose rules may use a --neon* or --glow-* token.
+NEON_SELECTORS = {
+    # theme.css (spec component block)
+    ".btn-primary", ".codebox .prompt", ".strip .num", ".step-no", ".card.is-highlight", ".bar > span",
+    # page rules
+    "html.no-glow", ".glyph", '.fam[aria-current="page"]::before', ".sidebar ul a.active", ".eyebrow",
+    ".card .exp.shipped", ".card.is-highlight .big", ".bar-val", ".fl-no", ".fl-main-line",
+    ".st-mark", ".st-line", ".stepper > li",
+}
+# Soft mint is for ordinary links, hover and the focus ring only.
+ACCENT_SELECTORS = {"a", "a:hover", ":focus-visible", ".skip-link"}
+GLOW_VALUES = {"none", "var(--glow-text)", "var(--glow-box)", "var(--glow-dot)", "var(--glow-line)",
+               "inset 0 0 0 1px var(--neon-line)", "brightness(1.08)"}
+
+
+def _luminance(hex_colour):
+    channels = [int(hex_colour[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    lin = [c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4 for c in channels]
+    return 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2]
+
+
+def _contrast(a, b):
+    la, lb = sorted((_luminance(a), _luminance(b)), reverse=True)
+    return (la + 0.05) / (lb + 0.05)
+
+
+def _rules(css):
+    """(selector, body) pairs of every rule in `css`, comments dropped, :root excluded."""
+    css = re.sub(r"/\*.*?\*/", "", css, flags=re.S)
+    css = re.sub(r"^:root \{.*?^\}", "", css, flags=re.S | re.M)
+    out = []
+    for m in re.finditer(r"([^{}]+)\{([^{}]*)\}", css):
+        for selector in m.group(1).split(","):
+            out.append((" ".join(selector.split()), m.group(2)))
+    return out
 
 
 class _Scan(HTMLParser):
@@ -81,6 +125,19 @@ class SitePageTest(unittest.TestCase):
         for name, value in TOKENS.items():
             self.assertRegex(root, r"%s:\s*%s;" % (re.escape(name), re.escape(value)), name)
 
+    def test_theme_css_is_byte_identical_to_spec_rev_25(self):
+        cut = self.css.index("\n\nhtml { background")
+        root, components = self.css[:cut], self.css[cut + 2:]
+        self.assertEqual(hashlib.sha256(root.encode()).hexdigest(), SPEC_ROOT_SHA256)
+        self.assertEqual(hashlib.sha256(components.encode()).hexdigest(), SPEC_COMPONENTS_SHA256)
+
+    def test_no_undefined_or_removed_custom_property(self):
+        declared = set(re.findall(r"(--[a-z0-9-]+)\s*:", self.all_css))
+        used = set(re.findall(r"var\((--[a-z0-9-]+)", self.all_css + self.html))
+        self.assertEqual(sorted(used - declared), [])
+        for gone in ("--accent-soft", "--accent-line"):
+            self.assertNotIn(gone, self.all_css + self.html)
+
     def test_no_colour_literal_outside_the_token_block(self):
         root_less = re.sub(r"^:root \{.*?^\}", "", self.css, flags=re.S | re.M)
         # The spec's ::selection rule is the one component rule that carries an rgba() value.
@@ -114,15 +171,75 @@ class SitePageTest(unittest.TestCase):
         self.assertNotRegex(self.all_css, r"@import|url\(\s*['\"]?https?:")
         self.assertEqual(sorted(set(re.findall(r'font-family:[^;]*', self.local_style))), [])
 
-    # AC3 no gradient, glow, shadow, blur, colour animation, rings
+    # AC3 no gradient, blur, colour animation, rings; glow only through the glow tokens
     def test_no_forbidden_effects(self):
-        for word in ("gradient", "text-shadow", "box-shadow", "backdrop-filter", "filter:",
-                     "transition", "animation", "@keyframes"):
+        for word in ("gradient", "backdrop-filter", "transition", "animation", "@keyframes"):
             self.assertNotIn(word, self.all_css, word)
         self.assertNotIn("<circle", self.html)
         self.assertNotIn("stroke-dasharray", self.html)
         self.assertNotIn("<linearGradient", self.html)
         self.assertEqual(self.scan.with_class("div", "ring"), [])
+
+    # HUN-130: neon highlight layer
+    def test_shadows_and_filters_use_only_the_glow_tokens(self):
+        found = re.findall(r"(?<![-\w])(text-shadow|box-shadow|filter)\s*:\s*([^;}]+)", self.all_css)
+        self.assertTrue(found)
+        for prop, value in found:
+            self.assertIn(value.strip(), GLOW_VALUES, prop)
+
+    def test_neon_and_glow_only_on_the_highlight_selectors(self):
+        used = set()
+        for selector, body in _rules(self.css) + _rules(self.local_style):
+            if re.search(r"var\(--(neon|glow)", body):
+                used.add(selector)
+                self.assertIn(selector, NEON_SELECTORS, selector)
+            if re.search(r"var\(--accent(?!-hover)", body):
+                self.assertIn(selector, ACCENT_SELECTORS, selector)
+        self.assertEqual(used, NEON_SELECTORS - {"html.no-glow"})  # the override sets the tokens to none
+        style_attrs = re.findall(r'style="([^"]*)"', self.html)
+        self.assertTrue(all(re.fullmatch(r"width:[\d.]+%", s) for s in style_attrs), style_attrs)
+
+    def test_neon_treatments_match_the_table(self):
+        local, theme = {}, {}
+        for table, css in ((local, self.local_style), (theme, self.css)):
+            for selector, body in _rules(css):
+                table[selector] = table.get(selector, "") + body
+        active = local[".sidebar ul a.active"]
+        for part in ("background:var(--neon-soft)", "color:var(--neon)", "text-shadow:var(--glow-text)",
+                     "box-shadow:inset 0 0 0 1px var(--neon-line)"):
+            self.assertIn(part, active)
+        self.assertIn("background:var(--neon); box-shadow:var(--glow-dot)", local['.fam[aria-current="page"]::before'])
+        self.assertIn("color:var(--neon)", local[".glyph"])
+        self.assertIn("color:var(--neon); text-shadow:var(--glow-text)", local[".eyebrow"])
+        self.assertIn("stroke:var(--neon)", local[".fl-main-line"])
+        self.assertIn("filter:var(--glow-line)", local[".fl-main-line"])
+        self.assertIn("filter:var(--glow-line)", local[".st-line"])
+        self.assertIn("box-shadow:var(--glow-dot)", local[".st-mark"])
+        self.assertIn("fill:var(--neon); text-shadow:var(--glow-text)", local[".fl-no"])
+        self.assertIn("color:var(--neon); text-shadow:var(--glow-text)", local[".bar-val"])
+        self.assertIn("color:var(--neon); text-shadow:var(--glow-text)", local[".card.is-highlight .big"])
+        self.assertEqual(local[".card .exp.shipped"].strip(), "color:var(--neon);")
+        self.assertIn("background: var(--neon)", theme[".btn-primary"])
+        self.assertIn("box-shadow: var(--glow-box)", theme[".btn-primary"])
+        self.assertIn("filter: brightness(1.08)", theme[".btn-primary:hover"])
+        self.assertIn("border-color: var(--neon-line)", theme[".card.is-highlight"])
+        self.assertIn("background: var(--neon); box-shadow: var(--glow-dot)", theme[".bar > span"])
+        self.assertEqual(theme[".codebox .prompt"].split(";")[0].strip(), "color: var(--neon)")
+        self.assertNotIn("glow", theme[".codebox .prompt"])
+
+    def test_no_glow_class_switches_every_glow_token_off(self):
+        m = re.search(r"html\.no-glow\s*\{([^}]*)\}", self.local_style)
+        self.assertIsNotNone(m)
+        self.assertEqual(sorted(re.findall(r"(--glow-[a-z]+)\s*:\s*none", m.group(1))),
+                         ["--glow-box", "--glow-dot", "--glow-line", "--glow-text"])
+        glow_tokens = re.findall(r"(--glow-[a-z]+)\s*:", re.search(r"^:root \{(.*?)^\}", self.css, re.S | re.M).group(1))
+        self.assertEqual(sorted(glow_tokens), ["--glow-box", "--glow-dot", "--glow-line", "--glow-text"])
+        self.assertNotIn("no-glow", self.html.split("<body")[1].split("<script>")[0])  # opt-in by the user, never preset
+
+    def test_neon_contrast_holds(self):
+        tokens = {"--bg": "#121413", "--neon": "#3CF5A8", "--on-accent": "#0E100F"}
+        self.assertGreaterEqual(_contrast(tokens["--neon"], tokens["--bg"]), 4.5)
+        self.assertGreaterEqual(_contrast(tokens["--on-accent"], tokens["--neon"]), 4.5)
 
     def test_type_rules(self):
         self.assertNotRegex(self.all_css, r"font-weight:\s*[7-9]00|font:\s*[7-9]00")
