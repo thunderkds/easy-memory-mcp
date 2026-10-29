@@ -61,8 +61,19 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured 2026-10-29 07:18:08 UTC (`date -u`: `Thu Oct 29 07:18:08 AM UTC 2026`), worktree `hun-86` at commit 3d9ccdf, before any implementation commit. Temp `EASY_MEMORY_HOME`, temp git repo, one note whose prompt holds the fake key `AKIAIOSFODNN7EXAMPLE`.
+
+```
+$ python3 easy_memory.py redact --repo REPO
+usage: easy_memory [-h]
+                   {hook-stop,hook-prompt,serve,report,install,uninstall,build-weights,switch} ...
+easy_memory: error: argument command: invalid choice: 'redact' (choose from hook-stop, hook-prompt, serve, report, install, uninstall, build-weights, switch)
+exit=2
+$ grep -c AKIAIOSFODNN7EXAMPLE <note file>
+1
+```
+
+The command is rejected as unknown (exit 2) and the saved note still holds the secret.
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
