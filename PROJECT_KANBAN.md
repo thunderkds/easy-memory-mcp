@@ -9,11 +9,8 @@
 ## Board
 
 ### Todo
-- [ ] **HUN-86** — redact command rewrites notes already saved | backend-developer | C2 | Risk: High | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-86.md`
-- [ ] **HUN-87** — Gate 0 pass check before the redaction release | qa-expert | C1 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-87.md`
 
 ### In Progress
-- [ ] **HUN-85** — Stop hook redacts secrets before a note is saved | backend-developer | C2 | Risk: High | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-85.md`
 
 ### Ready for Review
 
@@ -28,6 +25,9 @@
 - [x] **HUN-81** — MCP server with search, read, list and forget | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-81.md`
 - [x] **HUN-82** — End-to-end smoke and NFR checks | qa-expert | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-82.md`
 - [x] **HUN-84** — Hook-prompt tests pass on any day | backend-developer | C1 | Risk: Low | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-84.md`
+- [x] **HUN-85** — Stop hook redacts secrets before a note is saved | backend-developer | C2 | Risk: High | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-85.md`
+- [x] **HUN-86** — redact command rewrites notes already saved | backend-developer | C2 | Risk: High | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-86.md`
+- [x] **HUN-87** — Gate 0 pass check before the redaction release | qa-expert | C1 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-87.md`
 
 ### Closed (will not do)
 
