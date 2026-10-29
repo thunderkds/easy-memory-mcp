@@ -97,7 +97,7 @@ v0.1 proved the index method in a prototype and started a 2-week on/off measurem
 
 | Gate | Opens | Passes when |
 |------|-------|-------------|
-| Gate 0 | FR-009 | **Precondition**: the user confirms this draft (met 2026-10-29). **Pass**: all 307 v0.1 tests pass with the same names and skips. New redaction tests pass: one fixture per pattern is fully redacted, a no-secret fixture stays byte-identical, a 1 MB input runs under the NFR-008 limit. `tests/bench_t004.py` p95 is not worse. A smoke run adds no line to `hook.log`. The redaction release date is written in `RUNBOOK.md`. |
+| Gate 0 | FR-009 | **Precondition**: the user confirms this draft (met 2026-10-29). **First step**: make the 19 date-dependent tests in `tests/test_t004_hook_prompt.py` pass on any day (open item O6). **Pass**: all 307 v0.1 tests pass on an odd day and on an even day with the same names and skips. New redaction tests pass: one fixture per pattern is fully redacted, a no-secret fixture stays byte-identical, a 1 MB input runs under the NFR-008 limit. `tests/bench_t004.py` p95 is not worse. A smoke run adds no line to `hook.log`. The redaction release date is written in `RUNBOOK.md`. |
 | Sample bar | — | One repo has at least 10 sessions with `configured == auto` in each group (`REPORT_MIN_SESSIONS`, `easy_memory.py:1063`). The report needs a `configured == auto` filter first, so forced on/off sessions do not enter the comparison. |
 | Gate 1 | FR-011 merge, FR-005 bulk forget (CLI) | Sample bar met. FR-009 shipped. The v0.1.0 install date is recorded in `RUNBOOK.md`. |
 | Gate 2a | FR-014 decay or expiry, any change to `INDEX_*` constants or the note schema | The report is complete (sample bar met). The result may be positive or negative; a negative result is a reason to fix, not to block. The metric column is named (see Open items). An offline check against experiment 03 answers runs, and the data exists (see Open items). |
@@ -126,6 +126,7 @@ Kept so a later round does not repeat the analysis.
 | O3 | Name the metric for the Gate 2a rule. `PRD.md` FR-007 says input + output. The report's verdict line uses all four usage counts (`easy_memory.py:1263-1265`). | User |
 | O4 | Hook time grows with the note count (about 1 ms per note; `_index_lines`, `:581`, reads every note). Design the fix (cap or index file) after the report. | Supervisor |
 | O5 | Add the `configured == auto` filter to `report` before the sample bar is trusted. | Supervisor |
+| O6 | 19 tests in `tests/test_t004_hook_prompt.py` fail on odd days (found 2026-10-29: `FAILED (failures=7, errors=12, skipped=3)`). They do not set the switch, so `auto` gives `off` on odd days and the hook prints nothing. Fix: set the switch to `on` in the test setup, or patch `_today`. A subprocess test needs the switch in its store `config.json`, because a patch does not reach a child process. Do this first in Gate 0. | Supervisor |
 
 ---
 

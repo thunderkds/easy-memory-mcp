@@ -73,7 +73,7 @@
 
 | Version / Tag | Date | Scope (Task IDs) | Deployer | Approved (by / when / answer) | Outcome |
 |---------------|------|------------------|----------|-------------------------------|---------|
-| v0.1.0 (commit 7916424, not tagged) | 2026-10-28 | HUN-74 to HUN-82 | installer run 2026-10-28T07:22:23Z (settings backup stamp) | user / 2026-10-28 / "Approve v0.1.0 @ 7916424 (Recommended)" | Planned (approved; AC6 live check still open) |
+| v0.1.0 (tag `v0.1.0` at commit 7916424) | 2026-10-28 | HUN-74 to HUN-82 | installer run 2026-10-28T07:22:23Z (settings backup stamp) | user / 2026-10-28 / "Approve v0.1.0 @ 7916424 (Recommended)" | Planned (approved; AC6 live check still open) |
 
 ---
 
