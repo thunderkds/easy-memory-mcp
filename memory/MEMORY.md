@@ -29,3 +29,7 @@
 - [Weights keep words in 3+ files](decisions.md#architecture) — 2 gave 3.6 MB on orderly (limit 2 MB); 3 gives 1.7 MB and passes parity
 - [Prototype open defects D1-D3](learnings.md#patterns) — prompt-hook time grows with notes (~1 ms each); big transcripts; uncapped non-git build
 - [v0.1.0 released to GitHub](../RUNBOOK.md) — tag v0.1.0 at 7916424, main pushed 2026-10-28; install and the AC6 live check are the user's
+- [v0.2 plan: redaction only now](decisions.md#architecture) — FR-009 ships in the window; split gated; key deferred; Gate 3 removed
+- [Redaction regex and split test traps](learnings.md#patterns) — `|.*` fallback; patches on the shim pass silently
+- [Hook time grows with notes; report pollution](learnings.md#gotchas) — ~1 ms per note; `report` ignores `configured`; window start 2026-10-29T02:01:36Z
+- [Hook-prompt tests fail on odd days](learnings.md#gotchas) — 19 tests ignore the auto switch; fix is O6, first step of Gate 0
