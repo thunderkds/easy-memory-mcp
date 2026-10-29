@@ -61,8 +61,21 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE** (captured 2026-10-29T11:09:38Z, page unchanged at `main` 97d7cd1, no implementation commit yet; `date -u` printed `Thu Oct 29 11:09:38 AM UTC 2026`; fact inventory saved `11:10:03Z`):
+Full-page screenshots, via CDP `node /tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-memory-mcp/28185bde-ebb4-4e62-9f40-560e8aee485f/scratchpad/hun127/shots.mjs` (the viewport is as tall as the page, so no scrollbar paints; width and overflow come from the numbers below):
+- /tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-memory-mcp/28185bde-ebb4-4e62-9f40-560e8aee485f/scratchpad/hun127/before-1920.png, before-1440.png, before-1024.png, before-768.png, before-375.png
+- Measurement log: /tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-memory-mcp/28185bde-ebb4-4e62-9f40-560e8aee485f/scratchpad/hun127/before-measure.txt
+- Fact inventory (every block, number and command of the current page): /tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-memory-mcp/28185bde-ebb4-4e62-9f40-560e8aee485f/scratchpad/hun127/before-facts.txt (142 lines)
+
+Measured (left, right, width in px), unchanged page:
+```
+1920 scroll [1920,1920] shell [0,1920,1920] brand [32,173,141] GitHub btn [1813,1888,75] main [248,1920,1672] words 1377
+1440 scroll [1440,1440] shell [0,1440,1440] brand [32,173,141] GitHub btn [1333,1408,75] main [248,1440,1192] words 1377
+1024 scroll [1024,1024] shell [0,1024,1024] main [248,1024,776] words 1377
+ 768 scroll [768,768]   main [0,768,768]  words 1377
+ 375 scroll [375,375]   main [0,375,375]  words 1377
+```
+Finding: the shell and header content grow with the screen (1920 px wide at 1920). Visible word count of `<main>` before: **1377** (text nodes outside `code`, `pre`, `details`; `display:none` and `visibility:hidden` skipped; SVG text will be counted after).
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
