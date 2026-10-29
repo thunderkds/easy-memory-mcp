@@ -11,6 +11,7 @@
 ### Todo
 
 ### In Progress
+- [ ] **HUN-133** — Install stepper — equal code boxes across the three steps | frontend-developer | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-133.md`
 
 ### Ready for Review
 
