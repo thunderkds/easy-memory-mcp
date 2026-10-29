@@ -11,6 +11,7 @@
 ### Todo
 
 ### In Progress
+- [ ] **HUN-127** — Release page — centred container, visual guide, highlight-only release notes | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-127.md`
 
 ### Ready for Review
 
