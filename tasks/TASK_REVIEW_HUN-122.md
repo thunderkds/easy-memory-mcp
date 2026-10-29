@@ -41,12 +41,12 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| ☑ pass | `tests/test_t007_report.py` class `ForcedSwitchTest` (10 tests: AC1-AC6, SC1-SC3, edge cases); pass. `tests/test_t009_smoke.py` adjusted (see below). | [test file path(s) — required before Done] |
+| ☑ pass | `python3 -m unittest discover -s tests -v 2>&1 \| tail -5` real day: `OK (skipped=3)`; with FAKE_TODAY=2026-10-29 (odd): `Ran 378 tests in 35.260s / OK (skipped=3)`; FAKE_TODAY=2026-10-30 (even): `Ran 378 tests in 38.359s / OK (skipped=3)`. Before the change the 10 new tests failed 9 times (test-first). | [paste actual output] |
+| ☑ pass | configured `maybe`/None/5/list/`AUTO`/missing key: treated as forced (`test_odd_configured_values_count_as_not_auto`); all-forced repo: 0/0 rows, no verdict, no crash; forced session with no Claude log: counted as forced only; forced start stays excluded; auto start stays included; 5 forced do not lift a 9-session group over the bar. | |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
+| ☑ pass | Full suite above incl. `test_t009_smoke`, odd and even day. One adjustment: `tests/test_t009_smoke.py` `run_cycle` used `switch on` (forced) and asserted the session sits in the on group (`^on\s+1\s`, `1/1 (100%)`); it now asserts `forced switch: 1 (left out of the comparison)` and `^on\s+0\s`. Note-open rate stays covered by `test_t007_report.test_note_open_rate_counts_only_sessions_that_got_an_index`. | |
 | **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
 | **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
 | **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
@@ -76,9 +76,20 @@ store: 0 notes, 0 bytes (notes folder of this repo)
 
 Forced sessions sit inside the groups: on shows 6 (2 auto + 4 forced), off shows 4 (3 auto + 1 forced). There is no forced count.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: captured 2026-10-29 08:30:09 UTC (`date -u`), same seed and command, with the change:
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+easy-memory report for <tmp>/repo
+sessions logged: 10 | no data: 0 (log file, no prompts.log line) | no Claude log: 0 (prompts.log line, no log file) | forced switch: 5 (left out of the comparison)
+state  sessions   tokens incl. cache (headline)  tokens in+out  median turns  note opened
+on            2                             110            110             1  -  too few sessions to compare
+off           3                             113            113             1  -  too few sessions to compare
+Tokens are per session: median over sessions. Headline = tokens including cache (input + cache creation + cache read + output), as experiments 01 to 03 counted them; 'in+out' is input + output only (PRD FR-007 wording). Sub-agent work counts with its session. Note opened = share of on sessions that got an index and then ran memory_read or Read on a note. Only sessions where the switch was auto (the day decided the state) are compared; forced on/off sessions are not.
+too few sessions to compare (fewer than 10 sessions in a group): do not read a result into these numbers yet.
+store: 0 notes, 0 bytes (notes folder of this repo)
+```
+
+**DELTA**: `report` now compares only sessions where the day decided the state (on 2, off 3 instead of 6 and 4) and prints how many forced sessions it left out (5), so the sample bar can be read from the table.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/HUN-122.jsonl`, never the
 implementing agent alone]

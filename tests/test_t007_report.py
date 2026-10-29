@@ -304,5 +304,106 @@ class ReportTest(ReportTestCase):
         self.assertEqual(self.rows(out)["on"][1], "1")
 
 
+class ForcedSwitchTest(ReportTestCase):
+    """HUN-122 (O5): only sessions whose first line has configured == auto enter a group."""
+
+    def add_forced(self, sid, effective, configured, out_tokens=90):
+        self.log_prompt(sid, effective, configured=configured)
+        self.write_log(sid, [self.turn(sid, f"{sid}-m0", 10, out_tokens, cache=100)])
+
+    def test_forced_sessions_are_left_out_and_counted(self):  # AC1, AC2, AC4, SC1
+        for i in range(2):
+            self.add_session(f"auto-on-{i}", "on", 90)
+        for i in range(3):
+            self.add_session(f"auto-off-{i}", "off", 90)
+        for i in range(4):
+            self.add_forced(f"forced-on-{i}", "on", "on")
+        self.add_forced("forced-off-0", "off", "off")
+        _, out, _ = self.run_report()
+        rows = self.rows(out)
+        self.assertEqual((rows["on"][1], rows["off"][1]), ("2", "3"))
+        self.assertRegex(out, r"forced switch: 5 \(left out of the comparison\)")
+        self.assertRegex(out, r"sessions logged: 10 ")  # still every session
+
+    def test_forced_session_does_not_move_medians_or_open_rate(self):  # AC2
+        self.add_session("a", "on", 90, injected=True)
+        self.log_prompt("f", "on", injected=True, configured="on")
+        self.write_log("f", [self.turn("f", "fm", 5000, 5000, tools=[(
+            "mcp__easy-memory__memory_read", {"id": "n1"})])])
+        _, out, _ = self.run_report()
+        row = self.rows(out)["on"]
+        self.assertEqual((row[1], row[2], row[5]), ("1", "420", "0/1"))
+
+    def test_odd_configured_values_count_as_not_auto(self):  # AC2, edge
+        self.add_session("ok", "on", 90)
+        for i, value in enumerate(("maybe", None, 5, ["auto"], "AUTO")):
+            self.add_forced(f"odd-{i}", "on", value)
+        easy_memory._append_prompt_log(self.repo, {  # no configured key at all
+            "time": "2026-10-28T00:00:00Z", "session_id": "missing", "effective": "on",
+            "injected": False})
+        self.write_log("missing", [self.turn("missing", "mm", 1, 1)])
+        _, out, _ = self.run_report()
+        self.assertEqual(self.rows(out)["on"][1], "1")
+        self.assertIn("forced switch: 6 ", out)
+
+    def test_session_that_starts_forced_stays_excluded(self):  # AC3, SC2
+        self.add_forced("s", "on", "on")
+        self.log_prompt("s", "on", configured="auto")
+        self.log_prompt("s", "off", configured="auto")
+        _, out, _ = self.run_report()
+        self.assertEqual(self.rows(out).get("on", [0, "0"])[1], "0")
+        self.assertIn("forced switch: 1 ", out)
+
+    def test_session_that_starts_auto_stays_included(self):  # AC3
+        self.add_session("s", "on", 90)
+        self.log_prompt("s", "on", configured="off")
+        _, out, _ = self.run_report()
+        self.assertEqual(self.rows(out)["on"][1], "1")
+        self.assertIn("forced switch: 0 ", out)
+
+    def test_forced_session_is_not_no_data(self):  # AC5
+        self.add_forced("f", "on", "off")
+        _, out, _ = self.run_report()
+        self.assertRegex(out, r"no data: 0 ")
+
+    def test_forced_session_without_claude_log_counts_as_forced_only(self):  # edge: disjoint
+        self.add_session("a", "on", 90)
+        self.log_prompt("gone-forced", "on", configured="on")  # no Claude log
+        self.log_prompt("gone-auto", "off")                    # no Claude log
+        _, out, _ = self.run_report()
+        self.assertIn("forced switch: 1 ", out)
+        self.assertRegex(out, r"(?i)no claude log: 1 ")
+        self.assertRegex(out, r"sessions logged: 3 ")
+
+    def test_ten_auto_per_group_plus_forced_has_a_verdict(self):  # AC6, SC3
+        self.fill([100 + i for i in range(10)], [200 + i for i in range(10)])
+        for i in range(5):
+            self.add_forced(f"f{i}", "on", "on")
+        _, out, _ = self.run_report()
+        self.assertNotIn(TOO_FEW, out)
+        self.assertRegex(out, r"on vs off, median headline tokens: -\d+%")
+        self.assertEqual(self.rows(out)["on"][1], "10")
+
+    def test_forced_sessions_do_not_lift_a_thin_group_over_the_bar(self):  # AC6
+        self.fill([100 + i for i in range(9)], [200 + i for i in range(10)])
+        for i in range(5):
+            self.add_forced(f"f{i}", "on", "on")
+        _, out, _ = self.run_report()
+        self.assertIn(TOO_FEW, out)
+        self.assertNotRegex(out, r"on vs off.*%")
+
+    def test_all_sessions_forced_shows_zero_rows_no_verdict(self):  # edge
+        for i in range(3):
+            self.add_forced(f"f{i}", "on", "on")
+        code, out, err = self.run_report()
+        self.assertEqual(code, 0)
+        rows = self.rows(out)
+        self.assertEqual((rows["on"][1], rows["off"][1]), ("0", "0"))
+        self.assertIn("forced switch: 3 ", out)
+        self.assertNotRegex(out, r"on vs off.*%")
+        self.assertNotRegex(out, r"(?i)no claude session log")
+        self.assertEqual(err, "")
+
+
 if __name__ == "__main__":
     unittest.main()
