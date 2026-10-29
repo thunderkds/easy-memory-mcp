@@ -11,6 +11,7 @@ python3 easy_memory.py install --dry-run   # preview the change to your Claude C
 python3 easy_memory.py install             # add the Stop and prompt hooks, the MCP server and the allow rule
 python3 easy_memory.py switch [on|off|auto]  # per repo; auto is on for even days, off for odd days
 python3 easy_memory.py report              # sessions with memory on against off
+python3 easy_memory.py redact [--apply]    # list saved notes that hold a secret (dry run); --apply rewrites them
 python3 easy_memory.py uninstall [--purge] # remove it; --purge also deletes ~/.easy-memory
 python3 -m unittest discover -s tests      # the test suite
 ```

@@ -87,7 +87,7 @@ Recorded 2026-10-29 from `~/.easy-memory/*/prompts.log` and the settings backup 
 | Forced `on` and `off` sessions (verification, not part of the comparison) | 2026-10-28T07:22Z to 08:05Z and later | store `0e5001d12a9965ce` (43 lines), store `26b799979a291c4c` (3 lines): no `configured: auto` line |
 | First `configured: auto` line in a scratch clone (not a real repo) | 2026-10-28T08:05:17Z | store `57e9c974e7888078` (1 line, path under `/tmp`) |
 | **Window start: first `configured: auto` session in a real repo** | **2026-10-29T02:01:36Z** | store `c5aa0c6dafcc6672` (this repo), session `bf02bb49…` |
-| Redaction (FR-009) shipped | not yet | Gate 0 in `PRD_v0.2.md`; write the date here when it ships |
+| Redaction release (FR-009): YYYY-MM-DD | YYYY-MM-DD (placeholder: replace both with the date of merge) | Gate 0 in `PRD_v0.2.md`; checks in `tasks/TASK_REVIEW_HUN-87.md` |
 
 Sample bar: 10 `configured == auto` sessions per group in one repo (`REPORT_MIN_SESSIONS`, `easy_memory.py:1063`). On 2026-10-29 the count is 1 session, in the `off` group.
 

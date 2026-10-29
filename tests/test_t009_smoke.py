@@ -798,18 +798,21 @@ class RepoShapeTest(Sandbox):
 
 
 class PrivacyProbeTest(Sandbox):
-    """What lands on disk. These document accepted behaviour (PRD A6), they do not fix it."""
+    """What lands on disk. Since HUN-85 (FR-009) a secret in a listed shape is redacted at save."""
 
     SECRET = "AKIAIOSFODNN7EXAMPLE"
 
-    def test_secret_in_prompt_and_answer_is_stored_in_clear_but_only_in_private_note_files(self):
+    def test_secret_in_prompt_and_answer_is_redacted_and_the_note_file_is_private(self):
         answer = f"The deploy script reads the key {self.SECRET} from the env file, then " + ANSWER
         self.assert_silent(self.run_tool(["hook-stop"], stdin=self.stop_input(
             self.transcript(prompt=f"my token is {self.SECRET} explain verify_token"), answer=answer)), "Stop")
         holders = [str(p.relative_to(self.store)) for p in self.store.rglob("*")
                    if p.is_file() and self.SECRET.encode() in p.read_bytes()]
-        self.assertEqual(len(holders), 1, holders)  # only the note file; not hook.log, prompts.log, meta
-        self.assertTrue(holders[0].endswith(".json") and "/notes/" in holders[0])
+        self.assertEqual(holders, [])  # no file under the store holds the secret
+        (note_file,) = self.notes()
+        note = json.loads(note_file.read_text(encoding="utf-8"))
+        self.assertIn("[REDACTED:aws_access_key]", note["prompt"])
+        self.assertIn("[REDACTED:aws_access_key]", note["answer"])
         self.assertEqual(self.mode_problems(), [])
         self.assertEqual(self.hook_log(), "")
 
@@ -833,6 +836,69 @@ class PrivacyProbeTest(Sandbox):
         replies = self.mcp_session([{"method": "tools/call", "params": {
             "name": "memory_list", "arguments": {}}}], cwd=other)
         self.assertIn("No notes", replies[2]["result"]["content"][0]["text"])
+
+
+class RedactionSmokeTest(Sandbox):
+    """HUN-87 (Gate 0): redaction at save and the `redact` command, end to end, with fake secrets."""
+
+    TOKEN = "ghp_" + "abcdefghijklmnopqrstuvwxyz0123456789"
+    OLD_KEY = "AKIAIOSFODNN7EXAMPLE"
+
+    def test_stop_redacts_the_token_and_adds_no_hook_log_line(self):
+        self.switch_on()
+        self.run_tool(["build-weights", "--repo", str(self.repo)])
+        log_lines = len(self.hook_log().splitlines())
+        answer = f"The CI job exports {self.TOKEN} for the deploy step. " + ANSWER
+        self.assert_silent(self.run_tool(["hook-stop"], stdin=self.stop_input(
+            self.transcript(prompt=f"token {self.TOKEN} {PROMPT}"), answer=answer)), "Stop")
+        self.run_tool(["hook-prompt"], stdin=self.prompt_input())
+        (note_file,) = self.notes()
+        note = json.loads(note_file.read_text(encoding="utf-8"))
+        self.assertIn("[REDACTED:github_token]", note["prompt"])
+        self.assertIn("[REDACTED:github_token]", note["answer"])
+        holders = [str(p) for p in self.store.rglob("*")
+                   if p.is_file() and self.TOKEN.encode() in p.read_bytes()]
+        self.assertEqual(holders, [])
+        self.assertEqual(len(self.hook_log().splitlines()), log_lines)
+
+    def test_redact_dry_run_shows_id_and_kind_only_apply_removes_it_and_a_second_apply_is_quiet(self):
+        self.assert_silent(self.run_tool(["hook-stop"], stdin=self.stop_input(self.transcript())), "Stop")
+        (clean_file,) = self.notes()
+        old_id = "20260101T000000Z-oldstyle"  # an old-style note: saved before redaction existed
+        old_file = clean_file.parent / f"{old_id}.json"
+        old_file.write_text(json.dumps({
+            "v": 1, "id": old_id, "prompt": f"my key is {self.OLD_KEY}", "answer": "noted",
+            "time": "2026-01-01T00:00:00Z", "session_id": "old", "files": {}}, indent=2),
+            encoding="utf-8")
+        os.chmod(old_file, 0o600)
+        clean_bytes = clean_file.read_bytes()
+        log_lines = len(self.hook_log().splitlines())
+
+        dry = self.run_tool(["redact", "--repo", str(self.repo)])
+        dry_out = (dry.stdout + dry.stderr).decode("utf-8")
+        self.assertEqual(dry.returncode, 0, dry_out)
+        self.assertIn(f"{old_id}: aws_access_key 1", dry_out)
+        self.assertNotIn(self.OLD_KEY, dry_out)
+        self.assertNotIn(clean_file.stem, dry_out)
+        self.assertIn(self.OLD_KEY, old_file.read_text(encoding="utf-8"))  # dry run changed nothing
+
+        applied = self.run_tool(["redact", "--repo", str(self.repo), "--apply"])
+        apply_out = (applied.stdout + applied.stderr).decode("utf-8")
+        self.assertEqual(applied.returncode, 0, apply_out)
+        self.assertIn("Rewrote 1 note(s).", apply_out)
+        self.assertNotIn(self.OLD_KEY, apply_out)
+        rewritten = json.loads(old_file.read_text(encoding="utf-8"))
+        self.assertIn("[REDACTED:aws_access_key]", rewritten["prompt"])
+        self.assertNotIn(self.OLD_KEY, old_file.read_text(encoding="utf-8"))
+        self.assertEqual(clean_file.read_bytes(), clean_bytes)  # a note with no secret is untouched
+
+        again = self.run_tool(["redact", "--repo", str(self.repo), "--apply"])
+        again_out = (again.stdout + again.stderr).decode("utf-8")
+        self.assertEqual(again.returncode, 0, again_out)
+        self.assertIn("No secrets found in 2 note(s).", again_out)
+        self.assertNotIn("Rewrote", again_out)
+        self.assertEqual(self.mode_problems(), [])
+        self.assertEqual(len(self.hook_log().splitlines()), log_lines)
 
 
 class HugeInputTest(Sandbox):

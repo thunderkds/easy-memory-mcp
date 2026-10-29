@@ -296,6 +296,71 @@ def last_user_prompt(transcript_path):
     return None
 
 
+# Secret redaction (FR-009). Deterministic patterns, no model. The private key
+# pattern runs on the whole text (a block spans many lines); the others cannot
+# cross a newline, so each match stays inside one line. Every start of a token
+# pattern has a look-behind and every repeat is a plain character class, so no
+# input makes a match quadratic (NFR-008). The fallback of the key pattern is
+# the second alternative `...BEGIN....*`; the form `|\Z` was quadratic.
+_KEYWORDS = r"(?:SECRET|TOKEN|PASSWORD|PASSWD|API_KEY)"
+_NAME_TAIL = r"""[A-Za-z0-9_.-]{0,64}+["']?[ \t]{0,32}+"""  # possessive: no backtracking in a long name
+# Skips a value that is only a placeholder, so a second pass changes nothing. A placeholder of
+# another kind counts only when it ends the value; `[REDACTED:api_key].tail` is redacted whole.
+_NOT_REDACTED = (r"""(?!["']?(?:\[REDACTED:secret_assignment\]"""
+                 r"""|\[REDACTED:[a-z_]+\](?:[\s"',;)\]}>]|\Z)))""")
+_PRIVATE_KEY_HEAD = r"-----BEGIN [A-Z ]{0,40}PRIVATE KEY"
+_PRIVATE_KEY = re.compile(
+    _PRIVATE_KEY_HEAD + r".*?-----END [A-Z ]{0,40}PRIVATE KEY(?: BLOCK)?-----"
+    r"|" + _PRIVATE_KEY_HEAD + r".*", re.DOTALL)
+# A quoted value takes escapes (\") and, with no closing quote, runs to the end of the line.
+_QUOTED_ANY = r"""(?:"(?:[^"\\\r\n]|\\.)++"?|'(?:[^'\\\r\n]|\\.)++'?)"""
+_QUOTED_LONG = r"""(?:"(?:[^"\\\r\n]|\\.){8,}+"?|'(?:[^'\\\r\n]|\\.){8,}+'?)"""
+# (kind, needles, pattern, replacement). The pattern runs only when the text holds one of the
+# needles (a plain substring test, fast on 10 MB; upper-case needles are looked up in the
+# upper-cased text), so ordinary text skips it. Order matters: a longer shape runs before the shorter one it contains.
+_REDACT_PATTERNS = tuple((kind, needles, re.compile(pattern, flags), replacement)
+                         for kind, needles, flags, pattern, replacement in (
+    ("bearer_token", ("AUTHORIZATION",), re.I,
+     r"""(?<![A-Za-z0-9_])(?P<pre>Authorization["'\]]{0,2}[ \t]{0,8}+[:=,][ \t]{0,8}+["']?"""
+     r"""Bearer[ \t]{1,8}+["']?)""" + _NOT_REDACTED + r"""[^\s"']+""", r"\g<pre>[REDACTED:bearer_token]"),
+    ("github_token", ("ghp_", "gho_", "ghu_", "ghs_", "ghr_", "github_pat_"), 0,
+     r"(?<![A-Za-z0-9])(?:gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})", "[REDACTED:github_token]"),
+    ("slack_token", ("xox",), 0, r"(?<![A-Za-z0-9])xox[a-z]-[A-Za-z0-9-]{10,}", "[REDACTED:slack_token]"),
+    ("aws_access_key", ("AKIA", "ASIA"), 0,
+     r"(?<![A-Z0-9])(?:AKIA|ASIA)[A-Z0-9]{16}(?![A-Z0-9])", "[REDACTED:aws_access_key]"),
+    ("anthropic_key", ("sk-ant-",), 0, r"(?<![A-Za-z0-9_-])sk-ant-[A-Za-z0-9_-]{20,}", "[REDACTED:anthropic_key]"),
+    ("api_key", ("sk-",), 0, r"(?<![A-Za-z0-9_-])sk-[A-Za-z0-9_-]{20,}", "[REDACTED:api_key]"),
+    ("jwt", ("eyJ",), 0,
+     r"(?<![A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{5,}\.eyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]*", "[REDACTED:jwt]"),
+    # NAME=value or NAME:=value, any value. NAME: value, only a value of 8 or more characters
+    # (keeps `token: string`). One pass: the name is scanned once, not once per separator.
+    ("secret_assignment", ("SECRET", "TOKEN", "PASSWORD", "PASSWD", "API_KEY"), re.I,
+     r"(?P<pre>" + _KEYWORDS + _NAME_TAIL + r"(?:(?P<eq>:?=)(?![=>])|:)[ \t]{0,32}+)" + _NOT_REDACTED
+     + r"(?(eq)(?:" + _QUOTED_ANY + r"|[^\s\"']+)|(?:" + _QUOTED_LONG + r"|[^\s\"']{8,}))",
+     r"\g<pre>[REDACTED:secret_assignment]"),
+))
+
+
+def redact_text(text):
+    """Return (text with each secret replaced by [REDACTED:<kind>], {kind: count}).
+
+    Text with no secret comes back unchanged. The matched text is never logged or
+    returned. This function does not catch errors: a caller that fails must not save.
+    """
+    hits = {}
+    if "PRIVATE KEY" in text:
+        text, count = _PRIVATE_KEY.subn("[REDACTED:private_key]", text)
+        if count:
+            hits["private_key"] = count
+    for kind, needles, pattern, replacement in _REDACT_PATTERNS:
+        haystack = text.upper() if pattern.flags & re.I else text  # case-insensitive pattern, upper-case needles
+        if any(needle in haystack for needle in needles):
+            text, count = pattern.subn(replacement, text)
+            if count:
+                hits[kind] = hits.get(kind, 0) + count
+    return text, hits
+
+
 def save_stop_note(data):
     """Write the note for one Stop event (a dict). Returns the note path or None."""
     if data.get("stop_hook_active"):
@@ -312,9 +377,12 @@ def save_stop_note(data):
     if prompt is None:
         raise ValueError("no user prompt found in transcript")
     session_id = data.get("session_id")
+    # cited_files() below keeps the raw answer, so the file hashes do not change.
+    saved_prompt, _ = redact_text(prompt)
+    saved_answer, _ = redact_text(answer)
     return write_note(cwd, {
-        "prompt": prompt,
-        "answer": answer,
+        "prompt": saved_prompt,
+        "answer": saved_answer,
         "time": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         "session_id": session_id if isinstance(session_id, str) else "",
         "files": cited_files(answer, _repo_root(cwd)),
@@ -1514,6 +1582,85 @@ def serve_command(args):
             return 0
 
 
+def _redact_note(notes_dir, name, apply):
+    """Redact one note file. Returns (hits, status); status is "ok", "skipped" or "failed".
+
+    Prints a failure line with the note id and the error type only, never the error text
+    (it could hold note text). Writes only a note whose prompt or answer changed, and only if
+    the file is still the one that was read (a note deleted or replaced meanwhile is not touched).
+    """
+    note_id = name[:-len(".json")]
+    if not valid_note_id(note_id):
+        print(f"{ascii(name)}: skipped (bad name)")  # ascii(): no raw terminal escapes
+        return {}, "skipped"
+    path = notes_dir / name
+    try:
+        if path.is_symlink():
+            print(f"{note_id}: skipped (symlink)")
+            return {}, "skipped"
+        seen = os.lstat(path)
+        note = json.loads(path.read_text(encoding="utf-8"))
+        version = note.get("v") if isinstance(note, dict) else None
+        if isinstance(version, bool) or not isinstance(version, int) or not 1 <= version <= FORMAT_VERSION:
+            raise ValueError("not a note")
+    except Exception as err:  # a corrupt file (even RecursionError) must not stop the run
+        print(f"{note_id}: skipped ({type(err).__name__})")
+        return {}, "skipped"
+    hits = {}
+    try:
+        for field in ("prompt", "answer"):
+            if isinstance(note.get(field), str):
+                note[field], found = redact_text(note[field])
+                for kind, count in found.items():
+                    hits[kind] = hits.get(kind, 0) + count
+        if hits and apply:
+            try:
+                now = os.lstat(path)
+            except OSError:
+                now = None
+            if now is None or (now.st_ino, now.st_mtime_ns) != (seen.st_ino, seen.st_mtime_ns):
+                print(f"{note_id}: skipped (changed)")
+                return {}, "skipped"
+            _atomic_write(notes_dir, name, json.dumps(note, indent=2))  # same encoding as write_note
+    except Exception as err:
+        print(f"{note_id}: failed ({type(err).__name__})")
+        return hits, "failed"
+    return hits, "ok"
+
+
+def redact_command(args):
+    """redact: remove secrets from notes already saved. A dry run unless --apply is given.
+
+    Prints one line per note with a hit: note id, then each kind and count. Never prints
+    matched text. Returns 1 if the notes folder cannot be read or any note could not be
+    redacted or written, else 0.
+    """
+    notes_dir = store_home() / repo_key(args.repo) / "notes"
+    try:
+        names = sorted(name for name in os.listdir(notes_dir) if name.endswith(".json"))
+    except FileNotFoundError:
+        return 0
+    except OSError as err:
+        print(f"redact: cannot read notes ({type(err).__name__})", file=sys.stderr)
+        return 1
+    flagged, failed, skipped = 0, 0, 0
+    for name in names:
+        hits, status = _redact_note(notes_dir, name, args.apply)
+        failed += status == "failed"
+        skipped += status == "skipped"
+        if hits and status == "ok":
+            flagged += 1
+            print(f"{name[:-len('.json')]}: " + ", ".join(f"{kind} {count}" for kind, count in hits.items()))
+    if names and not flagged and not failed and not skipped:
+        print(f"No secrets found in {len(names)} note(s).")
+    elif flagged:
+        print(f"{'Rewrote' if args.apply else 'Found secrets in'} {flagged} note(s)."
+              + ("" if args.apply else " Run again with --apply to rewrite them."))
+    if skipped:
+        print(f"{skipped} skipped (unreadable)")
+    return 1 if failed else 0
+
+
 def _not_implemented(name):
     # stderr: a hook's stdout is added to the prompt, so stubs must not write there.
     def handler(args):
@@ -1532,6 +1679,7 @@ SUBCOMMANDS["install"] = install_command
 SUBCOMMANDS["uninstall"] = uninstall_command
 SUBCOMMANDS["report"] = report_command
 SUBCOMMANDS["serve"] = serve_command
+SUBCOMMANDS["redact"] = redact_command
 
 
 def main(argv=None):
@@ -1551,6 +1699,9 @@ def main(argv=None):
             command_parser.add_argument("--purge", action="store_true")
         elif name == "report":
             command_parser.add_argument("--repo", default=os.getcwd())
+        elif name == "redact":
+            command_parser.add_argument("--repo", default=os.getcwd())
+            command_parser.add_argument("--apply", action="store_true")
     try:
         args = parser.parse_args(argv)
     except SystemExit:
