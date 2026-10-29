@@ -61,8 +61,12 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE** (captured 2026-10-29T10:46:22Z by `date -u`, on unchanged `site/index.html` at commit 363edd6, before any implementation commit; scrollbars visible, no --hide-scrollbars):
+
+- Look: HUN-123 dark indigo dashboard (violet gradient body, framed panel, JetBrains Mono, gradient rule under h2, SVG rings, pill tags).
+- Full-page screenshots (CDP): /tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-memory-mcp/28185bde-ebb4-4e62-9f40-560e8aee485f/scratchpad/hun125/before-1440-full.png, before-1024-full.png, before-768-full.png, before-375-full.png; first-viewport screenshots before-<w>-view.png; headless-CLI screenshots before-1440-cli.png, before-1024-cli.png, before-768-cli.png (all in /tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-memory-mcp/28185bde-ebb4-4e62-9f40-560e8aee485f/scratchpad/hun125/).
+- Scroll widths (scrollWidth / innerWidth / scrollHeight; scrollWidth is innerWidth minus the 15 px scrollbar, so no horizontal scroll): 1440: [1425,1440,6393]; 1024: [1009,1024,7182]; 768: [753,768,9432]; 375: [360,375,10253] (from /tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-memory-mcp/28185bde-ebb4-4e62-9f40-560e8aee485f/scratchpad/hun125/before-scroll.txt).
+- Sentence inventory of the current page (every sentence, table cell, code line; hrefs listed under `## HREFS`): /tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-memory-mcp/28185bde-ebb4-4e62-9f40-560e8aee485f/scratchpad/hun125/before-inventory.txt (210 lines), built by /tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-memory-mcp/28185bde-ebb4-4e62-9f40-560e8aee485f/scratchpad/hun125/inventory.py from the page as of HEAD (copy: /tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-memory-mcp/28185bde-ebb4-4e62-9f40-560e8aee485f/scratchpad/hun125/old-index.html).
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
