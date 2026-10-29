@@ -61,8 +61,14 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured Thu Oct 29 08:51:46 AM UTC 2026 (UTC), on unchanged `site/index.html` (before any implementation commit), by the frontend-developer agent. Command:
+`google-chrome --headless=new --disable-gpu --hide-scrollbars --window-size=<w>,2400 --screenshot=<out> "file://$PWD/site/index.html"` for w in 375 768 1280. Chrome output:
+```
+219131 bytes written to file .../scratchpad/hun123/before-375.png
+335401 bytes written to file .../scratchpad/hun123/before-768.png
+364447 bytes written to file .../scratchpad/hun123/before-1280.png
+```
+Files (all under `/tmp/claude-1000/-home-hungnguyenhuu-workspace-pets-hungnguyen111-easy-memory-mcp/28185bde-ebb4-4e62-9f40-560e8aee485f/scratchpad/hun123/`): `before-375.png`, `before-768.png`, `before-1280.png`, `text.before.txt` (stripped body text, 1432 words / 8587 bytes), `hrefs.before.txt` (20 hrefs), `index.before.html` (copy of the unchanged page), `extract.py` (the extractor). The old look: near-black background (`--bg:#0a0a12`), cyan accents, sans-serif body, left sticky sidebar with uppercase group titles.
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
