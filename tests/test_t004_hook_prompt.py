@@ -51,6 +51,11 @@ class BuildSpy:
 
 
 class PromptHookTestCase(unittest.TestCase):
+    # Switch written to every repo's config.json by make_repo. The tests below set "on" so they
+    # do not depend on the calendar date (auto is off on odd days). None writes nothing: the
+    # switch and report tests that subclass this need the default.
+    switch = None
+
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="t004-")).resolve()
         self.addCleanup(lambda: subprocess.run(["rm", "-rf", str(self.tmp)]))
@@ -72,6 +77,8 @@ class PromptHookTestCase(unittest.TestCase):
             (repo / rel).write_text(body)
         run_git(repo, "add", ".")
         run_git(repo, "commit", "-q", "-m", "init")
+        if self.switch:
+            easy_memory.write_config(repo, self.switch)
         return repo
 
     def write_weights(self, repo, df=None, n=10):
@@ -126,6 +133,8 @@ class PromptHookTestCase(unittest.TestCase):
 
 
 class IndexTest(PromptHookTestCase):
+    switch = "on"
+
     def test_one_match_of_three_gives_one_line_with_header(self):  # SC1, AC1, AC3
         repo = self.make_repo()
         self.write_weights(repo)
@@ -236,6 +245,8 @@ class IndexTest(PromptHookTestCase):
 
 
 class NothingAddedTest(PromptHookTestCase):
+    switch = "on"
+
     def assert_silent(self, stdin_text, logged=0):
         code, out, err = self.run_hook(stdin_text)
         self.assertEqual((code, out, err), (0, "", ""))
@@ -280,6 +291,8 @@ class NothingAddedTest(PromptHookTestCase):
 
 
 class FailureTest(PromptHookTestCase):
+    switch = "on"
+
     def assert_silent_logged(self, stdin_text, argv=("hook-prompt",)):
         code, out, _ = self.run_hook(stdin_text, argv)
         self.assertEqual((code, out), (0, ""))
@@ -345,6 +358,8 @@ class FailureTest(PromptHookTestCase):
 
 
 class InjectionTest(PromptHookTestCase):
+    switch = "on"
+
     """Note text is untrusted data: it may sit only inside a quoted field inside the frame."""
 
     def assert_framed(self, text, *payloads):
