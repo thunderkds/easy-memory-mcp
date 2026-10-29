@@ -1582,6 +1582,62 @@ def serve_command(args):
             return 0
 
 
+def _redact_note(notes_dir, name, apply):
+    """Redact one note file. Returns (hits, status); status is "ok", "skipped" or "failed".
+
+    Prints a failure line with the note id and the error type only, never the error text
+    (it could hold note text). Writes only a note whose prompt or answer changed.
+    """
+    note_id = name[:-len(".json")]
+    try:
+        note = json.loads((notes_dir / name).read_text(encoding="utf-8"))
+        version = note.get("v") if isinstance(note, dict) else None
+        if isinstance(version, bool) or not isinstance(version, int) or not 1 <= version <= FORMAT_VERSION:
+            raise ValueError("not a note")
+    except Exception as err:  # a corrupt file (even RecursionError) must not stop the run
+        print(f"{note_id}: skipped ({type(err).__name__})")
+        return {}, "skipped"
+    hits = {}
+    try:
+        for field in ("prompt", "answer"):
+            if isinstance(note.get(field), str):
+                note[field], found = redact_text(note[field])
+                for kind, count in found.items():
+                    hits[kind] = hits.get(kind, 0) + count
+        if hits and apply:
+            _atomic_write(notes_dir, name, json.dumps(note, indent=2))  # same encoding as write_note
+    except Exception as err:
+        print(f"{note_id}: failed ({type(err).__name__})")
+        return hits, "failed"
+    return hits, "ok"
+
+
+def redact_command(args):
+    """redact: remove secrets from notes already saved. A dry run unless --apply is given.
+
+    Prints one line per note with a hit: note id, then each kind and count. Never prints
+    matched text. Returns 1 if any note could not be redacted or written, else 0.
+    """
+    notes_dir = store_home() / repo_key(args.repo) / "notes"
+    try:
+        names = sorted(name for name in os.listdir(notes_dir) if name.endswith(".json"))
+    except OSError:
+        return 0
+    flagged, failed = 0, 0
+    for name in names:
+        hits, status = _redact_note(notes_dir, name, args.apply)
+        failed += status == "failed"
+        if hits and status == "ok":
+            flagged += 1
+            print(f"{name[:-len('.json')]}: " + ", ".join(f"{kind} {count}" for kind, count in hits.items()))
+    if names and not flagged and not failed:
+        print(f"No secrets found in {len(names)} note(s).")
+    elif flagged:
+        print(f"{'Rewrote' if args.apply else 'Found secrets in'} {flagged} note(s)."
+              + ("" if args.apply else " Run again with --apply to rewrite them."))
+    return 1 if failed else 0
+
+
 def _not_implemented(name):
     # stderr: a hook's stdout is added to the prompt, so stubs must not write there.
     def handler(args):
@@ -1600,6 +1656,7 @@ SUBCOMMANDS["install"] = install_command
 SUBCOMMANDS["uninstall"] = uninstall_command
 SUBCOMMANDS["report"] = report_command
 SUBCOMMANDS["serve"] = serve_command
+SUBCOMMANDS["redact"] = redact_command
 
 
 def main(argv=None):
@@ -1619,6 +1676,9 @@ def main(argv=None):
             command_parser.add_argument("--purge", action="store_true")
         elif name == "report":
             command_parser.add_argument("--repo", default=os.getcwd())
+        elif name == "redact":
+            command_parser.add_argument("--repo", default=os.getcwd())
+            command_parser.add_argument("--apply", action="store_true")
     try:
         args = parser.parse_args(argv)
     except SystemExit:

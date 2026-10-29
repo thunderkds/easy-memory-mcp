@@ -4,8 +4,16 @@ Every test uses temp folders and EASY_MEMORY_HOME. All secrets here are fake and
 built from obvious filler (0123456789abcdef...); they are split in the source so
 a secret scanner does not flag this file.
 """
+import contextlib
+import hashlib
+import io
 import json
+import os
+import shutil
+import stat
+import subprocess
 import sys
+import tempfile
 import time
 import unittest
 from pathlib import Path
@@ -371,6 +379,198 @@ class HookStopRedactionTest(t002.HookTestCase):
         (note,) = self.notes(repo)
         self.assertTrue(note["answer"].endswith("[REDACTED:private_key]"))
         self.assertLess(seconds, 2.0)
+
+
+class RedactCommandTest(unittest.TestCase):
+    """HUN-86: `redact` rewrites saved notes; dry run by default, --apply writes."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, ignore_errors=True)
+        self.home = self.tmp / "home"
+        self.repo = self.tmp / "repo"
+        self.repo.mkdir()
+        subprocess.run(["git", "-C", str(self.repo), "init", "-q"], check=True)
+        patcher = mock.patch.dict(os.environ, {"EASY_MEMORY_HOME": str(self.home)})
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def save(self, prompt, answer="plain answer", **extra):
+        note = {"prompt": prompt, "answer": answer, "time": "2026-10-29T01:02:03Z",
+                "session_id": "sess-1", "files": {"src/a.py": "ab" * 32}, **extra}
+        return Path(easy_memory.write_note(str(self.repo), note))
+
+    def run_redact(self, *flags):
+        out, err = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = easy_memory.main(["redact", "--repo", str(self.repo), *flags])
+        return code, out.getvalue() + err.getvalue()
+
+    def snapshot(self, *paths):
+        return {str(p): (p.read_bytes(), p.stat().st_mtime_ns) for p in paths}
+
+    def store(self):
+        """Three notes: one with an AWS key (prompt) and a GitHub token (answer), two clean."""
+        clean_a = self.save("how does src/a.py work?")
+        secret = self.save(f"deploy with {AWS} now", f"I saw {GITHUB} in the log")
+        clean_b = self.save("what is next?", "nothing")
+        return clean_a, secret, clean_b
+
+    def test_dry_run_changes_nothing_and_lists_the_note(self):  # AC1, SC1
+        clean_a, secret, clean_b = self.store()
+        before = self.snapshot(clean_a, secret, clean_b)
+        code, out = self.run_redact()
+        self.assertEqual(code, 0)
+        self.assertEqual(self.snapshot(clean_a, secret, clean_b), before)
+        hit_lines = [line for line in out.splitlines() if secret.stem in line]
+        self.assertEqual(len(hit_lines), 1)
+        self.assertIn("aws_access_key 1", hit_lines[0])
+        self.assertIn("github_token 1", hit_lines[0])
+        self.assertNotIn(clean_a.stem, out)
+        self.assertNotIn(clean_b.stem, out)
+
+    def test_output_never_holds_matched_text(self):  # AC2
+        self.store()
+        self.save("DB_PASSWORD=hunter2hunter2", f"{JWT} and {SLACK}")
+        for flags in ((), ("--apply",), ("--apply",)):
+            _, out = self.run_redact(*flags)
+            for secret in (AWS, GITHUB, JWT, SLACK, "hunter2hunter2"):
+                self.assertNotIn(secret, out)
+                self.assertNotIn(secret[:12], out)
+
+    def test_apply_rewrites_only_notes_with_a_hit(self):  # AC3
+        clean_a, secret, clean_b = self.store()
+        before = self.snapshot(clean_a, clean_b)
+        code, out = self.run_redact("--apply")
+        self.assertEqual(code, 0)
+        self.assertEqual(self.snapshot(clean_a, clean_b), before)
+        text = secret.read_text(encoding="utf-8")
+        self.assertNotIn(AWS, text)
+        self.assertNotIn(GITHUB, text)
+        note = json.loads(text)
+        self.assertEqual(note["prompt"], "deploy with [REDACTED:aws_access_key] now")
+        self.assertEqual(note["answer"], "I saw [REDACTED:github_token] in the log")
+        self.assertIn(secret.stem, out)
+
+    def test_second_apply_is_byte_identical_and_reports_no_hit(self):  # AC4, SC2
+        clean_a, secret, clean_b = self.store()
+        self.run_redact("--apply")
+        paths = (clean_a, secret, clean_b)
+        digests = {p: hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}
+        mtimes = {p: p.stat().st_mtime_ns for p in paths}
+        code, out = self.run_redact("--apply")
+        self.assertEqual(code, 0)
+        self.assertEqual({p: hashlib.sha256(p.read_bytes()).hexdigest() for p in paths}, digests)
+        self.assertEqual({p: p.stat().st_mtime_ns for p in paths}, mtimes)
+        for path in paths:
+            self.assertNotIn(path.stem, out)
+        code, dry = self.run_redact()
+        for path in paths:
+            self.assertNotIn(path.stem, dry)
+
+    def test_other_fields_and_mode_survive_and_encoding_matches_write_note(self):  # AC5, SC3
+        secret = self.save(f"café 日本語 {AWS} naïve", "réponse ✓", extra_field={"k": [1, 2]})
+        before = json.loads(secret.read_text(encoding="utf-8"))
+        self.run_redact("--apply")
+        after = json.loads(secret.read_text(encoding="utf-8"))
+        self.assertEqual(after["prompt"], "café 日本語 [REDACTED:aws_access_key] naïve")
+        self.assertEqual(after["answer"], "réponse ✓")
+        for field in before:
+            if field != "prompt":
+                self.assertEqual(after[field], before[field], field)
+        self.assertEqual(list(after), list(before))
+        self.assertEqual(stat.S_IMODE(secret.stat().st_mode), 0o600)
+        self.assertEqual(secret.read_text(encoding="utf-8"), json.dumps(after, indent=2))
+
+    def test_writes_go_through_atomic_write(self):  # AC6
+        _, secret, _ = self.store()
+        with mock.patch.object(easy_memory, "_atomic_write", wraps=easy_memory._atomic_write) as spy:
+            self.run_redact("--apply")
+        self.assertEqual(spy.call_count, 1)
+        self.assertEqual(spy.call_args.args[1], secret.name)
+
+    def test_failed_write_leaves_the_old_note_and_goes_on(self):  # AC6
+        first = self.save(f"one {AWS}")
+        second = self.save(f"two {GITHUB}")
+        old = first.read_bytes()
+        real = easy_memory._atomic_write
+
+        def flaky(folder, name, text, mode=0o600):
+            if name == first.name:
+                raise OSError("disk full")
+            return real(folder, name, text, mode)
+
+        with mock.patch.object(easy_memory, "_atomic_write", side_effect=flaky):
+            code, out = self.run_redact("--apply")
+        self.assertEqual(code, 1)
+        self.assertEqual(first.read_bytes(), old)
+        self.assertNotIn(GITHUB, second.read_text(encoding="utf-8"))
+        self.assertIn(first.stem, out)
+        self.assertIn("OSError", out)
+        self.assertNotIn(AWS, out)
+        self.assertEqual([p.name for p in first.parent.iterdir() if p.name.endswith(".tmp")], [])
+
+    def test_rename_failure_leaves_no_partial_note(self):  # AC6
+        only = self.save(f"one {AWS}")
+        old = only.read_bytes()
+        with mock.patch("os.replace", side_effect=OSError("boom")):
+            code, _ = self.run_redact("--apply")
+        self.assertEqual(code, 1)
+        self.assertEqual(only.read_bytes(), old)
+        self.assertEqual([p.name for p in only.parent.iterdir() if p.name.endswith(".tmp")], [])
+
+    def test_corrupt_note_is_reported_and_skipped(self):  # AC7
+        good = self.save(f"one {AWS}")
+        notes = good.parent
+        (notes / "20200101T000000000-aaaaaaaa.json").write_text("{not json " + AWS, encoding="utf-8")
+        (notes / "20200101T000000001-bbbbbbbb.json").write_bytes(b"\xff\xfe" + AWS.encode())
+        (notes / "20200101T000000002-cccccccc.json").write_text("[1, 2]", encoding="utf-8")
+        (notes / "20200101T000000003-dddddddd.json").write_text(
+            json.dumps({"v": 1, "prompt": 5, "answer": ["x"]}), encoding="utf-8")
+        for flags in ((), ("--apply",)):
+            code, out = self.run_redact(*flags)
+            self.assertEqual(code, 0)
+            self.assertIn("20200101T000000000-aaaaaaaa", out)
+            self.assertIn("20200101T000000001-bbbbbbbb", out)
+            self.assertIn("20200101T000000002-cccccccc", out)
+            self.assertNotIn(AWS, out)
+        self.assertNotIn(AWS, good.read_text(encoding="utf-8"))
+
+    def test_note_with_a_placeholder_is_left_alone(self):
+        note = self.save("see [REDACTED:aws_access_key] and TOKEN=[REDACTED:secret_assignment]")
+        before = self.snapshot(note)
+        self.run_redact("--apply")
+        self.assertEqual(self.snapshot(note), before)
+
+    def test_empty_store_prints_nothing(self):
+        self.assertEqual(self.run_redact(), (0, ""))
+        self.assertEqual(self.run_redact("--apply"), (0, ""))
+
+    def test_works_when_the_switch_is_off(self):
+        note = self.save(f"one {AWS}")
+        easy_memory.main(["switch", "off", "--repo", str(self.repo)])
+        self.run_redact("--apply")
+        self.assertNotIn(AWS, note.read_text(encoding="utf-8"))
+
+    def test_a_raising_redactor_writes_nothing(self):  # fail closed
+        note = self.save(f"one {AWS}")
+        before = self.snapshot(note)
+        with mock.patch.object(easy_memory, "redact_text", side_effect=RuntimeError("x")):
+            code, out = self.run_redact("--apply")
+        self.assertEqual(code, 1)
+        self.assertEqual(self.snapshot(note), before)
+        self.assertIn("RuntimeError", out)
+
+    def test_command_line_runs_as_a_process(self):
+        note = self.save(f"one {AWS}")
+        env = {**os.environ, "EASY_MEMORY_HOME": str(self.home)}
+        cmd = [sys.executable, str(ROOT / "easy_memory.py"), "redact", "--repo", str(self.repo)]
+        dry = subprocess.run(cmd, capture_output=True, text=True, env=env)
+        self.assertEqual(dry.returncode, 0)
+        self.assertIn(note.stem, dry.stdout)
+        self.assertIn(AWS, note.read_text(encoding="utf-8"))
+        subprocess.run([*cmd, "--apply"], capture_output=True, text=True, env=env, check=True)
+        self.assertNotIn(AWS, note.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

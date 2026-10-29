@@ -41,12 +41,12 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `tests/test_t010_redact.py` class `RedactCommandTest` (13 tests, AC1 to AC7 plus switch off, placeholder, empty store, fail closed, real process); `tests/test_t001_store.py:288` lists the new `redact` subcommand. Targeted run: `python3 -m unittest discover -s tests -p "test_t010*"` printed `Ran 53 tests in 1.348s` / `OK` |
+| Verification command run | ☑ pass | `python3 -m unittest discover -s tests -v 2>&1 \| tail -5` printed: `OK (skipped=3)` and `[NFR-001] 7000 files, 20 runs: min=0.080s p50=0.089s p95=0.109s max=0.109s`; 354 tests `ok`. `python3 -m py_compile easy_memory.py` clean. Before the change the same suite printed `OK (skipped=3)` (same 3 skips). |
+| Negative cases hold | ☑ pass | Corrupt JSON, invalid UTF-8, JSON list, wrong field types: reported by note id and error type, skipped, exit 0. Write failure (OSError, os.replace failure): old bytes kept, no `.tmp` left, exit 1, next note still done. Raising redactor: nothing written, exit 1. Output greps clean of every fixture secret (dry run, apply, second apply). |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
+| Full smoke suite still green (no regression) | ☑ pass | Full suite `OK (skipped=3)`; the `tests/test_t001_store.py` subcommand-table test needed `redact` added (the only edit to an existing test). |
 | **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
 | **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
 | **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
@@ -75,9 +75,29 @@ $ grep -c AKIAIOSFODNN7EXAMPLE <note file>
 
 The command is rejected as unknown (exit 2) and the saved note still holds the secret.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: captured 2026-10-29 07:21:31 UTC (`date -u`), same temp store and note as BEFORE, after the change.
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+$ redact            (dry run)
+20261029T071808460-c769bfb7: aws_access_key 1
+Found secrets in 1 note(s). Run again with --apply to rewrite them.
+exit=0
+$ redact --apply
+20261029T071808460-c769bfb7: aws_access_key 1
+Rewrote 1 note(s).
+exit=0
+$ redact --apply
+No secrets found in 1 note(s).
+exit=0
+$ redact            (dry run)
+No secrets found in 1 note(s).
+exit=0
+prompt now: deploy with [REDACTED:aws_access_key] please
+grep -c AKIAIOSFODNN7EXAMPLE <note>  -> 0
+mode: -rw-------
+```
+
+**DELTA**: A user can now list which saved notes hold a secret without seeing it, then remove it in place with one `redact --apply`; a second run changes nothing.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/HUN-86.jsonl`, never the
 implementing agent alone]
