@@ -41,12 +41,12 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `tests/test_t010_redact.py` (32 tests, AC1-AC7) ; `tests/test_t009_smoke.py::PrivacyProbeTest` updated (it asserted the v0.1 clear-text behaviour). `python3 -m unittest discover -s tests -v` -> `Ran 339 tests in 32.104s` / `OK (skipped=3)` (307 v0.1 + 32 new, same 3 skips) |
+| Verification command run | ☑ pass | `python3 -m unittest discover -s tests -v 2>&1 | tail -5` -> `Ran 339 tests in 32.104s`, `OK (skipped=3)`, `[NFR-001] 7000 files, 20 runs: min=0.092s p50=0.098s p95=0.123s max=0.147s`. `python3 tests/bench_t004.py --repo <worktree>` x3 -> p95 0.101 / 0.109 / 0.104s (median 0.104s) vs BEFORE 0.117 / 0.105 / 0.113s (median 0.113s). 1 MB timing printed by the test (worst case): `redact 1MB long TOKEN run: 0.526s`; `redact 1MB repeated BEGIN: 0.008s`; `hook-stop with 1MB repeated BEGIN: 0.062s`. `python3 -m py_compile easy_memory.py` ok |
+| Negative cases hold | ☑ pass | `risk-…`/`task-…`/`my-sk-…` not redacted; `token: string`, `token: abcdefg` (7 chars), `token == null`, `tokens => 1` not redacted; no-secret text byte-identical incl. CRLF and non-ASCII; raising redactor -> exit 0, no stdout/stderr, no note, exactly one `hook.log` line without matched text; redaction idempotent (second pass: same text, no hits) |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
+| Full smoke suite still green (no regression) | ☑ pass | `tests/test_t009_smoke.py` -> `Ran 29 tests ... OK (skipped=3)`; full suite `OK (skipped=3)` as above |
 | **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
 | **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
 | **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
@@ -78,9 +78,21 @@ The saved note holds the token in both `prompt` and `answer`.
 `tests/bench_t004.py --repo <worktree>` BEFORE, 3 runs (p95): 0.117s, 0.105s, 0.113s -> median **0.113s**
 (p50 0.087 / 0.090 / 0.083s). Note: on 2026-10-29 (odd day) the switch is `auto` = `off`, so the bench measures the early-exit path (`runs_with_index=0`); `hook-prompt` is not changed by this task.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER** (same script, same fake token, 2026-10-29T05:13:00Z, worktree `hun-85` with the change, uncommitted at capture):
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+$ date -u +%FT%TZ          -> 2026-10-29T05:13:00Z
+$ python3 easy_memory.py hook-stop < in.json ; echo exit=$?
+exit=0
+prompt: my key is [REDACTED:github_token] please help
+answer[:80]: Looked at a.py. The token is [REDACTED:github_token]. Detail sentence. Detail se
+$ grep -c ghp_ <note file>
+0
+```
+
+`tests/bench_t004.py --repo <worktree>` AFTER, 3 runs (p95): 0.101s, 0.109s, 0.104s -> median **0.104s** (BEFORE median 0.113s; not worse).
+
+**DELTA**: A secret in a listed shape in a prompt or answer is saved as `[REDACTED:<kind>]`, so a new note never holds it; a note with no secret is unchanged.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/HUN-85.jsonl`, never the
 implementing agent alone]

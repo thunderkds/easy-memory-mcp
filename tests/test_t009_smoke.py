@@ -798,18 +798,21 @@ class RepoShapeTest(Sandbox):
 
 
 class PrivacyProbeTest(Sandbox):
-    """What lands on disk. These document accepted behaviour (PRD A6), they do not fix it."""
+    """What lands on disk. Since HUN-85 (FR-009) a secret in a listed shape is redacted at save."""
 
     SECRET = "AKIAIOSFODNN7EXAMPLE"
 
-    def test_secret_in_prompt_and_answer_is_stored_in_clear_but_only_in_private_note_files(self):
+    def test_secret_in_prompt_and_answer_is_redacted_and_the_note_file_is_private(self):
         answer = f"The deploy script reads the key {self.SECRET} from the env file, then " + ANSWER
         self.assert_silent(self.run_tool(["hook-stop"], stdin=self.stop_input(
             self.transcript(prompt=f"my token is {self.SECRET} explain verify_token"), answer=answer)), "Stop")
         holders = [str(p.relative_to(self.store)) for p in self.store.rglob("*")
                    if p.is_file() and self.SECRET.encode() in p.read_bytes()]
-        self.assertEqual(len(holders), 1, holders)  # only the note file; not hook.log, prompts.log, meta
-        self.assertTrue(holders[0].endswith(".json") and "/notes/" in holders[0])
+        self.assertEqual(holders, [])  # no file under the store holds the secret
+        (note_file,) = self.notes()
+        note = json.loads(note_file.read_text(encoding="utf-8"))
+        self.assertIn("[REDACTED:aws_access_key]", note["prompt"])
+        self.assertIn("[REDACTED:aws_access_key]", note["answer"])
         self.assertEqual(self.mode_problems(), [])
         self.assertEqual(self.hook_log(), "")
 
