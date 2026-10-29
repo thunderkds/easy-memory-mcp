@@ -11,7 +11,6 @@
 ### Todo
 
 ### In Progress
-- [ ] **HUN-122** — Report compares only auto-switch sessions | backend-developer | C1 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-122.md`
 
 ### Ready for Review
 
@@ -29,6 +28,7 @@
 - [x] **HUN-85** — Stop hook redacts secrets before a note is saved | backend-developer | C2 | Risk: High | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-85.md`
 - [x] **HUN-86** — redact command rewrites notes already saved | backend-developer | C2 | Risk: High | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-86.md`
 - [x] **HUN-87** — Gate 0 pass check before the redaction release | qa-expert | C1 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-87.md`
+- [x] **HUN-122** — Report compares only auto-switch sessions | backend-developer | C1 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-122.md`
 
 ### Closed (will not do)
 
