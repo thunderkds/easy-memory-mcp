@@ -1,4 +1,4 @@
-"""HUN-125: static release page `site/index.html` in the Graphite Mint theme. Standard library only."""
+"""HUN-125 / HUN-127: static release page `site/index.html` in the Graphite Mint theme. Standard library only."""
 import re
 import unittest
 from html.parser import HTMLParser
@@ -121,6 +121,7 @@ class SitePageTest(unittest.TestCase):
             self.assertNotIn(word, self.all_css, word)
         self.assertNotIn("<circle", self.html)
         self.assertNotIn("stroke-dasharray", self.html)
+        self.assertNotIn("<linearGradient", self.html)
         self.assertEqual(self.scan.with_class("div", "ring"), [])
 
     def test_type_rules(self):
@@ -154,12 +155,12 @@ class SitePageTest(unittest.TestCase):
         self.assertEqual(items, [
             ("what", "What it is"), ("context", "Context"), ("how", "How it works"),
             ("run", "Install"), ("use", "Use it"), ("rollback", "Remove it"),
-            ("numbers", "Measured"), ("limits", "Known limits"), ("notes", "Release notes"), ("built", "How it was built"),
+            ("numbers", "Measured"), ("limits", "Known limits"), ("notes", "Release notes"),
         ])
 
     def test_section_order_and_anchors(self):
         sections = re.findall(r'<section id="([^"]+)">', self.html)
-        self.assertEqual(sections, ["what", "context", "how", "run", "use", "rollback", "numbers", "limits", "notes", "built"])
+        self.assertEqual(sections, ["what", "context", "how", "run", "use", "rollback", "numbers", "limits", "notes"])
         self.assertIn('<body id="top">', self.html)
 
     def test_in_page_links_have_targets(self):
@@ -179,11 +180,20 @@ class SitePageTest(unittest.TestCase):
         self.assertEqual(re.findall(r'<strong class="step-title">([^<]+)</strong>', strip),
                          ["Local", "Hooks and MCP", "Measured on yourself"])
 
-    def test_how_it_works_step_grid(self):
-        grid = re.search(r'<ol class="strip steps c5"[^>]*>(.*?)</ol>', self.html, re.S).group(1)
-        self.assertEqual(re.findall(r'<span class="step-no">(\d\d)</span>', grid), ["00", "01", "02", "03", "04"])
-        self.assertEqual(re.findall(r'<span class="step-title">([^<]+)</span>', grid),
-                         ["Stop hook", "Note store", "Word weights", "Prompt hook", "MCP server"])
+    def test_how_it_works_flow_is_an_accessible_svg(self):
+        flows = [a for t, a in self.scan.tags if t == "svg" and "flow" in a.get("class", "").split()]
+        self.assertEqual(len(flows), 2)  # wide and tall layout of the same flow
+        for a in flows:
+            self.assertEqual(a.get("role"), "img")
+            self.assertTrue(len(a.get("aria-label", "")) > 80)
+            self.assertNotIn("aria-hidden", a)
+        flow = re.search(r'<svg class="flow flow-wide".*?</svg>', self.html, re.S).group(0)
+        titles = re.findall(r'<text class="fl-title"[^>]*>([^<]+)</text>', flow)
+        self.assertEqual(titles, ["Your answer", "Stop hook", "Note store", "Prompt hook", "Next prompt",
+                                  "Word weights", "MCP server"])
+        # The main loop is mint (four arrows + the legend sample); side paths use the neutral line class.
+        self.assertEqual(flow.count('class="fl-main-line"'), 5)
+        self.assertEqual(flow.count('class="fl-line"'), 3)
 
     def test_experiment_cards(self):
         cards = self.scan.with_class("article", "card")
@@ -193,30 +203,74 @@ class SitePageTest(unittest.TestCase):
         self.assertEqual(self.scan.by_class["exp"], ["exp 01", "exp 02", "exp 03 · shipped"])
         self.assertEqual(self.scan.by_class["shipped"], ["exp 03 · shipped"])
 
-    def test_install_steps_have_codeboxes(self):
-        self.assertEqual(self.scan.by_class["step-no"][5:], ["01", "02", "03"])
-        boxes = self.scan.with_class("div", "codebox")
-        self.assertEqual(len(boxes), 4)
+    def test_install_stepper_has_codeboxes(self):
+        self.assertEqual(self.scan.by_class["step-no"], ["01", "02", "03", "end"])
+        stepper = re.search(r'<ol class="stepper"[^>]*>(.*?)</ol>', self.html, re.S).group(1)
+        self.assertEqual(re.findall(r"<h3>([^<]+)</h3>", stepper), ["Get the code", "Preview", "Install", "Check"])
+        self.assertEqual(stepper.count('class="codebox"'), 3)
+        self.assertEqual(len(self.scan.with_class("div", "codebox")), 4)
         self.assertEqual(len(self.scan.by_class["prompt"]), 8)
         self.assertEqual(set(self.scan.by_class["prompt"]), {"$"})
         self.assertEqual(len([a for t, a in self.scan.tags if t == "button" and "data-copy" in a]), 4)
 
-    def test_measured_strip(self):
-        self.assertEqual(self.scan.by_class["num"], ["0.212 s", "0.066 s", "0.024 s", "307"])
-        self.assertRegex(self.html, r'<ul class="strip stats c4">')
+    def test_use_it_switch_strip_and_commands(self):
+        days = re.search(r'<ol class="days"[^>]*>(.*?)</ol>', self.html, re.S).group(1)
+        self.assertEqual(re.findall(r'<span class="d-state">(on|off)</span>', days), ["on", "off"] * 4)
+        cmds = re.search(r'<ul class="cmds"[^>]*>(.*?)</ul>', self.html, re.S).group(1)
+        self.assertEqual(cmds.count("<li>"), 4)
+
+    def test_remove_it_triggers_are_short_labels(self):
+        sec = re.search(r'<section id="rollback">(.*?)</section>', self.html, re.S).group(1)
+        chips = re.findall(r'<li class="chip">([^<]+)</li>', sec)
+        self.assertEqual(chips, ["hook error on every prompt", "prompts ≥ 1 s",
+                                 "MCP fails in claude mcp list", "permission prompt on open"])
+
+    def test_measured_bar_chart_and_stats(self):
+        bars = re.findall(r'<div class="bar" role="img" aria-label="([^"]+)"><span style="width:([\d.]+)%"></span></div>', self.html)
+        self.assertEqual(bars, [("Prompt hook p95: 0.212 s of a 1 s limit", "21.2"),
+                                ("Stop hook p95: 0.066 s of a 2 s limit", "3.3")])
+        self.assertAlmostEqual(0.212 / 1 * 100, 21.2)
+        self.assertAlmostEqual(0.066 / 2 * 100, 3.3)
+        self.assertEqual(self.scan.by_class["num"], ["0.024 s", "1.69 MB", "307"])
+        self.assertRegex(self.html, r'<ul class="strip stats c3">')
 
     def test_known_limits_status_is_plain_words(self):
         self.assertEqual(self.scan.by_class["status"], ["open", "open", "open", "accepted", "to run"])
         self.assertNotRegex(self.html, r'class="tag')
         self.assertNotIn(".tag", self.local_style)
 
-    # AC6 content kept (spot checks; the full sentence inventory is in the TASK_REVIEW evidence)
+    # HUN-127: container, no task IDs, no "built" section, folded detail
+    def test_container_stops_growing(self):
+        self.assertRegex(self.local_style, r"--container-max:\s*1280px")
+        self.assertRegex(self.local_style, r"\.container\s*\{[^}]*max-width:var\(--container-max\)[^}]*margin:0 auto")
+        self.assertIn('<div class="header-inner container">', self.html)
+        self.assertIn('<div class="shell container">', self.html)
+
+    def test_no_task_ids_and_no_built_section(self):
+        self.assertNotIn("HUN-", self.html)
+        self.assertNotIn("#built", self.html)
+        self.assertNotIn('id="built"', self.html)
+        self.assertNotIn("How it was built", self.html)
+
+    def test_release_notes_groups(self):
+        notes = re.search(r'<section id="notes">(.*?)</section>', self.html, re.S).group(1)
+        self.assertEqual(re.findall(r"<dt>([^<]+)</dt>", notes), ["save", "recall", "control", "measure", "install"])
+        self.assertNotIn("<details", notes)
+
+    def test_each_section_folds_its_detail(self):
+        for sid in ("what", "context", "how", "run", "use", "rollback", "numbers", "limits"):
+            sec = re.search(r'<section id="%s">(.*?)</section>' % sid, self.html, re.S).group(1)
+            self.assertEqual(sec.count('<details class="more">'), 1, sid)
+            self.assertEqual(sec.count("<summary>More detail</summary>"), 1, sid)
+            self.assertTrue(sec.rstrip().endswith("</details>"), sid)  # at the end of the section
+
+    # AC6 content kept (spot checks; the full fact inventory is in the TASK_REVIEW evidence)
     def test_content_kept(self):
         for text in ("Coding agents pay again for what an earlier session already found out.",
                      "python3 easy_memory.py install --dry-run",
-                     "1.69 MB word-weights file · loads in 0.024 s",
-                     "HUN-82", "Independent end-to-end smoke and latency checks.",
-                     "docs/RELEASE_v0.1.0.md"):
+                     "1.69 MB", "Independent end-to-end smoke and latency checks.",
+                     "docs/RELEASE_v0.1.0.md", "7,831-file repo, 200 notes",
+                     "A 400 MB transcript used 808 MB.", "settings.json.easy-memory.bak.&lt;time&gt;"):
             self.assertIn(text, self.html)
 
     # AC7 responsive
@@ -241,8 +295,11 @@ class SitePageTest(unittest.TestCase):
         self.assertIn(":focus-visible { outline: 2px solid var(--accent)", self.css)
         svgs = [a for t, a in self.scan.tags if t == "svg"]
         self.assertTrue(svgs)
-        for a in svgs:
-            self.assertEqual(a.get("aria-hidden"), "true")
+        for a in svgs:  # the flow diagrams are role="img" with a label; every other svg is decorative
+            if a.get("role") == "img":
+                self.assertTrue(a.get("aria-label"))
+            else:
+                self.assertEqual(a.get("aria-hidden"), "true")
 
     def test_buttons_have_names(self):
         for m in re.finditer(r"<button([^>]*)>([^<]*)</button>", self.html):
