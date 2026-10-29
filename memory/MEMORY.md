@@ -32,4 +32,4 @@
 - [v0.2 plan: redaction only now](decisions.md#architecture) — FR-009 ships in the window; split gated; key deferred; Gate 3 removed
 - [Redaction regex and split test traps](learnings.md#patterns) — `|.*` fallback; patches on the shim pass silently
 - [Hook time grows with notes; report pollution](learnings.md#gotchas) — ~1 ms per note; `report` ignores `configured`; window start 2026-10-29T02:01:36Z
-- [Hook-prompt tests fail on odd days](learnings.md#gotchas) — 19 tests ignore the auto switch; fix is O6, first step of Gate 0
+- [Hook-prompt tests and the auto switch](learnings.md#gotchas) — fixed by HUN-84; new prompt-hook test classes must set `switch = "on"`
