@@ -61,8 +61,22 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE** (captured 2026-10-29T05:06:09Z, commit `9cf971b`, before any implementation commit; fake token `ghp_0123456789abcdef0123456789abcdef0123`, temp `EASY_MEMORY_HOME`, `hook-stop` run on a Stop JSON whose prompt and answer both hold the token):
+
+```
+$ date -u +%FT%TZ          -> 2026-10-29T05:06:09Z
+$ python3 easy_memory.py hook-stop < in.json ; echo exit=$?
+exit=0
+prompt: my key is ghp_0123456789abcdef0123456789abcdef0123 please help
+answer[:80]: Looked at a.py. The token is ghp_0123456789abcdef0123456789abcdef0123. Detail se
+$ grep -c ghp_ <note file>
+2
+```
+
+The saved note holds the token in both `prompt` and `answer`.
+
+`tests/bench_t004.py --repo <worktree>` BEFORE, 3 runs (p95): 0.117s, 0.105s, 0.113s -> median **0.113s**
+(p50 0.087 / 0.090 / 0.083s). Note: on 2026-10-29 (odd day) the switch is `auto` = `off`, so the bench measures the early-exit path (`runs_with_index=0`); `hook-prompt` is not changed by this task.
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
