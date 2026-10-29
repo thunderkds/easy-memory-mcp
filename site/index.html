@@ -27,7 +27,7 @@
 
   /* Header */
   .site-header { position:sticky; top:0; z-index:20; background:var(--bg); border-bottom:1px solid var(--line-header); }
-  .header-inner { height:var(--header-h); padding:0 var(--s-7); display:flex; align-items:center; gap:var(--s-4); }
+  .header-inner { height:calc(var(--header-h) - 1px); padding:0 var(--s-7); display:flex; align-items:center; gap:var(--s-4); }
   .brand { display:inline-flex; align-items:center; gap:10px; color:var(--text-strong); font-size:17px; font-weight:600; white-space:nowrap; }
   .brand:hover { color:var(--text-strong); text-decoration:none; }
   .glyph { flex:none; color:var(--accent); }
@@ -220,6 +220,9 @@
     h1 { font-size:32px; }
     .strip.c3 { --cols:1; }
     .strip.c3 > * + * { border-left:0; border-top:1px solid var(--line); }
+    .strip.stats { --cols:2; }
+    .strip.stats > * + * { border-left:1px solid var(--line); border-top:0; }
+    .strip.stats > :nth-child(3) { grid-column:1 / -1; border-left:0; border-top:1px solid var(--line); }
     .cards { grid-template-columns:minmax(0,1fr); }
     .codebox { padding-left:16px; }
     .figure, .chart { padding:16px; }

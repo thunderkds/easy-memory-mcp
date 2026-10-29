@@ -246,6 +246,19 @@ class SitePageTest(unittest.TestCase):
         self.assertIn('<div class="header-inner container">', self.html)
         self.assertIn('<div class="shell container">', self.html)
 
+    def test_header_outer_height_is_header_h(self):
+        # --header-h is the total height with the 1px bottom border, so the inner box gives that 1px back.
+        self.assertRegex(self.local_style, r"\.header-inner\s*\{[^}]*height:calc\(var\(--header-h\) - 1px\)")
+        self.assertRegex(self.local_style, r"\.site-header\s*\{[^}]*border-bottom:1px solid var\(--line-header\)")
+        self.assertRegex(self.local_style, r"\.sidebar\s*\{[^}]*top:var\(--header-h\)")
+
+    def test_stats_strip_is_two_columns_below_720(self):
+        media = re.search(r"@media \(max-width:719px\) \{(.*)\n  \}\n</style>", self.local_style + "</style>", re.S)
+        self.assertIsNotNone(media)
+        block = media.group(1)
+        self.assertRegex(block, r"\.strip\.stats\s*\{\s*--cols:2;\s*\}")
+        self.assertRegex(block, r"\.strip\.stats > :nth-child\(3\)\s*\{[^}]*grid-column:1 / -1")
+
     def test_no_task_ids_and_no_built_section(self):
         self.assertNotIn("HUN-", self.html)
         self.assertNotIn("#built", self.html)
