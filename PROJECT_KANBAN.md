@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-10-28
+**Last updated**: 2026-10-29
 
 > Board cache, pulled from the board by `python3 scripts/board_sync.py pull`. Do not edit it by hand:
 > the board is the source of truth, and the next pull overwrites this file.
@@ -9,6 +9,10 @@
 ## Board
 
 ### Todo
+- [ ] **HUN-84** — Hook-prompt tests pass on any day | backend-developer | C1 | Risk: Low | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-84.md`
+- [ ] **HUN-85** — Stop hook redacts secrets before a note is saved | backend-developer | C2 | Risk: High | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-85.md`
+- [ ] **HUN-86** — redact command rewrites notes already saved | backend-developer | C2 | Risk: High | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-86.md`
+- [ ] **HUN-87** — Gate 0 pass check before the redaction release | qa-expert | C1 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-87.md`
 
 ### In Progress
 
