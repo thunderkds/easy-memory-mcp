@@ -14,6 +14,11 @@
 **Why**: AC1 says drop words found in one file, AC2 caps the file at 2 MB; only 3 meets both. The 0.12 floor was not changed.
 **Files**: `easy_memory.py`, `tests/parity_t003.py`, `tasks/TASK_GUIDE_HUN-76.md`
 
+### 2026-10-29 — v0.2 plan: redaction only now, everything else gated (Option B2)
+**Decision**: Only FR-009 (secret redaction at save, plus a `redact` command, dry-run by default) ships during the v0.1 on/off measurement. The package split (FR-011, package `easy_memory_core/`) is built in a worktree and merged when Gate 1 opens. The portable store key (FR-010) is deferred with sync. Gate 2 splits into 2a (decay, expiry) and 2b (optional embedder in `memory_search` only). Gate 3 (other clients) is removed.
+**Why**: A three-agent review found the hooks run live from this checkout, so a merge changes the measured hooks on the next prompt. A key change moves `config.json`, `prompts.log` and `weights.json`, which are the measured data. Root-commit keys can merge unrelated forks. The user chose Claude only on 2026-10-28.
+**Files**: `PRD_v0.2.md`, `BRAINSTORMING_LOG_v0.2.md`, `RUNBOOK.md` (commit 109d96e). Confirmed by the user on 2026-10-29.
+
 ## Infrastructure
 
 ### 2026-10-28 — easy-verifier registered as the scoring MCP (dev tool)
