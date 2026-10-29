@@ -7,3 +7,6 @@ memory/event-trace/
 experiments/*/results/
 experiments/*/work/
 experiments/*/*.log
+
+# hook runtime state (active task, guide hashes, step counts); local only
+.claude/hooks/.state/
