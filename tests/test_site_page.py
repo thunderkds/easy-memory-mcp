@@ -330,6 +330,20 @@ class SitePageTest(unittest.TestCase):
         self.assertEqual(set(self.scan.by_class["prompt"]), {"$"})
         self.assertEqual(len([a for t, a in self.scan.tags if t == "button" and "data-copy" in a]), 4)
 
+    def test_install_stepper_boxes_are_equal_from_720_up(self):
+        """HUN-133: the three step items share rows, so code boxes, Copy buttons and captions line up."""
+        css = re.sub(r"/\*.*?\*/", "", self.local_style, flags=re.S)
+        wide = re.search(r"@media \(min-width:720px\) \{(.*?\n  \})", css, re.S)
+        self.assertIsNotNone(wide, "no (min-width:720px) block")
+        rules = dict(_rules(wide.group(1)))
+        item = rules[".stepper > li"]
+        self.assertIn("grid-template-rows:subgrid", item)
+        self.assertIn("grid-row:span 4", item)
+        self.assertIn("flex:1", rules[".stepper .codebox code"])
+        # the stacked layout (< 720) keeps boxes sized to their content
+        stacked = re.search(r"@media \(max-width:719px\) \{(.*?)\n  \}", css, re.S).group(1)
+        self.assertNotIn("subgrid", stacked)
+
     def test_use_it_switch_strip_and_commands(self):
         days = re.search(r'<ol class="days"[^>]*>(.*?)</ol>', self.html, re.S).group(1)
         self.assertEqual(re.findall(r'<span class="d-state">(on|off)</span>', days), ["on", "off"] * 4)
