@@ -61,8 +61,18 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured 2026-10-29 07:27:26 UTC on branch `hun-87` (HEAD 53e8ff7), before any HUN-87 implementation commit:
+
+```
+$ date -u && python3 -m unittest tests.test_t009_smoke -v 2>&1 | tail -5
+Thu Oct 29 07:27:26 AM UTC 2026
+
+----------------------------------------------------------------------
+Ran 29 tests in 10.641s
+
+OK (skipped=3)
+```
+The smoke suite has 29 tests and no test of the `redact` command; `grep -n redact -i tests/test_t009_smoke.py` shows only the HUN-85 privacy probe (lines 801-815).
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
