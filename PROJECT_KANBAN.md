@@ -11,7 +11,6 @@
 ### Todo
 
 ### In Progress
-- [ ] **HUN-133** — Install stepper — equal code boxes across the three steps | frontend-developer | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-133.md`
 
 ### Ready for Review
 
@@ -34,6 +33,7 @@
 - [x] **HUN-125** — Release page in the Graphite Mint family theme | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-125.md`
 - [x] **HUN-127** — Release page — centred container, visual guide, highlight-only release notes | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-127.md`
 - [x] **HUN-130** — Release page — Graphite Mint neon highlight layer | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-130.md`
+- [x] **HUN-133** — Install stepper — equal code boxes across the three steps | frontend-developer | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-133.md`
 
 ### Closed (will not do)
 
