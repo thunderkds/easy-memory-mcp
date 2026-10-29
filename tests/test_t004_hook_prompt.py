@@ -358,9 +358,9 @@ class FailureTest(PromptHookTestCase):
 
 
 class InjectionTest(PromptHookTestCase):
-    switch = "on"
-
     """Note text is untrusted data: it may sit only inside a quoted field inside the frame."""
+
+    switch = "on"
 
     def assert_framed(self, text, *payloads):
         lines = text.splitlines()
