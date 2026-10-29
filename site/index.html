@@ -5,182 +5,215 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Easy Memory: per-repo session memory for Claude Code</title>
 <meta name="description" content="Easy Memory saves what a Claude Code session concluded and hands the next session a short index. Standard-library Python, local only.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0a12'/%3E%3Cpath d='M8 23 L16 9 L24 23' fill='none' stroke='%2300d4ff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='1' y='1' width='30' height='30' rx='7' fill='%230E100F' stroke='%237EDDB0' stroke-width='2'/%3E%3Cpath d='M9 11h14M9 16h14M9 21h8' fill='none' stroke='%237EDDB0' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="theme.css">
 <style>
-  :root {
-    --bg-a:#5a3d8f; --bg-b:#3b2a6b; --bg-c:#2b1f52;
-    --frame:#262142; --sidebar:#1f1a3a; --panel:#2e2850; --card:#36305a; --sunken:#1b1735; --border:#483f78;
-    --text:#dcd6f5; --muted:#aaa4ce; --white:#f4f1ff;
-    --accent-a:#6d8bff; --accent-b:#a35cff;
-    --blue:#8ba4ff; --blue-soft:#adbfff; --violet:#bb8aff; --violet-soft:#d2b4ff; --magenta:#e06bff; --green:#6fe0a3; --orange:#f5b062; --sky:#5fb4ff;
-    --blue-dim:rgba(139,164,255,.14); --green-dim:rgba(111,224,163,.12);
-    --orange-dim:rgba(245,176,98,.12); --violet-dim:rgba(187,138,255,.14);
-    --ring-track:rgba(220,214,245,.14);
-    --frame-shadow:0 24px 60px rgba(12,7,34,.55);
-    --font:"JetBrains Mono","Fira Code",ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
-    --font-diagram:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    --radius:14px; --radius-sm:10px; --radius-pill:999px;
-    color-scheme:dark; --scroll-thumb:var(--border); --scroll-track:transparent;
-    --sidebar-w:15rem; --measure:72ch; --page-pad:1.5rem;
+  /* Easy Memory layout. Every colour comes from the tokens in theme.css. */
+  *, *::before, *::after { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+
+  .skip-link { position:absolute; left:-9999px; top:8px; z-index:50; padding:8px 14px; background:var(--bg-sunken); color:var(--accent); border:1px solid var(--line-strong); border-radius:var(--r-sm); }
+  .skip-link:focus { left:16px; }
+  a.btn-primary, a.btn-primary:hover { color:var(--on-accent); }
+
+  /* Header */
+  .site-header { position:sticky; top:0; z-index:20; height:var(--header-h); padding:0 var(--s-7); display:flex; align-items:center; gap:var(--s-4); background:var(--bg); border-bottom:1px solid var(--line-header); }
+  .brand { display:inline-flex; align-items:center; gap:10px; color:var(--text-strong); font-size:17px; font-weight:600; white-space:nowrap; }
+  .brand:hover { color:var(--text-strong); text-decoration:none; }
+  .glyph { flex:none; color:var(--accent); }
+  .ver { font:400 12px var(--font-mono); color:var(--text-muted); border:1px solid var(--line-strong); border-radius:var(--r-xs); padding:3px 8px; white-space:nowrap; }
+  .family { display:flex; align-items:center; gap:28px; margin-left:auto; }
+  .fam { display:inline-flex; align-items:center; gap:8px; font-size:14px; color:var(--text-2); white-space:nowrap; }
+  .fam::before { content:""; width:7px; height:7px; border-radius:2px; background:var(--dot-idle); flex:none; }
+  .fam:hover { color:var(--text-strong); text-decoration:none; }
+  .fam[aria-current="page"] { color:var(--text-strong); }
+  .fam[aria-current="page"]::before { background:var(--accent); }
+  .site-header .btn { height:auto; padding:8px 14px; }
+  .nav-toggle { display:none; }
+  .drawer-family { display:none; }
+
+  /* Shell */
+  .shell { display:grid; grid-template-columns:var(--sidebar-w) minmax(0,1fr); }
+  .sidebar { position:sticky; top:var(--header-h); align-self:start; height:calc(100vh - var(--header-h)); overflow-y:auto; padding:var(--s-7) var(--s-5); background:var(--bg); border-right:1px solid var(--line-subtle); }
+  .nav-group + .nav-group { margin-top:28px; }
+  .group-label { margin:0; padding:0 12px 8px; font:400 11.5px var(--font-mono); color:var(--text-muted); }
+  .sidebar ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:2px; }
+  .sidebar ul a, .drawer-family .fam { display:block; padding:7px 12px; border-radius:var(--r-sm); color:var(--text-nav); font-size:14px; }
+  .sidebar ul a:hover { background:var(--bg-hover); color:var(--text-strong); text-decoration:none; }
+  .sidebar ul a.active { background:var(--accent-soft); color:var(--accent); font-weight:500; }
+  .drawer-family .fam { display:flex; }
+  .drawer-family .fam:hover { background:var(--bg-hover); }
+  .drawer-family .fam[aria-current="page"] { color:var(--text-strong); }
+
+  /* Main column */
+  main { min-width:0; padding:var(--s-9) var(--s-10); display:flex; flex-direction:column; gap:var(--s-8); }
+  main > * { width:100%; max-width:var(--content-max); }
+  section { scroll-margin-top:calc(var(--header-h) + var(--s-6)); }
+
+  /* Type */
+  h1 { margin:0 0 16px; font:600 44px/1.1 var(--font-sans); letter-spacing:-0.02em; color:var(--text-strong); }
+  h2 { margin:0 0 16px; font:600 20px/1.3 var(--font-sans); color:var(--text-strong); }
+  h3 { margin:20px 0 8px; font:600 15px/1.4 var(--font-sans); color:var(--text-strong); }
+  strong { font-weight:600; color:var(--text-strong); }
+  .eyebrow { margin:0 0 12px; font:400 12.5px var(--font-mono); color:var(--accent); }
+  .lede { margin:0; max-width:680px; font-size:17px; line-height:1.6; color:var(--text-2); }
+  .actions { display:flex; flex-wrap:wrap; gap:12px; margin-top:24px; }
+  section p, section ul { max-width:72ch; margin:0 0 12px; }
+  section ul { padding-left:20px; }
+  section li { margin:4px 0; }
+  .caption { font-size:13.5px; line-height:1.5; color:var(--text-muted); }
+  code { font:400 0.9em var(--font-mono); color:var(--text); background:var(--bg-sunken); border-radius:var(--r-xs); padding:1px 6px; overflow-wrap:anywhere; }
+
+  /* Strips and step grid */
+  .strip { max-width:none; margin:0; padding:0; list-style:none; }
+  .strip > li { margin:0; }
+  .c3 { --cols:3; } .c4 { --cols:4; } .c5 { --cols:5; }
+  section .strip { margin:16px 0 12px; }
+  .strip.steps > * { padding:16px; }
+  .strip .step-title, .step-meta { display:block; }
+  .step-meta { overflow-wrap:anywhere; }
+  .strip .label { line-height:1.5; overflow-wrap:anywhere; }
+
+  /* Cards */
+  .cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:16px 0 12px; }
+  .card h3 { margin:0; }
+  .card p { margin:0; max-width:none; font-size:14px; line-height:1.5; color:var(--text); }
+  .card .exp { font:400 11.5px var(--font-mono); color:var(--text-muted); }
+  .card .exp.shipped { color:var(--accent); }
+  .card .big { font:500 28px/1.1 var(--font-mono); color:var(--text-strong); }
+
+  /* Install steps and code boxes */
+  .step { margin:20px 0; }
+  .step h3 { margin:0 0 8px; }
+  .step-no { margin-right:10px; }
+  .codebox { margin:8px 0 12px; }
+  .codebox code { flex:1 1 0; min-width:0; overflow-x:auto; padding:0; font:inherit; color:var(--text); background:none; white-space:pre; }
+  .codebox .prompt { user-select:none; }
+  .codebox .comment { color:var(--text-muted); }
+  .codebox [data-copy] { display:none; flex:none; }
+  .js .codebox [data-copy] { display:inline-flex; }
+
+  /* Tables */
+  .table-wrap { margin:16px 0 12px; }
+  .table-wrap table { min-width:520px; }
+  td code { white-space:normal; }
+  #notes td:first-child { white-space:nowrap; }
+  .status { font:400 12.5px var(--font-mono); color:var(--text-muted); white-space:nowrap; }
+
+  footer { padding-top:24px; border-top:1px solid var(--line); font-size:13.5px; color:var(--text-muted); }
+  footer p { margin:0; }
+
+  /* 720-1023: sidebar becomes a drawer behind Menu, main padding 32px */
+  @media (max-width:1023px) {
+    .shell { grid-template-columns:minmax(0,1fr); }
+    .sidebar { position:static; height:auto; border-right:0; border-bottom:1px solid var(--line-subtle); }
+    .js .sidebar { position:fixed; top:0; bottom:0; left:0; height:100vh; z-index:30; width:min(var(--sidebar-w),calc(100vw - 112px)); border-right:1px solid var(--line-subtle); border-bottom:0; visibility:hidden; }
+    .js .sidebar.open { visibility:visible; }
+    .js .nav-toggle { display:inline-flex; }
+    main { padding:var(--s-7); }
   }
-  * { box-sizing:border-box; }
-  html { scroll-behavior:smooth; background:var(--bg-c); scrollbar-color:var(--scroll-thumb) var(--scroll-track); }
-  ::-webkit-scrollbar { width:10px; height:10px; }
-  ::-webkit-scrollbar-track { background:var(--scroll-track); }
-  ::-webkit-scrollbar-thumb { background:var(--scroll-thumb); border-radius:var(--radius-pill); }
-  @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } * { transition:none !important; } }
-  body { font-family:var(--font); margin:0; padding:var(--page-pad); min-height:100vh; color:var(--text); background:linear-gradient(160deg,var(--bg-a) 0%,var(--bg-b) 55%,var(--bg-c) 100%); font-size:.875rem; line-height:1.7; letter-spacing:.01em; }
+  @media (max-width:1023px) {
+    .ver { display:none; }
+  }
 
-  .layout { display:grid; grid-template-columns:var(--sidebar-w) minmax(0,1fr); max-width:76rem; margin:0 auto; background:linear-gradient(to right,var(--sidebar) var(--sidebar-w),var(--frame) var(--sidebar-w)); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--frame-shadow); overflow:clip; }
-  .content { min-width:0; padding:2rem 2.25rem 0; }
-  .content p, .content ul { max-width:var(--measure); }
-
-  .sidebar { scrollbar-color:var(--scroll-thumb) var(--scroll-track); position:sticky; top:var(--page-pad); align-self:start; max-height:calc(100vh - 2 * var(--page-pad)); overflow-y:auto; padding:1.75rem 1rem 2rem 1.25rem; }
-  .sidebar a.brand { display:block; padding:0; color:var(--white); font-weight:700; font-size:1.05rem; letter-spacing:.04em; text-decoration:none; margin-bottom:.15rem; }
-  .sidebar a.brand::before { display:none; }
-  .sidebar .ver { color:var(--muted); font-size:.72rem; margin-bottom:1rem; }
-  .nav-group { border-top:1px solid var(--border); padding:.35rem 0; --dot:var(--magenta); }
-  .nav-group:nth-of-type(2) { --dot:var(--green); }
-  .nav-group:nth-of-type(3) { --dot:var(--orange); }
-  .nav-group:nth-of-type(4) { --dot:var(--sky); }
-  .nav-group summary { display:flex; align-items:center; justify-content:space-between; cursor:pointer; list-style:none; color:var(--text); font-size:.8rem; letter-spacing:.06em; padding:.45rem .5rem; border-radius:var(--radius-sm); }
-  .nav-group summary::-webkit-details-marker { display:none; }
-  .nav-group summary::after { content:""; width:.45rem; height:.45rem; border-right:1.5px solid var(--muted); border-bottom:1.5px solid var(--muted); transform:rotate(45deg); transition:transform .15s; margin-right:.25rem; }
-  .nav-group[open] summary::after { transform:rotate(-135deg); }
-  .nav-group summary:hover { background:var(--blue-dim); }
-  .sidebar ul { list-style:none; margin:0 0 .25rem; padding:0; }
-  .sidebar a { display:flex; align-items:center; gap:.65rem; padding:.3rem .5rem; color:var(--muted); text-decoration:none; font-size:.78rem; border-radius:var(--radius-sm); }
-  .sidebar a::before { content:""; flex:none; width:.4rem; height:.4rem; border-radius:50%; background:var(--dot); }
-  .sidebar a:hover { color:var(--white); background:var(--blue-dim); }
-  .sidebar a.active { color:var(--white); background:var(--violet-dim); box-shadow:inset 0 0 0 1px var(--accent-b); }
-  .nav-toggle { display:none; font:inherit; font-size:.8rem; letter-spacing:.04em; background:transparent; color:var(--blue); border:1px solid var(--accent-a); border-radius:var(--radius-pill); padding:.4rem 1.1rem; cursor:pointer; transition:background .15s,color .15s; }
-  .nav-toggle:hover { background:var(--blue-dim); color:var(--white); }
-
-  a { color:var(--blue); text-underline-offset:.2em; }
-  a:focus-visible, button:focus-visible, summary:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
-  .skip-link { position:absolute; left:-9999px; top:0; background:var(--panel); color:var(--blue); padding:.6rem 1rem; border:1px solid var(--accent-a); border-radius:0 0 var(--radius-sm) 0; z-index:10; }
-  .skip-link:focus { left:0; }
-  .btn { display:inline-block; padding:.4rem 1.25rem; border:1px solid var(--accent-a); border-radius:var(--radius-pill); color:var(--blue); text-decoration:none; letter-spacing:.04em; transition:background .15s,color .15s; }
-  .btn:hover { background:var(--blue-dim); color:var(--white); }
-
-  h1 { font-size:1.6rem; font-weight:700; color:var(--white); letter-spacing:.02em; margin:0 0 .5rem; }
-  h2 { font-size:.95rem; font-weight:700; color:var(--white); margin:0 0 1.1rem; text-transform:uppercase; letter-spacing:.1em; }
-  h2::after { content:""; display:block; width:2.25rem; height:3px; margin-top:.5rem; border-radius:var(--radius-pill); background:linear-gradient(90deg,var(--accent-a),var(--accent-b)); }
-  h3 { font-size:.95rem; color:var(--white); margin:1.4rem 0 .5rem; }
-  p { color:var(--text); }
-  .lead { color:var(--muted); font-size:.95rem; }
-  .header, section { background:var(--panel); border:1px solid var(--border); border-radius:var(--radius); padding:1.5rem 1.75rem; }
-  .header { background:linear-gradient(90deg,var(--accent-a),var(--accent-b)) top/100% 3px no-repeat,var(--panel); margin-bottom:1.25rem; }
-  .header .lead:last-child { margin-bottom:0; }
-  section { margin:1.25rem 0; scroll-margin-top:1rem; }
-
-  .table-wrap { overflow-x:auto; border:1px solid var(--border); border-radius:var(--radius-sm); margin:1rem 0; background:var(--card); }
-  table { border-collapse:collapse; width:100%; min-width:28rem; font-size:.82rem; }
-  th, td { text-align:left; padding:.6rem .85rem; border-bottom:1px solid var(--border); vertical-align:top; }
-  th { background:var(--sunken); color:var(--muted); text-transform:uppercase; font-size:.7rem; letter-spacing:.08em; }
-  th:first-child, td:first-child { position:sticky; left:0; background:var(--card); }
-  th:first-child { background:var(--sunken); }
-  tr:last-child td { border-bottom:none; }
-  code { color:var(--blue-soft); background:var(--blue-dim); padding:.1rem .4rem; border-radius:6px; font-size:.9em; font-family:var(--font); }
-  pre { background:var(--sunken); border:1px solid var(--border); border-radius:var(--radius-sm); padding:1rem 1.1rem; font-size:.8rem; color:var(--green); white-space:pre-wrap; overflow-wrap:anywhere; font-family:var(--font); }
-  pre code { background:none; color:inherit; padding:0; font-size:inherit; }
-  .tag { display:inline-block; padding:.1rem .7rem; border:1px solid currentColor; border-radius:var(--radius-pill); font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; white-space:nowrap; }
-  .tag-ok { background:var(--green-dim); color:var(--green); }
-  .tag-warn { background:var(--orange-dim); color:var(--orange); }
-  .tag-open { background:var(--violet-dim); color:var(--violet-soft); }
-  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(10rem,1fr)); gap:.9rem; margin:1rem 0; }
-  .stat { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:1rem 1.1rem; display:flex; flex-direction:column; justify-content:flex-start; }
-  .stat .n { font-size:1.5rem; font-weight:700; color:var(--white); line-height:1.2; }
-  .stat .l { color:var(--muted); font-size:.75rem; }
-  .stat-ring { text-align:center; }
-  .ring { position:relative; width:8rem; height:8rem; margin:.25rem auto .75rem; display:grid; place-items:center; }
-  .ring svg { position:absolute; inset:0; width:100%; height:100%; transform:rotate(-90deg); }
-  .ring .track { fill:none; stroke:var(--ring-track); stroke-width:6; }
-  .ring .arc { fill:none; stroke-width:6; stroke-linecap:round; }
-  .ring .n { position:relative; font-size:1.1rem; }
-  .ring .g1 { stop-color:var(--accent-a); }
-  .ring .g2 { stop-color:var(--accent-b); }
-  .step h3 .num { color:var(--violet); }
-
-  svg.flow { display:block; width:100%; max-width:34rem; height:auto; margin:1rem auto; }
-  svg.flow .node { fill:var(--card); stroke:var(--border); stroke-width:1.5; }
-  svg.flow .node-hook { stroke:var(--accent-a); }
-  svg.flow .node-store { stroke:var(--green); }
-  svg.flow .t { fill:var(--white); font-size:13px; font-weight:700; text-anchor:middle; font-family:var(--font-diagram); }
-  svg.flow .s { fill:var(--muted); font-size:11px; text-anchor:middle; font-family:var(--font-diagram); }
-  svg.flow .arrow { stroke:var(--muted); stroke-width:1.5; fill:none; }
-  svg.flow .arrowhead { fill:var(--muted); }
-
-  footer { color:var(--muted); font-size:.75rem; margin:2rem 0 1.5rem; }
-
-  @media (max-width:767px) {
-    :root { --page-pad:.5rem; }
-    .layout { grid-template-columns:minmax(0,1fr); background:var(--frame); }
-    .sidebar { position:static; max-height:none; overflow:visible; padding:1rem 1rem .75rem; background:var(--sidebar); border-bottom:1px solid var(--border); }
-    .content { padding:1rem 1rem 0; }
-    .js .nav-toggle { display:inline-block; }
-    .js .nav-groups[data-collapsed="true"] { display:none; }
-    .header, section { padding:1.1rem; }
+  /* < 720: family nav moves into the drawer, one-column grids, 44px targets */
+  @media (max-width:719px) {
+    .site-header { padding:0 var(--s-4); }
+    .site-header .family { display:none; }
+    .js .nav-toggle { margin-left:auto; }
+    .drawer-family { display:flex; flex-direction:column; align-items:stretch; gap:2px; margin:0 0 28px; padding-bottom:20px; border-bottom:1px solid var(--line-subtle); }
+    .drawer-family .fam, .sidebar ul a { display:flex; align-items:center; min-height:44px; }
+    .drawer-family .btn { margin-top:8px; justify-content:center; }
+    .btn, .site-header .btn, .codebox .btn { min-height:44px; }
+    main { padding:var(--s-6) var(--s-4); gap:var(--s-8); }
+    h1 { font-size:32px; }
+    .strip.c3, .strip.c5 { --cols:1; }
+    .strip.c4 { --cols:2; }
+    .strip.c3 > * + *, .strip.c5 > * + * { border-left:0; border-top:1px solid var(--line); }
+    .strip.c4 > :nth-child(odd) { border-left:0; }
+    .strip.c4 > :nth-child(n+3) { border-top:1px solid var(--line); }
+    .cards { grid-template-columns:minmax(0,1fr); }
+    .codebox { padding-left:16px; }
   }
 </style>
 </head>
 <body id="top">
 <a class="skip-link" href="#main">Skip to content</a>
-<div class="layout">
 
-<aside class="sidebar">
-  <a class="brand" href="#top">Easy Memory</a>
-  <div class="ver">memory kit · v0.1.0 prototype</div>
-  <button class="nav-toggle" type="button" aria-expanded="true" aria-controls="site-nav">Menu</button>
-  <nav id="site-nav" class="nav-groups" aria-label="Sections">
-    <details class="nav-group" open>
-      <summary>Overview</summary>
-      <ul>
-      <li><a href="#what">What it is</a></li>
-      <li><a href="#context">Context</a></li>
-      <li><a href="#how">How it works</a></li>
+<header class="site-header">
+  <a class="brand" href="#top">
+    <svg class="glyph" width="26" height="26" viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true" focusable="false"><rect x="1" y="1" width="24" height="24" rx="5"/><path d="M7 9h12M7 13h12M7 17h7"/></svg>
+    <span>Easy Memory</span>
+  </a>
+  <span class="ver">memory kit · v0.1.0 prototype</span>
+  <nav class="family" aria-label="Easy Kit family">
+    <a class="fam" href="https://personal-agentic-claude.vercel.app/">Easy Kit</a>
+    <a class="fam" href="https://easy-memory.vercel.app/" aria-current="page">Easy Memory</a>
+    <a class="fam" href="https://easy-verifier.vercel.app/">Easy Verifier</a>
+    <a class="btn btn-secondary" href="https://github.com/thunderkds/easy-memory-mcp">GitHub</a>
+  </nav>
+  <button class="btn btn-secondary nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar">Menu</button>
+</header>
+
+<div class="shell">
+
+<aside class="sidebar" id="sidebar">
+  <nav class="family drawer-family" aria-label="Easy Kit family sites">
+    <a class="fam" href="https://personal-agentic-claude.vercel.app/">Easy Kit</a>
+    <a class="fam" href="https://easy-memory.vercel.app/" aria-current="page">Easy Memory</a>
+    <a class="fam" href="https://easy-verifier.vercel.app/">Easy Verifier</a>
+    <a class="btn btn-secondary" href="https://github.com/thunderkds/easy-memory-mcp">GitHub</a>
+  </nav>
+  <nav id="site-nav" aria-label="Sections">
+    <div class="nav-group">
+      <p class="group-label" id="g-overview">// overview</p>
+      <ul aria-labelledby="g-overview">
+        <li><a href="#what">What it is</a></li>
+        <li><a href="#context">Context</a></li>
+        <li><a href="#how">How it works</a></li>
       </ul>
-    </details>
-    <details class="nav-group" open>
-      <summary>Guide</summary>
-      <ul>
-      <li><a href="#run">Install</a></li>
-      <li><a href="#use">Use it</a></li>
-      <li><a href="#rollback">Remove it</a></li>
+    </div>
+    <div class="nav-group">
+      <p class="group-label" id="g-guide">// guide</p>
+      <ul aria-labelledby="g-guide">
+        <li><a href="#run">Install</a></li>
+        <li><a href="#use">Use it</a></li>
+        <li><a href="#rollback">Remove it</a></li>
       </ul>
-    </details>
-    <details class="nav-group" open>
-      <summary>Reference</summary>
-      <ul>
-      <li><a href="#numbers">Measured</a></li>
-      <li><a href="#limits">Known limits</a></li>
-      <li><a href="#notes">Release notes</a></li>
-      <li><a href="#built">How it was built</a></li>
+    </div>
+    <div class="nav-group">
+      <p class="group-label" id="g-reference">// reference</p>
+      <ul aria-labelledby="g-reference">
+        <li><a href="#numbers">Measured</a></li>
+        <li><a href="#limits">Known limits</a></li>
+        <li><a href="#notes">Release notes</a></li>
+        <li><a href="#built">How it was built</a></li>
       </ul>
-    </details>
-    <details class="nav-group" open>
-      <summary>Family</summary>
-      <ul>
-      <li><a href="https://personal-agentic-claude.vercel.app/">Easy Kit</a></li>
-      <li><a href="https://easy-verifier.vercel.app/">Easy Verifier</a></li>
-      <li><a href="https://github.com/thunderkds/easy-memory-mcp">GitHub</a></li>
-      </ul>
-    </details>
+    </div>
   </nav>
 </aside>
 
-<main id="main" class="content">
+<main id="main">
 
-<header class="header">
+<header class="hero">
+  <p class="eyebrow">&gt; per-repo memory for claude code</p>
   <h1>Easy Memory</h1>
-  <p class="lead">Per-repo memory for Claude Code. After each answer it saves a note. Before your next prompt it hands the agent a short index of the notes that match. The agent can ignore the index or open one note.</p>
-  <ul class="lead">
-    <li><strong>Local</strong> — one Python file, standard library only. No model calls, no network, nothing leaves your machine.</li>
-    <li><strong>Hooks and MCP</strong> — a Stop hook, a prompt hook, and a stdio MCP server with four tools.</li>
-    <li><strong>Measured on yourself</strong> — a per-repo switch alternates memory on and off by day, and a report compares the two.</li>
-  </ul>
-  <p class="lead"><a class="btn" href="https://github.com/thunderkds/easy-memory-mcp" target="_blank" rel="noopener noreferrer">View the source on GitHub</a></p>
+  <p class="lede">Per-repo memory for Claude Code. After each answer it saves a note. Before your next prompt it hands the agent a short index of the notes that match. The agent can ignore the index or open one note.</p>
+  <div class="actions">
+    <a class="btn btn-primary" href="https://github.com/thunderkds/easy-memory-mcp" target="_blank" rel="noopener noreferrer">View the source on GitHub</a>
+    <a class="btn btn-secondary" href="#run">Install</a>
+  </div>
 </header>
+
+<ul class="strip c3" aria-label="Highlights">
+  <li><strong class="step-title">Local</strong><span class="label">one Python file, standard library only. No model calls, no network, nothing leaves your machine.</span></li>
+  <li><strong class="step-title">Hooks and MCP</strong><span class="label">a Stop hook, a prompt hook, and a stdio MCP server with four tools.</span></li>
+  <li><strong class="step-title">Measured on yourself</strong><span class="label">a per-repo switch alternates memory on and off by day, and a report compares the two.</span></li>
+</ul>
 
 <section id="what">
   <h2>What it is</h2>
@@ -196,34 +229,39 @@
 <section id="context">
   <h2>Context</h2>
   <p>This continues easy-context-mcp, which was retired on 2026-10-23. Code search (vectors plus a symbol graph) did not beat plain grep in any test. Memory between sessions was the first idea that did. Three experiments came before any product code.</p>
-  <div class="table-wrap"><table>
-    <thead><tr><th>#</th><th>Question</th><th>Result</th></tr></thead>
-    <tbody>
-      <tr><td>01</td><td>Does memory from the last session cut tokens on a follow-up?</td><td>Yes. The previous final answer cut tokens by 58% at the same accuracy and caught a renamed method. Resume was misled.</td></tr>
-      <tr><td>02</td><td>Does it still work when saving, choosing and delivering memory are automatic?</td><td>Risk. It cut tokens by 35% on one repo and added 4% on the other, about 15% saved overall. Stale memory misled 0 runs. The picker was the weak part.</td></tr>
-      <tr><td>03</td><td>Can more precise injection save tokens on both repos?</td><td>Go for a prototype. The index method (list notes, the agent opens one) cut tokens by 29% and 27%. Accuracy was the same.</td></tr>
-    </tbody>
-  </table></div>
+  <div class="cards">
+    <article class="card">
+      <span class="exp">exp 01</span>
+      <span class="big">−58%</span>
+      <h3>Does memory from the last session cut tokens on a follow-up?</h3>
+      <p>Yes. The previous final answer cut tokens by 58% at the same accuracy and caught a renamed method. Resume was misled.</p>
+    </article>
+    <article class="card">
+      <span class="exp">exp 02</span>
+      <span class="big">~−15%</span>
+      <h3>Does it still work when saving, choosing and delivering memory are automatic?</h3>
+      <p>Risk. It cut tokens by 35% on one repo and added 4% on the other, about 15% saved overall. Stale memory misled 0 runs. The picker was the weak part.</p>
+    </article>
+    <article class="card is-highlight">
+      <span class="exp shipped">exp 03 · shipped</span>
+      <span class="big">−29% / −27%</span>
+      <h3>Can more precise injection save tokens on both repos?</h3>
+      <p>Go for a prototype. The index method (list notes, the agent opens one) cut tokens by 29% and 27%. Accuracy was the same.</p>
+    </article>
+  </div>
   <p>The prototype is the index method from experiment 03. Raw agent answers from the experiments stay local, because they quote private source code.</p>
 </section>
 
 <section id="how">
   <h2>How it works</h2>
-  <svg class="flow" viewBox="0 0 520 250" role="img" aria-label="Flow: an answer ends, the Stop hook saves a note; the next prompt reaches the prompt hook, which scores notes with word weights and adds an index; the agent may open a note through MCP memory_read.">
-    <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="arrowhead" d="M0 0 L10 5 L0 10 z"/></marker></defs>
-    <rect class="node node-hook" x="10" y="20" width="150" height="54" rx="8"/><text class="t" x="85" y="44">Stop hook</text><text class="s" x="85" y="62">after an answer ≥ 200 chars</text>
-    <rect class="node node-store" x="185" y="20" width="150" height="54" rx="8"/><text class="t" x="260" y="44">Note store</text><text class="s" x="260" y="62">~/.easy-memory/&lt;repo&gt;</text>
-    <rect class="node" x="360" y="20" width="150" height="54" rx="8"/><text class="t" x="435" y="44">Word weights</text><text class="s" x="435" y="62">built in the background</text>
-    <rect class="node node-hook" x="185" y="120" width="150" height="54" rx="8"/><text class="t" x="260" y="144">Prompt hook</text><text class="s" x="260" y="162">score ≥ 0.12, top 5</text>
-    <rect class="node" x="10" y="120" width="150" height="54" rx="8"/><text class="t" x="85" y="144">Your prompt</text><text class="s" x="85" y="162">+ framed index</text>
-    <rect class="node node-hook" x="360" y="120" width="150" height="54" rx="8"/><text class="t" x="435" y="144">MCP server</text><text class="s" x="435" y="162">memory_read opens one</text>
-    <path class="arrow" d="M160 47 L183 47" marker-end="url(#ah)"/>
-    <path class="arrow" d="M360 47 L337 47" marker-end="url(#ah)"/>
-    <path class="arrow" d="M260 74 L260 118" marker-end="url(#ah)"/>
-    <path class="arrow" d="M185 147 L162 147" marker-end="url(#ah)"/>
-    <path class="arrow" d="M395 120 L325 76" marker-end="url(#ah)"/>
-    <text class="s" x="260" y="214">The prompt hook never builds weights. It starts a background build and adds nothing until the file exists.</text>
-  </svg>
+  <ol class="strip steps c5" aria-label="Flow: an answer ends, the Stop hook saves a note; the next prompt reaches the prompt hook, which scores notes with word weights and adds an index; the agent may open a note through MCP memory_read.">
+    <li><span class="step-no">00</span><span class="step-title">Stop hook</span><span class="step-meta">after an answer ≥ 200 chars</span></li>
+    <li><span class="step-no">01</span><span class="step-title">Note store</span><span class="step-meta">~/.easy-memory/&lt;repo&gt;</span></li>
+    <li><span class="step-no">02</span><span class="step-title">Word weights</span><span class="step-meta">built in the background</span></li>
+    <li><span class="step-no">03</span><span class="step-title">Prompt hook</span><span class="step-meta">score ≥ 0.12, top 5</span><span class="step-meta">your prompt + framed index</span><span class="step-meta">2,500-char frame</span></li>
+    <li><span class="step-no">04</span><span class="step-title">MCP server</span><span class="step-meta">search · read · list · forget</span><span class="step-meta">memory_read opens one</span></li>
+  </ol>
+  <p class="caption">The prompt hook never builds weights. It starts a background build and adds nothing until the file exists.</p>
   <ul>
     <li><strong>Stop hook</strong> saves one note per turn: the question, the answer, the time, and the sha256 of each repo file the answer cited.</li>
     <li><strong>Prompt hook</strong> scores each note against your prompt. It adds at most 5 lines in a frame of at most 2,500 characters, and flags cited files as <code>CHANGED:</code> or <code>DELETED:</code>.</li>
@@ -236,20 +274,20 @@
   <h2>Install</h2>
   <p>Clone the repo, then run three commands from that clone. Run them from the main checkout, never from a git worktree. The hook commands keep an absolute path.</p>
   <div class="step">
-    <h3><span class="num">1.</span> Get the code</h3>
-<pre><code>git clone git@github.com:thunderkds/easy-memory-mcp.git
-cd easy-memory-mcp
-python3 -m unittest discover -s tests</code></pre>
+    <h3><span class="step-no">01</span>Get the code</h3>
+    <div class="codebox"><code tabindex="0"><span class="prompt">$ </span>git clone git@github.com:thunderkds/easy-memory-mcp.git
+<span class="prompt">$ </span>cd easy-memory-mcp
+<span class="prompt">$ </span>python3 -m unittest discover -s tests</code><button class="btn btn-primary" type="button" data-copy aria-label="Copy commands, step 1: get the code">Copy</button></div>
     <p>Pass: the last line reads <code>OK</code>.</p>
   </div>
   <div class="step">
-    <h3><span class="num">2.</span> Preview the change</h3>
-<pre><code>python3 easy_memory.py install --dry-run</code></pre>
+    <h3><span class="step-no">02</span>Preview the change</h3>
+    <div class="codebox"><code tabindex="0"><span class="prompt">$ </span>python3 easy_memory.py install --dry-run</code><button class="btn btn-primary" type="button" data-copy aria-label="Copy command, step 2: preview the change">Copy</button></div>
     <p>It prints a diff of your user-level Claude Code settings (<code>$CLAUDE_CONFIG_DIR/settings.json</code>, else <code>~/.claude/</code>) and the <code>claude mcp add</code> command. It writes nothing.</p>
   </div>
   <div class="step">
-    <h3><span class="num">3.</span> Install</h3>
-<pre><code>python3 easy_memory.py install</code></pre>
+    <h3><span class="step-no">03</span>Install</h3>
+    <div class="codebox"><code tabindex="0"><span class="prompt">$ </span>python3 easy_memory.py install</code><button class="btn btn-primary" type="button" data-copy aria-label="Copy command, step 3: install">Copy</button></div>
     <p>It copies the settings file to <code>settings.json.easy-memory.bak.&lt;time&gt;</code>. It then adds a Stop hook (10 s timeout), a prompt hook (5 s timeout) and the allow rule <code>mcp__easy-memory</code>. It registers the MCP server with <code>claude mcp add --scope user</code>. Run it twice and the second run changes nothing.</p>
   </div>
   <p>Check: <code>claude mcp list</code> shows <code>easy-memory</code> connected. If <code>claude</code> is not on your PATH, the hooks still install and the manual command is printed.</p>
@@ -257,7 +295,7 @@ python3 -m unittest discover -s tests</code></pre>
 
 <section id="use">
   <h2>Use it</h2>
-  <div class="table-wrap"><table>
+  <div class="table-wrap" role="region" aria-label="Commands" tabindex="0"><table>
     <thead><tr><th>Command</th><th>What it does</th></tr></thead>
     <tbody>
       <tr><td><code>switch</code></td><td>Prints the state for this repo and what it means today.</td></tr>
@@ -276,40 +314,40 @@ python3 -m unittest discover -s tests</code></pre>
 <section id="rollback">
   <h2>Remove it</h2>
   <p>Roll back if Claude Code shows a hook error on every prompt, prompts feel slow (about 1 s or more), the MCP server fails in <code>claude mcp list</code>, or opening a note triggers a permission prompt.</p>
-<pre><code>python3 easy_memory.py uninstall            # removes both hooks and the allow rule
-claude mcp remove --scope user easy-memory  # only if uninstall printed it as a manual step
-python3 easy_memory.py uninstall --purge    # also deletes ~/.easy-memory (prints the size first)</code></pre>
+  <div class="codebox"><code tabindex="0"><span class="prompt">$ </span>python3 easy_memory.py uninstall            <span class="comment"># removes both hooks and the allow rule</span>
+<span class="prompt">$ </span>claude mcp remove --scope user easy-memory  <span class="comment"># only if uninstall printed it as a manual step</span>
+<span class="prompt">$ </span>python3 easy_memory.py uninstall --purge    <span class="comment"># also deletes ~/.easy-memory (prints the size first)</span></code><button class="btn btn-primary" type="button" data-copy aria-label="Copy commands: remove it">Copy</button></div>
   <p>If the settings file is still wrong, copy the newest <code>settings.json.easy-memory.bak.&lt;time&gt;</code> back over it. Check: <code>grep easy_memory "$CLAUDE_CONFIG_DIR/settings.json"</code> prints nothing.</p>
 </section>
 
 <section id="numbers">
   <h2>Measured</h2>
-  <div class="stats">
-    <div class="stat stat-ring"><div class="ring"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><defs><linearGradient id="ring-1" x1="0" y1="0" x2="1" y2="1"><stop class="g1" offset="0"/><stop class="g2" offset="1"/></linearGradient></defs><circle class="track" cx="50" cy="50" r="44"/><circle class="arc" cx="50" cy="50" r="44" pathLength="100" stroke="url(#ring-1)" stroke-dasharray="21.2 100"/></svg><div class="n">0.212 s</div></div><div class="l">prompt hook p95 · 7,831-file repo, 200 notes (limit 1 s)</div></div>
-    <div class="stat stat-ring"><div class="ring"><svg viewBox="0 0 100 100" aria-hidden="true" focusable="false"><defs><linearGradient id="ring-2" x1="0" y1="0" x2="1" y2="1"><stop class="g1" offset="0"/><stop class="g2" offset="1"/></linearGradient></defs><circle class="track" cx="50" cy="50" r="44"/><circle class="arc" cx="50" cy="50" r="44" pathLength="100" stroke="url(#ring-2)" stroke-dasharray="3.3 100"/></svg><div class="n">0.066 s</div></div><div class="l">Stop hook p95 (limit 2 s)</div></div>
-    <div class="stat"><div class="n">1.69 MB</div><div class="l">word-weights file · loads in 0.024 s</div></div>
-    <div class="stat"><div class="n">307</div><div class="l">tests pass (3 skipped: opt-in or host-dependent)</div></div>
-  </div>
+  <ul class="strip stats c4">
+    <li><span class="num">0.212 s</span><span class="label">prompt hook p95 · 7,831-file repo, 200 notes (limit 1 s)</span></li>
+    <li><span class="num">0.066 s</span><span class="label">Stop hook p95 (limit 2 s)</span></li>
+    <li><span class="num">0.024 s</span><span class="label">1.69 MB word-weights file · loads in 0.024 s</span></li>
+    <li><span class="num">307</span><span class="label">tests pass (3 skipped: opt-in or host-dependent)</span></li>
+  </ul>
   <p>An independent QA task checked the full cycle: install, save, index, MCP read, report, uninstall. It also checked file modes, no network traffic (a socket shim and <code>strace</code>), garbage input, and that the repo tree hash does not change.</p>
 </section>
 
 <section id="limits">
   <h2>Known limits</h2>
-  <div class="table-wrap"><table>
+  <div class="table-wrap" role="region" aria-label="Known limits" tabindex="0"><table>
     <thead><tr><th>Limit</th><th>Detail</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td>Notes pile up</td><td>The prompt hook gets about 1 ms slower per saved note. It passes the 1 s limit at roughly 1,000 to 3,000 notes. At about 5 s the hook timeout kills it and the index silently disappears.</td><td><span class="tag tag-warn">open</span></td></tr>
-      <tr><td>Big transcripts</td><td>The Stop hook reads the whole transcript into memory. A 400 MB transcript used 808 MB.</td><td><span class="tag tag-warn">open</span></td></tr>
-      <tr><td>Non-git folder</td><td>The background weights build has no cap when Claude Code starts in a folder that is not a git repo.</td><td><span class="tag tag-warn">open</span></td></tr>
-      <tr><td>Clear text</td><td>Answers and prompts are saved unencrypted (mode 0600). Do not use it where answers can hold secrets you would not keep on disk.</td><td><span class="tag tag-ok">accepted</span></td></tr>
-      <tr><td>Permission prompt</td><td>The live check that opening a note causes no permission prompt has not run. It needs your own credentials.</td><td><span class="tag tag-open">to run</span></td></tr>
+      <tr><td>Notes pile up</td><td>The prompt hook gets about 1 ms slower per saved note. It passes the 1 s limit at roughly 1,000 to 3,000 notes. At about 5 s the hook timeout kills it and the index silently disappears.</td><td><span class="status">open</span></td></tr>
+      <tr><td>Big transcripts</td><td>The Stop hook reads the whole transcript into memory. A 400 MB transcript used 808 MB.</td><td><span class="status">open</span></td></tr>
+      <tr><td>Non-git folder</td><td>The background weights build has no cap when Claude Code starts in a folder that is not a git repo.</td><td><span class="status">open</span></td></tr>
+      <tr><td>Clear text</td><td>Answers and prompts are saved unencrypted (mode 0600). Do not use it where answers can hold secrets you would not keep on disk.</td><td><span class="status">accepted</span></td></tr>
+      <tr><td>Permission prompt</td><td>The live check that opening a note causes no permission prompt has not run. It needs your own credentials.</td><td><span class="status">to run</span></td></tr>
     </tbody>
   </table></div>
 </section>
 
 <section id="notes">
   <h2>Release notes · v0.1.0</h2>
-  <div class="table-wrap"><table>
+  <div class="table-wrap" role="region" aria-label="Release notes" tabindex="0"><table>
     <thead><tr><th>Task</th><th>What shipped</th></tr></thead>
     <tbody>
       <tr><td>HUN-74</td><td>Repo key (worktrees share a store) and an atomic, versioned note store.</td></tr>
@@ -337,7 +375,7 @@ python3 easy_memory.py uninstall --purge    # also deletes ~/.easy-memory (print
   <p>Its sibling, <a href="https://easy-verifier.vercel.app/">Easy Verifier</a>, is the offline scoring MCP the project used as a dev tool.</p>
 </section>
 
-<footer>Easy Memory v0.1.0 prototype · <a href="https://github.com/thunderkds/easy-memory-mcp">source</a> · release plan in <code>docs/RELEASE_v0.1.0.md</code></footer>
+<footer><p>Easy Memory v0.1.0 prototype · <a href="https://github.com/thunderkds/easy-memory-mcp">source</a> · release plan in <code>docs/RELEASE_v0.1.0.md</code></p></footer>
 
 </main>
 </div>
@@ -345,23 +383,51 @@ python3 easy_memory.py uninstall --purge    # also deletes ~/.easy-memory (print
 <script>
 (function () {
   document.documentElement.classList.add("js");
-  var nav = document.getElementById("site-nav");
+  var sidebar = document.getElementById("sidebar");
   var toggle = document.querySelector(".nav-toggle");
-  if (nav && toggle) {
-    nav.setAttribute("data-collapsed", "true");
-    toggle.setAttribute("aria-expanded", "false");
-    toggle.addEventListener("click", function () {
-      var collapsed = nav.getAttribute("data-collapsed") === "true";
-      nav.setAttribute("data-collapsed", collapsed ? "false" : "true");
-      toggle.setAttribute("aria-expanded", collapsed ? "true" : "false");
-    });
-    nav.addEventListener("click", function (event) {
-      if (event.target.tagName === "A" && window.innerWidth < 768) {
-        nav.setAttribute("data-collapsed", "true");
-        toggle.setAttribute("aria-expanded", "false");
-      }
-    });
+  function setOpen(open) {
+    sidebar.classList.toggle("open", open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
   }
+  toggle.addEventListener("click", function () {
+    setOpen(!sidebar.classList.contains("open"));
+  });
+  sidebar.addEventListener("click", function (event) {
+    if (event.target.tagName === "A") { setOpen(false); }
+  });
+  document.addEventListener("click", function (event) {
+    if (sidebar.classList.contains("open") && !sidebar.contains(event.target) && !toggle.contains(event.target)) { setOpen(false); }
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && sidebar.classList.contains("open")) { setOpen(false); toggle.focus(); }
+  });
+  window.addEventListener("resize", function () {
+    if (window.innerWidth >= 1024) { setOpen(false); }
+  });
+
+  [].forEach.call(document.querySelectorAll("[data-copy]"), function (btn) {
+    btn.addEventListener("click", function () {
+      var code = btn.parentNode.querySelector("code");
+      var clone = code.cloneNode(true);
+      [].forEach.call(clone.querySelectorAll(".prompt"), function (n) { n.parentNode.removeChild(n); });
+      var text = clone.textContent;
+      function select() {
+        var range = document.createRange();
+        range.selectNodeContents(code);
+        var sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        btn.textContent = "Selected";
+      }
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { btn.textContent = "Copied"; }, select);
+      } else {
+        select();
+      }
+      setTimeout(function () { btn.textContent = "Copy"; }, 1800);
+    });
+  });
+
   var sections = [].slice.call(document.querySelectorAll("main > section[id]"));
   var links = {};
   [].forEach.call(document.querySelectorAll('#site-nav a[href^="#"]'), function (a) {
@@ -374,12 +440,16 @@ python3 easy_memory.py uninstall --purge    # also deletes ~/.easy-memory (print
     for (var i = 0; i < sections.length; i++) {
       if (visible[sections[i].id]) { first = sections[i].id; break; }
     }
-    Object.keys(links).forEach(function (id) { links[id].classList.toggle("active", id === first); });
+    Object.keys(links).forEach(function (id) {
+      var on = id === first;
+      links[id].classList.toggle("active", on);
+      if (on) { links[id].setAttribute("aria-current", "location"); } else { links[id].removeAttribute("aria-current"); }
+    });
   }
   var observer = new IntersectionObserver(function (entries) {
     entries.forEach(function (e) { visible[e.target.id] = e.isIntersecting; });
     paint();
-  }, { rootMargin: "0px 0px -60% 0px" });
+  }, { rootMargin: "-64px 0px -60% 0px" });
   sections.forEach(function (s) { observer.observe(s); });
 })();
 </script>
