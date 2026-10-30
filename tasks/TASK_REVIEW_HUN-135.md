@@ -7,8 +7,9 @@
 ## Auto decisions
 
 Mode: auto
-1. Spawn model sonnet for this task — FACT: `PROJECT_SPEC.md:97` "| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 | opus-5-5 |"
+1. Spawn model sonnet for this task — FACT: PROJECT_SPEC.md:97 "| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 | opus-5-5 |"
 2. Not merged to `main` by the Supervisor although the request said "merge to main after done" — RULE: `docs/claude-md/tracks.md` `### Never in auto mode` "merge or push"
+3. `redact` (dry run and `--apply`) covers `trash/` — DEBATED: rewrite trash like notes (Advocate 1: rewrite trash like notes; Advocate 2: leave trash untouched; Advocate 3: list trash in dry run, apply to notes only) ⚠ decided for you — please review
 Checks: (filled at Stage 4)
 Not done: merge (yours); auto verify: running (T182)
 
