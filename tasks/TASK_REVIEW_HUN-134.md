@@ -10,47 +10,49 @@
 
 ---
 
-<!-- Optional: the final report, only for a task run in auto mode (the user's `[auto]` tag,
-`docs/claude-md/tracks.md` `## Auto mode`). To use it, copy the block below out of this comment, to this
-place, and replace every <...>. Keep `Mode: auto` as its first line, exactly as written: T182's hook reads
-it. Write it to this file before the run ends; the chat message is a copy, not the report. The same
-block is the Supervisor's final chat message. It is not the `delivery-report` page and not
-Evidence. A taste decision (what the user wants) also ends with the flag. Write `DEBATED` only when ≥2
-Advocate `Agent` calls ran for that question, naming each Advocate's option. A decision with no Advocates is
-labelled `RULE`, `FACT` or `SAFER OPTION`, never `DEBATED`. A decision flagged `⚠ decided for you` is a choice, and is never labelled `FACT`. A
-safety action a rule requires (for example the backup before a delete) is `RULE` without the flag.
-At Risk Medium or High, a `RULE:` counts only when it names a written rule (`path:line`,
-`path § <heading>`, or `docs/claude-md/tracks.md` `### <section>`), and a `FACT:` needs a Citation
-(`path:line "quoted text"`); without one it is a choice and must be `DEBATED`. Good: `2. backed up the CSV
-— RULE: `docs/claude-md/tracks.md` `### Stops that stay``. Bad: `1. kept recurring.csv — RULE: Surgical Changes`.
-
 ## Auto decisions
 
 Mode: auto
-1. <what was decided> — RULE: <the rule>
-2. <what was decided> — FACT: <path>:<line> "<quoted text>"
-3. <what was decided> — DEBATED: <option> (Advocate 1: <its option>; Advocate 2: <its option>) ⚠ decided for you — please review
-4. <what was decided> — SAFER OPTION: <why> ⚠ decided for you — please review
-Paused: <only when a stop that stays paused the task: which one, and why>
-Checks: tests `<command>` — <result>; reviews <skill — result>; real run `<command>` — printed `<what it printed>` (auto-checked, not /verify)
-Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | /verify (yours)>
+1. Registered the draft on Linear through the Linear connector (board assigned HUN-134; P1→High, labels `complexity:c2`, `risk:medium`, project easy-memory-mcp), because `board_sync.py` could not run — FACT: scripts/board_sync.py:58 "`LINEAR_API_KEY` is read from the environment only and never printed (NFR-001)." (the env had no key: `pull failed: LINEAR_API_KEY is not set`)
+2. Extended track — RULE: AGENTS.md:142 "The extended track applies if any of: C2 or above; Risk Medium or High"
+3. Requirement Fidelity Gate signed `auto (Supervisor)` — RULE: docs/claude-md/tracks.md:215 "Signed `auto (Supervisor)`, not by the user."
+4. Spawned backend-developer on opus (CLI Model Table empty) and the Supervisor made the worktree itself (`git worktree add ../easy-memory-mcp-HUN-134`) instead of a Common-Infrastructure spawn — DEBATED: opus + Supervisor worktree (Advocate 1: opus, Supervisor runs `git worktree add`; Advocate 2: sonnet, Common-Infrastructure agent creates the worktree per docs/claude-md/pipeline-stages.md:169) ⚠ decided for you — please review
+5. AC 8 evidence without your login: no credential linked into the throwaway config (it printed `Not logged in · Please run /login`); instead a live run with your real config + `--plugin-dir plugin` (no settings write, throwaway `EASY_MEMORY_HOME`) plus the installed plugin copy's hooks driven with that run's real transcript — DEBATED: never touch credentials (Advocate 1: symlink `~/.claude-hung2/.credentials.json` into the throwaway config for the run; Advocate 2: no credentials, live run with real config + `--plugin-dir`, AC 8 plugin-only session left partial) ⚠ decided for you — please review
+6. Kept an untracked, refreshed copy of `tasks/TASK_GUIDE_HUN-134.md` in the main checkout (the spawn hook reads guides there; a fast-forward of `main` was denied as a merge) — DEBATED: keep and refresh until merge (Advocate 1: keep it so main-checkout hooks find the guide; Advocate 2: delete it now so main is untouched and the merge cannot be blocked) ⚠ decided for you — please review. **Before you merge: `rm tasks/TASK_GUIDE_HUN-134.md` in the main checkout**, or git refuses the merge.
+7. security-review done by an independent reviewer agent after the built-in skill failed (`fatal: ambiguous argument 'origin/HEAD...'`) — FACT: memory/MEMORY.md:37 "security-review needs `origin`; board has no Ready-for-Review ... use an independent agent"
+8. Linear stays In Progress (no Ready-for-Review state on the board); the board-cache row moves to Ready for Review on the task branch by hand — FACT: memory/MEMORY.md:37 "board has no Ready-for-Review"
+9. README allow rule kept as the guide states it (security P3: it also allows `memory_forget`) — FACT: tasks/TASK_GUIDE_HUN-134.md:79 "the allow rule for the new tool names (`mcp__plugin_easy-memory_easy-memory`)"
+10. Did not run `/verify`, merge, push, tag or move to Done — RULE: docs/claude-md/tracks.md § Never in auto mode (line 353)
+Checks: tests `python3 -m unittest discover -s tests` — `Ran 434 tests in 24.865s` `OK (skipped=3)`; `claude plugin validate .` and `claude plugin validate plugin` — `✔ Validation passed`; reviews code-review — 0 P0, 1 P1 (process), 1 P2, security-review (independent agent) — pass, 3 × P3; real runs `experiments/hun-134/work/ac5.sh`, `ac6live.sh`, `ac8drive.sh` — see Evidence (auto-checked, not /verify)
+Not done: merge (yours); /verify (yours); `git tag v0.2.0` + push (yours — Easy Kit T217 pins ref v0.2.0); `rm tasks/TASK_GUIDE_HUN-134.md` in the main checkout before merging; board description of HUN-134 still holds the pre-review guide (`board_sync.py update --guide HUN-134` needs `LINEAR_API_KEY`)
 
--->
+## Stage 4 findings
+
+**code-review** (scope: `easy_memory.py` guard + install warning and their callers `hook_stop`, `hook_prompt`, `install_command`; `plugin/*`; `.claude-plugin/marketplace.json`; `tests/test_plugin.py`; `README.md`). Lane: `lane: C2, 10 files, 2272 lines, EXCEEDS (lines 2272 > 500); unpredicted: tasks/TASK_GUIDE_HUN-134.md` — 1773 lines are the test-guarded copy `plugin/easy_memory.py`; not under-labelled. Entry point `.claude-plugin/marketplace.json` → `plugin/` exists (reachable).
+
+| Sev | File | Finding | Conf | Action |
+|---|---|---|---|---|
+| P1 (process) | — | The backend agent was stopped by the runner's background limit before its final report, so there is no `Startup reads:` line (the rule counts all reads as missing). The diff follows the guide (tests derive hooks from `HOOK_EVENTS`; copy-not-symlink decision measured) | 100 | Not fixable after the fact; recorded here |
+| P2 | `easy_memory.py` `_plugin_defers_to_old_hooks` | A stale old hook entry (clone deleted) still makes the plugin defer, so no notes are saved, silently | 75 | Suggestion: log one `hook.log` line when deferring, or check the old hook's script path exists |
+
+**security-review** (independent agent, `cmp` confirmed the copy is identical): `security-review: pass`. P3 only: README allow rule also auto-allows `memory_forget` (same breadth as the old `mcp__easy-memory` rule); `_is_ours` substring match can make the plugin defer (fails closed); `bin/easy-memory` breaks if invoked through a symlink. Checked, no issue: hook command quoting, `.mcp.json` args array, hooks always exit 0, guard never bypasses redaction or changes the store path, reads user-level settings only, no secrets.
 
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
-| verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `tests/test_plugin.py` (new, 16 tests): `ManifestTest` (AC 1–4: marketplace, manifest 0.2.0, hooks derived from `HOOK_EVENTS`, `.mcp.json`, byte-identical copy, no dev kit in plugin), `DoubleInstallTest` (AC 6 + edge cases: invalid settings, foreign hooks), `BinWrapperTest` (AC 5 wrapper), `InstallWarningTest` (AC 7). Full suite: `Ran 434 tests in 24.865s` / `OK (skipped=3)` |
+| Verification command run | ☑ pass | `python3 -m unittest discover -s tests && claude plugin validate . && claude plugin validate plugin` → `OK (skipped=3)`, `✔ Validation passed`, `✔ Validation passed` |
+| Negative cases hold | ☑ pass | AC 6 live (`ac6live.sh`, 2026-10-30 08:28:55Z, real config with old hooks + `--plugin-dir plugin`): 2 turns → `notes saved after turn 2 (expect 2): 2` — one note per turn, not two. Tests: invalid settings JSON → note saved; `enabledPlugins` false → install proceeds |
+| Real run: marketplace install (AC 5) | ☑ pass | `ac5.sh` 2026-10-30 08:25:53Z, throwaway `CLAUDE_CONFIG_DIR`: `✔ Successfully installed plugin: easy-memory@easy-memory (scope: user)`; `claude plugin details`: `easy-memory 0.2.0` … `Hooks (2)  Stop, UserPromptSubmit` … `MCP servers (1)  easy-memory`; `cached easy_memory.py identical to repo root`; cached `bin/easy-memory switch on` → `switch: on`, `report` → exit 0 |
+| Real run: note saved + index (AC 8) | ☑ pass (plugin-only session partial) | Live session with plugin (`ac6live.sh`): note `475f0bad466b2cd9/notes/20261030T082907438-54bf2fa6.json`; tool names `mcp__plugin_easy-memory_easy-memory__memory_read`, `mcp__plugin_easy-memory_easy-memory__memory_search` (T217 contract). Installed plugin copy alone (`ac8drive.sh`, 08:30:22Z, `CLAUDE_PLUGIN_ROOT` = cache, no old hooks): `hook-stop` exit 0 → `475f0bad466b2cd9/notes/20261030T083022805-02175209.json`; `hook-prompt` → `<easy-memory-index>\n- id 20261030T083022805-02175209 | question: "How does the kettle thermostat stop the heater? …"`. A fully plugin-only `claude -p` session needs a logged-in throwaway config (decision 5) |
+| verify | ☐ pass / ☐ fail / ☐ N/A | |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | Diff files + callers `hook_stop`, `hook_prompt`, `install_command`, `_is_ours`, `settings_path`; `site/`, `agents/`, `skills/`, `.claude/` untouched |
+| Full smoke suite still green (no regression) | ☑ pass | `Ran 434 tests` `OK (skipped=3)`; existing install tests unchanged |
+| **Companion score (easy-verifier)** | ☑ N/A | not run in this auto run |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ N/A | no UI |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ N/A | no UI |
+| **UI: Responsiveness at target viewports** | ☑ N/A | no UI |
 
 ---
 
@@ -85,9 +87,16 @@ exit 2
 
 No marketplace and no plugin exist: the validator only sees the repo root as a bare skills tree (MANIFEST_NOT_FOUND), and `plugin/` and `.claude-plugin/` are absent. Getting easy-memory today needs a clone plus `python3 easy_memory.py install`, which edits user settings.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: `claude plugin validate .` / `claude plugin validate plugin` → `✔ Validation passed`; throwaway install (2026-10-30 08:25:53Z):
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+✔ Successfully installed plugin: easy-memory@easy-memory (scope: user)
+easy-memory 0.2.0
+  Hooks (2)  Stop, UserPromptSubmit  (harness-only — no model context cost)
+  MCP servers (1)  easy-memory  (tool schemas resolved at runtime; not counted)
+cached easy_memory.py identical to repo root
+```
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
-implementing agent alone]
+**DELTA**: a user gets easy-memory with `/plugin marketplace add thunderkds/easy-memory-mcp` and `/plugin install easy-memory@easy-memory` — no clone, no `install` command, no settings edit; a leftover old install still gives one note per turn.
+
+**WITNESS**: Supervisor session, 2026-10-30 08:25–08:30Z, scripts `experiments/hun-134/work/ac5.sh`, `ac6live.sh`, `ac8drive.sh` (gitignored), independent of the implementing agent; trace `memory/event-trace/HUN-134.jsonl`.

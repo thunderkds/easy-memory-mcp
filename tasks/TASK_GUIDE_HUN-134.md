@@ -41,7 +41,7 @@ User, 2026-10-30 (Easy Kit session): "make this kit simple more … split this k
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
-- [x] Restated intent confirmed to match the user's request (by Supervisor, 2026-10-30)
+- [x] Restated intent confirmed to match the user's request (auto (Supervisor), 2026-10-30)
 - [x] Every Acceptance Criterion below traces to the requirement
 
 > An agent must NOT start implementing until this gate is checked. If anything here is unclear,
@@ -101,26 +101,13 @@ python3 -m unittest discover -s tests && claude plugin validate . && claude plug
 
 ### Evidence (filled by reviewer at Stage 4/5)
 
-| Check | Result | Notes |
-|-------|--------|-------|
-| New test(s) cover acceptance criteria | ☐ | |
-| Full suite passes | ☐ | |
-| Real run: marketplace install + note saved | ☐ | |
-| code-review | ☐ | |
-| security-review (Risk Medium) | ☐ | |
-| verify | ☐ | |
-| Visual regression | ☐ N/A | no UI |
-| Design-system compliance | ☐ N/A | no UI |
-| Responsiveness | ☐ N/A | no UI |
+> **Moved.** See `tasks/TASK_REVIEW_HUN-134.md` (review sections are never taken from the board).
 
 ---
 
 ## Demonstration
 
-BEFORE: easy-memory needs a clone, `python3 easy_memory.py install` from the main checkout (never a worktree), and an edit to user settings.
-AFTER: two `/plugin` commands; no clone, no settings edit.
-DELTA: paste `claude plugin details` output and the saved note path.
-WITNESS: the AC 8 real-run transcript lines.
+> **Moved.** See `tasks/TASK_REVIEW_HUN-134.md` (review sections are never taken from the board).
 
 ---
 
