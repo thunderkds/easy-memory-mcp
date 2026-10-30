@@ -12,6 +12,7 @@ Mode: auto
 3. `redact` (dry run and `--apply`) covers `trash/` — DEBATED: rewrite trash like notes (Advocate 1: rewrite trash like notes; Advocate 2: leave trash untouched; Advocate 3: list trash in dry run, apply to notes only) ⚠ decided for you — please review
 Checks: (filled at Stage 4)
 Not done: merge (yours); auto verify: running (T182)
+Paused: auto-mode check failed — extended track, but the trace has no `code-review` Skill call (Stage 4 runs in auto mode); Risk High, but the trace has no `security-review` Skill call
 
 ## Evidence
 
@@ -37,8 +38,18 @@ Not done: merge (yours); auto verify: running (T182)
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured 2026-10-30T15:46:07Z on branch `v03-m6-trash` (commit 38f5014, before any implementation commit). Throwaway `EASY_MEMORY_HOME`; a note saved, then `memory_forget` and `memory_restore` called over `easy_memory.py serve` (JSON-RPC on stdio):
+
+```
+2026-10-30T15:46:07Z saved <tmp>/.easy-memory/c5aa0c6dafcc6672/notes/20261030T154607730-535de01a.json
+forget reply: Forgot note 20261030T154607730-535de01a.
+tools: ['memory_search', 'memory_read', 'memory_list', 'memory_forget']
+restore reply: {'code': -32602, 'message': 'unknown tool'}
+2026-10-30T15:46:07Z note file exists: False
+store contents: ['meta.json', 'notes'] trash dir exists: False
+```
+
+The note file is gone, no `trash/` exists, and `tools/list` has no `memory_restore`.
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
