@@ -7,7 +7,7 @@
 ## Auto decisions
 
 Mode: auto
-1. Spawn model sonnet for this task — FACT: `PROJECT_SPEC.md:94` "| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 | opus-5-5 |"
+1. Spawn model sonnet for this task — FACT: `PROJECT_SPEC.md:97` "| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 | opus-5-5 |"
 2. Not merged to `main` by the Supervisor although the request said "merge to main after done" — RULE: `docs/claude-md/tracks.md` `### Never in auto mode` "merge or push"
 Checks: (filled at Stage 4)
 Not done: merge (yours); auto verify: running (T182)
