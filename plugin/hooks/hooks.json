@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "Stop": [
+      {"hooks": [{"type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/easy_memory.py\" hook-stop", "timeout": 10}]}
+    ],
+    "UserPromptSubmit": [
+      {"hooks": [{"type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/easy_memory.py\" hook-prompt", "timeout": 5}]}
+    ]
+  }
+}

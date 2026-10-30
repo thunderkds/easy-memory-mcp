@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-10-29
+**Last updated**: 2026-10-30
 
 > Board cache, pulled from the board by `python3 scripts/board_sync.py pull`. Do not edit it by hand:
 > the board is the source of truth, and the next pull overwrites this file.
@@ -13,6 +13,7 @@
 ### In Progress
 
 ### Ready for Review
+- [ ] **HUN-134** — easy-memory installs as a Claude Code plugin (hooks + MCP server, no clone, no settings edit) | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-134.md`
 
 ### Done
 - [x] **HUN-74** — Package skeleton, repo key and atomic note store | common-infrastructure | C1 | Risk: Low | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-74.md`

@@ -4,6 +4,25 @@
 
 ## Use it
 
+### As a Claude Code plugin (no clone)
+
+In Claude Code:
+
+```
+/plugin marketplace add thunderkds/easy-memory-mcp
+/plugin install easy-memory@easy-memory
+```
+
+The plugin runs the same Stop and prompt hooks and the same MCP server, and saves notes in the same `~/.easy-memory/`. It does not edit your settings. Its MCP tools have new names, `mcp__plugin_easy-memory_easy-memory__memory_search` and so on, so the old allow rule `mcp__easy-memory` does not match them. To open notes without a permission prompt, add this rule to `permissions.allow` in your settings yourself (a plugin cannot set permissions):
+
+```
+mcp__plugin_easy-memory_easy-memory
+```
+
+If you installed the old way, run `python3 easy_memory.py uninstall` (no `--purge`) first — your notes stay. If you skip it, the plugin's hooks do nothing while the old hooks are in your settings (still one note per turn), but both MCP servers run and every tool shows up twice. The plugin puts `easy-memory` on the Bash PATH: `easy-memory switch [on|off|auto]`, `easy-memory report`, `easy-memory redact [--apply]`.
+
+### From a clone
+
 Run these from the main checkout, never from a git worktree. The hook commands keep an absolute path.
 
 ```bash

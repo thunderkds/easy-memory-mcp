@@ -392,6 +392,8 @@ def save_stop_note(data):
 def hook_stop(args):
     """Stop hook: stdin is the hook JSON. Prints nothing; always returns 0 (NFR-004)."""
     try:
+        if _plugin_defers_to_old_hooks():
+            return 0
         data = json.loads(sys.stdin.read(MAX_STDIN_CHARS))
         if not isinstance(data, dict):
             raise ValueError("Stop input is not a JSON object")
@@ -774,6 +776,8 @@ def hook_prompt(args):
     """
     log_to, entry = None, None
     try:
+        if _plugin_defers_to_old_hooks():
+            return 0
         data = json.loads(sys.stdin.read(MAX_STDIN_CHARS))
         if not isinstance(data, dict):
             raise ValueError("UserPromptSubmit input is not a JSON object")
@@ -828,6 +832,44 @@ def hook_entries():
 def _is_ours(hook):
     return isinstance(hook, dict) and isinstance(hook.get("command"), str) \
         and OUR_MARKER in hook["command"]
+
+
+PLUGIN_KEY_PREFIX = "easy-memory@"  # enabledPlugins key of the plugin, any marketplace
+
+
+def _user_settings():
+    """User settings as a dict; {} if missing, unreadable or not a JSON object."""
+    try:
+        data = json.loads(settings_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def _plugin_defers_to_old_hooks():
+    """True when this file runs from the plugin and user settings still hold our hooks.
+
+    The old hooks keep working, so the plugin's hook does nothing (one note per turn).
+    """
+    root = os.environ.get("CLAUDE_PLUGIN_ROOT")
+    if not root:
+        return False
+    root = os.path.abspath(root)
+    if os.path.commonpath([root, os.path.abspath(__file__)]) != root:
+        return False  # the old hook; CLAUDE_PLUGIN_ROOT leaked into its environment
+    hooks = _user_settings().get("hooks")
+    return isinstance(hooks, dict) and any(
+        _is_ours(hook) for event in HOOK_EVENTS
+        for group in (hooks.get(event) if isinstance(hooks.get(event), list) else [])
+        if isinstance(group, dict) and isinstance(group.get("hooks"), list)
+        for hook in group["hooks"])
+
+
+def _plugin_enabled():
+    enabled = _user_settings().get("enabledPlugins")
+    return isinstance(enabled, dict) and any(
+        isinstance(key, str) and key.startswith(PLUGIN_KEY_PREFIX) and value
+        for key, value in enabled.items())
 
 
 def _load_settings(path):
@@ -1066,6 +1108,10 @@ def _unregister_mcp():
 def install_command(args):
     """install [--dry-run]: add our hooks and the MCP allow rule to user-level settings, then
     register the MCP server with `claude mcp add --scope user`."""
+    if _plugin_enabled():
+        print(f"easy-memory: the easy-memory plugin is enabled in {settings_path()}; it already "
+              "runs the hooks and the MCP server, so nothing was changed", file=sys.stderr)
+        return 0
     code = _edit_settings(hook_entries(), True, args.dry_run,
                           "installed: Stop and UserPromptSubmit hooks", "already installed")
     return code if code != 0 else _register_mcp(args.dry_run)
