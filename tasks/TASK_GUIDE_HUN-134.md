@@ -41,8 +41,8 @@ User, 2026-10-30 (Easy Kit session): "make this kit simple more … split this k
 
 ### Requirement Fidelity Gate (sign off BEFORE implementation)
 
-- [x] Restated intent confirmed to match the user's request (auto (Supervisor), 2026-10-30)
-- [x] Every Acceptance Criterion below traces to the requirement
+- [X] Restated intent confirmed to match the user's request (by Supervisor, 2026-10-30)
+- [X] Every Acceptance Criterion below traces to the requirement
 
 > An agent must NOT start implementing until this gate is checked. If anything here is unclear,
 > STOP and ask the Supervisor (Karpathy: Think Before Coding).
@@ -56,18 +56,19 @@ User, 2026-10-30 (Easy Kit session): "make this kit simple more … split this k
 **Entry point**: `.claude-plugin/marketplace.json` (repo root) → plugin folder `plugin/`.
 
 **Known facts (measured in T216 and on 2026-10-30, Claude Code 2.1.314):**
-- A plugin MCP server's tools are named `mcp__plugin_<plugin>_<server>__<tool>`: here `mcp__plugin_easy-memory_easy-memory__memory_search` (measured with `--plugin-dir`), not `mcp__easy-memory__memory_search`. The old allow rule `mcp__easy-memory` does not match them.
-- A plugin cannot set permissions (only `agent`, `subagentStatusLine` keys take effect).
-- `${CLAUDE_PLUGIN_ROOT}` expands in hook commands and `.mcp.json`; it changes on every update — write no state there.
-- `${CLAUDE_PLUGIN_DATA}` is deleted on uninstall — do not move the store there.
-- The plugin root must NOT be the repo root: the repo's own `agents/` and `skills/` would load as plugin agents and skills.
+
+* A plugin MCP server's tools are named `mcp__plugin_<plugin>_<server>__<tool>`: here `mcp__plugin_easy-memory_easy-memory__memory_search` (measured with `--plugin-dir`), not `mcp__easy-memory__memory_search`. The old allow rule `mcp__easy-memory` does not match them.
+* A plugin cannot set permissions (only `agent`, `subagentStatusLine` keys take effect).
+* `${CLAUDE_PLUGIN_ROOT}` expands in hook commands and `.mcp.json`; it changes on every update — write no state there.
+* `${CLAUDE_PLUGIN_DATA}` is deleted on uninstall — do not move the store there.
+* The plugin root must NOT be the repo root: the repo's own `agents/` and `skills/` would load as plugin agents and skills.
 
 ---
 
 ## Acceptance Criteria
 
-| # | Criterion (testable) | Traces to requirement |
-|---|----------------------|-----------------------|
+| \# | Criterion (testable) | Traces to requirement |
+| -- | -- | -- |
 | 1 | `claude plugin validate .` (marketplace) and `claude plugin validate plugin` both exit 0 | "run as plugin" |
 | 2 | `plugin/hooks/hooks.json` registers exactly the two events of `HOOK_EVENTS` (Stop → `hook-stop`, timeout 10; UserPromptSubmit → `hook-prompt`, timeout 5), each running `easy_memory.py` through `${CLAUDE_PLUGIN_ROOT}`; a test derives the expected entries from `HOOK_EVENTS` so they cannot drift | same hooks as today |
 | 3 | `plugin/.mcp.json` registers server `easy-memory` running `easy_memory.py serve` through `${CLAUDE_PLUGIN_ROOT}` | same MCP server |
@@ -84,8 +85,8 @@ User, 2026-10-30 (Easy Kit session): "make this kit simple more … split this k
 
 ### Success Criteria (observable, pass/fail)
 
-| # | Given (input/state) | Expect (output/behavior) | How it's checked |
-|---|---------------------|--------------------------|------------------|
+| \# | Given (input/state) | Expect (output/behavior) | How it's checked |
+| -- | -- | -- | -- |
 | 1 | plugin hooks.json and `HOOK_EVENTS` | same events, commands, timeouts | automated test |
 | 2 | `CLAUDE_PLUGIN_ROOT` set + our hooks in settings | hook exits 0, no note written | automated test |
 | 3 | `CLAUDE_PLUGIN_ROOT` set, no old hooks | hook saves the note as today | automated test |
@@ -103,13 +104,9 @@ python3 -m unittest discover -s tests && claude plugin validate . && claude plug
 
 > **Moved.** See `tasks/TASK_REVIEW_HUN-134.md` (review sections are never taken from the board).
 
----
-
 ## Demonstration
 
 > **Moved.** See `tasks/TASK_REVIEW_HUN-134.md` (review sections are never taken from the board).
-
----
 
 ## Approach
 
@@ -133,7 +130,7 @@ python3 -m unittest discover -s tests && claude plugin validate . && claude plug
 ## Files to Change (Predicted)
 
 | File | Change |
-|------|--------|
+| -- | -- |
 | `.claude-plugin/marketplace.json` | new: marketplace with one plugin |
 | `plugin/` | new: manifest, hooks.json, .mcp.json, bin wrapper, easy_memory.py link/copy |
 | `easy_memory.py` | plugin guard in the hook path; `install` warning |
@@ -143,7 +140,7 @@ python3 -m unittest discover -s tests && claude plugin validate . && claude plug
 ## Files Must NOT Touch
 
 | File | Reason |
-|------|--------|
+| -- | -- |
 | `site/` | out of scope |
 | note store format (`FORMAT_VERSION`), ranking, MCP tool code | behaviour must not change |
 | `agents/`, `skills/`, `.claude/` | the repo's own dev kit |

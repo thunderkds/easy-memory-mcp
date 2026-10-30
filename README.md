@@ -6,6 +6,8 @@
 
 ### As a Claude Code plugin (no clone)
 
+The repo `thunderkds/easy-memory-mcp` is private. Only GitHub accounts with access to it can add the marketplace or install the plugin; for anyone else the clone fails with `Repository not found` or a password prompt.
+
 In Claude Code:
 
 ```

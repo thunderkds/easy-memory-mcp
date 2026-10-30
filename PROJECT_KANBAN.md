@@ -13,7 +13,6 @@
 ### In Progress
 
 ### Ready for Review
-- [ ] **HUN-134** — easy-memory installs as a Claude Code plugin (hooks + MCP server, no clone, no settings edit) | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-134.md`
 
 ### Done
 - [x] **HUN-74** — Package skeleton, repo key and atomic note store | common-infrastructure | C1 | Risk: Low | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-74.md`
@@ -35,6 +34,7 @@
 - [x] **HUN-127** — Release page — centred container, visual guide, highlight-only release notes | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-127.md`
 - [x] **HUN-130** — Release page — Graphite Mint neon highlight layer | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-130.md`
 - [x] **HUN-133** — Install stepper — equal code boxes across the three steps | frontend-developer | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-133.md`
+- [x] **HUN-134** — easy-memory installs as a Claude Code plugin (hooks + MCP server, no clone, no settings edit) | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-134.md`
 
 ### Closed (will not do)
 

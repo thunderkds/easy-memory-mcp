@@ -8,7 +8,7 @@
     {
       "name": "easy-memory",
       "source": "./plugin",
-      "description": "Per-repo session notes for Claude Code: saves each answer, adds a short index of matching notes to the next prompt."
+      "description": "Per-repo session notes for Claude Code: saves each answer, adds a short index of matching notes to the next prompt. Needs access to the private GitHub repo thunderkds/easy-memory-mcp."
     }
   ]
 }
