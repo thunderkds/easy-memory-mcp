@@ -60,7 +60,12 @@ class ManifestTest(unittest.TestCase):
             "command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/easy_memory.py", "serve"]}})
 
     def test_plugin_script_is_byte_identical_to_root(self):
-        self.assertEqual(PLUGIN_SCRIPT.read_bytes(), ROOT_SCRIPT.read_bytes())
+        # A copy, not a symlink: a git-subdir install keeps the link and its target is not
+        # in the cache (measured 2026-10-30). After editing easy_memory.py run:
+        #   cp easy_memory.py plugin/easy_memory.py
+        self.assertFalse(PLUGIN_SCRIPT.is_symlink())
+        self.assertEqual(PLUGIN_SCRIPT.read_bytes(), ROOT_SCRIPT.read_bytes(),
+                         "plugin/easy_memory.py differs; run: cp easy_memory.py plugin/")
 
     def test_no_repo_dev_kit_inside_plugin(self):
         for name in ("agents", "skills", "commands"):
