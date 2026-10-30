@@ -51,9 +51,19 @@ store contents: ['meta.json', 'notes'] trash dir exists: False
 
 The note file is gone, no `trash/` exists, and `tools/list` has no `memory_restore`.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER**: same script, 2026-10-30T15:50:39Z, after the change (implementation commit on `v03-m6-trash`); the `forget` call, then `tools/list`, then `memory_restore`:
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+```
+2026-10-30T15:50:39Z saved <tmp>/.easy-memory/c5aa0c6dafcc6672/notes/20261030T155039275-5ac93bf2.json
+forget reply: Moved note 20261030T155039275-5ac93bf2 to the trash. Restore it with memory_restore within 30 days; after that it is deleted.
+tools: ['memory_search', 'memory_read', 'memory_list', 'memory_forget', 'memory_restore']
+restore reply: {'content': [{'type': 'text', 'text': 'Restored note 20261030T155039275-5ac93bf2.'}], 'isError': False}
+2026-10-30T15:50:39Z note file exists: True
+store contents: ['meta.json', 'notes', 'trash'] trash dir exists: True
+trash folder mode: 700
+```
+
+**DELTA**: A forgotten note now sits in `trash/` for 30 days and `memory_restore <id>` brings it back; before, `memory_forget` deleted the file for good.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
 implementing agent alone]
