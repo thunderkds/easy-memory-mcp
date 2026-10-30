@@ -36,6 +36,12 @@ Port from evidence: `experiments/02-auto-memory/memstore.py` (tokens, cited file
 | Word weights | Per-repo table of how rare each word is in the repo's source files. Used to score a prompt against notes. |
 | Store | The folder `~/.easy-memory/<repo-key>/` with a repo's notes. Worktrees share the main repo's store. |
 | Switch | Per-repo state `on`, `off` or `auto` (even day = on, odd day = off, local time). |
+| Typed prompt | A transcript `type: user` entry the user wrote: not `isMeta`, not a sidechain, not an event. (v0.3, `PRD_v0.3.md`) |
+| Event | A `type: user` entry the user did not type: a task notification (`origin.kind == "task-notification"`), `!` command output (`<bash-input>`, `<bash-stdout>`, `<bash-stderr>`), `[Request interrupted`, or a compaction summary (`isCompactSummary`). Never a note's question. (v0.3) |
+| Trigger | Note field naming the event that set off the reply: `task-notification`, `bash` or `compact`. Absent when a typed prompt did. (v0.3) |
+| Turn | The transcript entries after the last typed prompt. (v0.3) |
+| Touched file | A repo file the turn opened, edited, wrote, searched, or named inside a Bash command. A note cites a file only if its answer names it and the turn touched it. (v0.3) |
+| Trash | `<store>/trash/`: forgotten notes, restorable with `memory_restore` for 30 days. (v0.3) |
 
 ---
 
@@ -96,7 +102,7 @@ Port from evidence: `experiments/02-auto-memory/memstore.py` (tokens, cited file
 
 ## Tasks
 
-Linear is the source of truth: team `HUN`, project **easy-memory-mcp** (https://linear.app/thunderkds/project/easy-memory-mcp-ddcf0593772a). Tasks are `HUN-74` to `HUN-82`; each issue description is its task guide. Do not list tasks here. `PROJECT_KANBAN.md` and `tasks/TASK_GUIDE_<ID>.md` are a cache that `python3 scripts/board_sync.py pull` rewrites from Linear.
+Linear is the source of truth: team `HUN`, project **easy-memory-mcp** (https://linear.app/thunderkds/project/easy-memory-mcp-ddcf0593772a). Tasks started at `HUN-74`; v0.3 tasks come from `PRD_v0.3.md` and `BRAINSTORMING_LOG_v0.3.md`; each issue description is its task guide. Do not list tasks here. `PROJECT_KANBAN.md` and `tasks/TASK_GUIDE_<ID>.md` are a cache that `python3 scripts/board_sync.py pull` rewrites from Linear.
 
 ---
 
