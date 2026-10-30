@@ -239,6 +239,17 @@ class RetentionTest(TrashBase):
         self.assertLess(time.time() - moved.stat().st_mtime, 60)
         self.assertTrue(moved.exists())  # an old note is not purged by its own forget
 
+    def test_a_failed_utime_skips_the_purge_so_the_note_is_kept(self):  # Stage 4 fix
+        # If the move time cannot be set, the note keeps its save time; a purge right after
+        # would delete a note saved over 30 days ago at once. Forget must then skip the purge.
+        note_id = self.save("a", "answer " * 40)
+        self.age(self.notes_dir() / f"{note_id}.json", 90)
+        with mock.patch.object(easy_memory.os, "utime", side_effect=PermissionError("denied")):
+            text = easy_memory._tool_forget(self.repo, {"id": note_id})
+        self.assertIn("memory_restore", text)
+        self.assertTrue((self.trash_dir() / f"{note_id}.json").exists())
+        self.assertIn("PermissionError", (self.home / "hook.log").read_text(encoding="utf-8"))
+
     def test_trash_older_than_30_days_is_deleted_at_the_next_forget(self):  # AC5
         client = self.initialized()
         old, recent = self.trashed(client, 31, 29)

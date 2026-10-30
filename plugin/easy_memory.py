@@ -1570,9 +1570,10 @@ def _tool_forget(repo, args):
         raise _ToolError(f"cannot forget {path.stem}: {type(err).__name__}") from None
     try:
         os.utime(target)  # the move keeps the save time; the 30 days count from now
-    except OSError as err:
+    except OSError as err:  # no purge: the note would still carry its save time
         log_hook_error("memory_forget", err)
-    _purge_trash(trash)
+    else:
+        _purge_trash(trash)
     return (f"Moved note {path.stem} to the trash. Restore it with memory_restore within "
             f"{TRASH_KEEP_DAYS} days; after that it is deleted.")
 
