@@ -1,0 +1,3 @@
+#!/bin/sh
+# easy-memory switch|report|redact ... (the plugin puts this folder on the Bash PATH)
+exec python3 "$(dirname "$0")/../easy_memory.py" "$@"

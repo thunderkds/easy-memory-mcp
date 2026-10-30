@@ -1,0 +1,5 @@
+{
+  "mcpServers": {
+    "easy-memory": {"command": "python3", "args": ["${CLAUDE_PLUGIN_ROOT}/easy_memory.py", "serve"]}
+  }
+}

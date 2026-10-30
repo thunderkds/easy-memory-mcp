@@ -1,0 +1,7 @@
+{
+  "name": "easy-memory",
+  "version": "0.2.0",
+  "description": "Per-repo session notes for Claude Code: saves each answer, adds a short index of matching notes to the next prompt, and offers memory_search / memory_read over MCP. Notes stay in ~/.easy-memory/.",
+  "author": {"name": "thunderkds"},
+  "repository": "https://github.com/thunderkds/easy-memory-mcp"
+}

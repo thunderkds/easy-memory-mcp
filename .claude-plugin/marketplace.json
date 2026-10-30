@@ -1,0 +1,14 @@
+{
+  "name": "easy-memory",
+  "description": "easy-memory: per-repo session notes for Claude Code.",
+  "owner": {
+    "name": "thunderkds"
+  },
+  "plugins": [
+    {
+      "name": "easy-memory",
+      "source": "./plugin",
+      "description": "Per-repo session notes for Claude Code: saves each answer, adds a short index of matching notes to the next prompt."
+    }
+  ]
+}
