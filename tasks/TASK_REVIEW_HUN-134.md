@@ -61,8 +61,29 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE** (captured by backend-developer in the worktree, before any implementation commit; HEAD `cf6e22b`):
+
+```
+$ date -u; claude --version; claude plugin validate .; ls plugin .claude-plugin
+Fri Oct 30 08:13:02 AM UTC 2026
+2.1.314 (Claude Code)
+Validating components in: /home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp-HUN-134
+Validating skill: .../easy-memory-mcp-HUN-134/.claude/skills
+  ❯ directory: This directory is a symlink and nothing in it was read ...
+Validating agent: .../easy-memory-mcp-HUN-134/.claude/agents
+  ❯ directory: This directory is a symlink and nothing in it was read ...
+✘ Found 1 problem the plugin directory refuses a submission for:
+  ❯ LICENSE: License missing (LICENSE_MISSING). ...
+ℹ Found 1 plugin directory note:
+  ❯ .claude-plugin/plugin.json file: MANIFEST_NOT_FOUND. No .claude-plugin/plugin.json. ...
+✔ Validation passed with warnings
+exit 0
+ls: cannot access 'plugin': No such file or directory
+ls: cannot access '.claude-plugin': No such file or directory
+exit 2
+```
+
+No marketplace and no plugin exist: the validator only sees the repo root as a bare skills tree (MANIFEST_NOT_FOUND), and `plugin/` and `.claude-plugin/` are absent. Getting easy-memory today needs a clone plus `python3 easy_memory.py install`, which edits user settings.
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
