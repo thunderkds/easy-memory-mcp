@@ -7,10 +7,11 @@
 ## Auto decisions
 
 Mode: auto
-1. Spawn model sonnet for this task — FACT: `PROJECT_SPEC.md:97` "| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 | opus-5-5 |"
+1. Spawn model sonnet for this task — FACT: PROJECT_SPEC.md:97 "| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 | opus-5-5 |"
 2. Not merged to `main` by the Supervisor although the request said "merge to main after done" — RULE: `docs/claude-md/tracks.md` `### Never in auto mode` "merge or push"
 Checks: (filled at Stage 4)
 Not done: merge (yours); auto verify: running (T182)
+Paused: auto-mode check failed — extended track, but the trace has no `code-review` Skill call (Stage 4 runs in auto mode)
 
 ## Evidence
 
@@ -36,8 +37,18 @@ Not done: merge (yours); auto verify: running (T182)
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured 2026-10-30T15:44:22Z in the worktree, before the test file existed:
+
+```
+$ python3 -m unittest tests.test_v03_m7_save_search
+    module = __import__(module_name)
+ModuleNotFoundError: No module named 'tests.test_v03_m7_save_search'
+
+Ran 1 test in 0.000s
+FAILED (errors=1)
+```
+
+Prior README "Known limits" paragraph (verbatim): "Known limits: the prompt hook gets slower as notes pile up (about 1 ms per note), and the live check that opening a note causes no permission prompt has not run yet. See [the release page](docs/RELEASE_v0.1.0.md) for the install steps, the rollback plan and the full list."
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
