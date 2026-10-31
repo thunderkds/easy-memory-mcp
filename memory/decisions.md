@@ -34,6 +34,12 @@
 **Lesson**: a ranking change that can hide notes must pass a holdout that was not used to pick it; the labelled pool in exp 06 is the reusable benchmark.
 **Files**: `easy_memory.py` (`score`, `_index_lines`), `experiments/05-df-cutoff/`, `experiments/06-hun140-recall/`, `tasks/TASK_GUIDE_HUN-140.md`
 
+### 2026-10-31 — Forget is recoverable: trash + memory_restore (HUN-135 merged)
+**Decision**: `memory_forget` moves the note to `<store>/trash/` (0700; file 0600; mtime = move time); `memory_restore` moves it back and never overwrites; trash files older than 30 days (`TRASH_KEEP_DAYS`) are purged at the next forget; `redact` (dry run and `--apply`) covers `trash/`; forget, restore and redact refuse a symlinked `trash/`.
+**Why**: verifier V-R5 (forget was irreversible); user chose trash + restore, 30 days. Debate re-run 2026-10-31 with 3 Advocates: redact must cover trash (AC 7, "secret must not survive a forget").
+**Open (Low)**: a secret stays in clear text in the trash up to 30 days after a forget; `redact --apply` removes it at once.
+**Files**: `easy_memory.py` (`_tool_forget`, `_tool_restore`, `redact_command`), `tests/test_v03_m6_trash.py`, `README.md`
+
 ## Infrastructure
 
 ### 2026-10-28 — easy-verifier registered as the scoring MCP (dev tool)

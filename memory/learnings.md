@@ -23,6 +23,15 @@
 
 ## Gotchas
 
+### 2026-10-31 — The merge gate blocks every merge while any task is In Progress
+`pre_bash_block_unsafe_merge.py` refuses any command with `merge` in it (even `git merge-base`, `git merge-tree`) while any board row is In Progress or Ready for Review — not only the task being merged. Tasks held by a merge gate (Gate 2a: HUN-137/138/139) therefore block unrelated merges. Fix used: park verified-but-held tasks in Todo with a Linear comment naming the merge condition (`report` shows ≥10 sessions per group; then rebase, re-run suite + verify, merge). A kit task should scope the gate to the merged task.
+
+### 2026-10-31 — security-review and verify skills cannot target a task worktree
+In this repo layout (one worktree per task) the built-in `security-review` diffs the main checkout (`main` vs `origin/main`), and sub-agents have no `verify` skill. Every reviewer redid the review by hand on `git diff main...HEAD` in the worktree, and verify ran as a real run against a throwaway `EASY_MEMORY_HOME`. Write the active-task state file first so the trace is tagged.
+
+### 2026-10-31 — Stop hook re-blocks on expired untagged evidence (kit 04b019a)
+`stop_auto_mode_check.py` counts untagged `Skill` records only from the last 6 h, and checks a task whose worktree review file says `Mode: auto` even when the board row is Todo. Result: every stop of a normal session was blocked for hours. Kit task T186 ("paused means paused") is set up in `../wt-t186`; run it from a kit session, then update the kit here.
+
 - 2026-10-29 — easy-ui-mcp (Docker container, `network_mode: host`, http://localhost:8765): `POST /api/run-test` only navigates and screenshots; the rule checks (`ui_check`, `ui_assert`, `ui_wait_for`) are MCP tools, callable without registering via JSON-RPC to `/mcp` (initialize → notifications/initialized → tools/call, keep the `mcp-session-id` header). There is no viewport tool: check widths through same-origin iframes in a harness page. In the session JSON a false `ui_check` is `ok:false`. Ports 8766 and 8767 are taken by other apps on this machine: serve pages elsewhere (18767) and `ui_assert` the page title first. `document.fonts.check()` returns true when no matching font face is declared, so it cannot prove a web font loaded.
 - 2026-10-29 — The merge hook (`pre_bash_block_unsafe_merge.py`) checks the whole Bash command before any of it runs: a board status push and `git merge` in one command is blocked. Push the status in one call, merge in the next. Headless Chrome `--hide-scrollbars` hides scrollbar styling problems; drive the page over CDP with Node 26 (global `WebSocket`, `google-chrome --remote-debugging-port`) for real clicks, Tab and viewport checks.
 - 2026-10-29 — The built-in `security-review` skill fails here (`git diff origin/HEAD...`: the remote is `github`, not `origin`). Gate 0 used an independent read-only `general-purpose` agent given the diff and the PRD section instead. `/verify` is user-only (disable-model-invocation).

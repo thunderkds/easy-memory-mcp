@@ -37,3 +37,6 @@
 - [security-review needs `origin`; board has no Ready-for-Review](learnings.md#gotchas) — use an independent agent; mark Done before merge
 - [Hook-prompt tests and the auto switch](learnings.md#gotchas) — fixed by HUN-84; new prompt-hook test classes must set `switch = "on"`
 - [Ranking stays as main; HUN-140 shelved](decisions.md#architecture) — rare-word gate hid ~1/3 of relevant notes (exp 06 holdout); df cutoff (exp 05) also failed
+- [Forget is recoverable (trash + restore)](decisions.md#architecture) — HUN-135 merged 2026-10-31; 30-day trash; redact covers trash; symlinked trash refused
+- [Merge gate blocks all merges while any task In Progress](learnings.md#gotchas) — park Gate-2a-held tasks in Todo with the merge condition
+- [Review skills can't target worktrees; stop hook 6h window](learnings.md#gotchas) — review/verify by hand in the worktree; kit fix T186 pending
