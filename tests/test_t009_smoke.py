@@ -370,7 +370,7 @@ class FullCycleTest(Sandbox):
             {"method": "tools/call", "params": {"name": "memory_search", "arguments": {"query": PROMPT}}},
         ], nosocket=nosocket)
         self.assertEqual(sorted(t["name"] for t in replies[2]["result"]["tools"]),
-                         ["memory_forget", "memory_list", "memory_read", "memory_search"])
+                         ["memory_forget", "memory_list", "memory_read", "memory_restore", "memory_search"])
         read = replies[3]["result"]
         self.assertFalse(read["isError"], read)
         text = read["content"][0]["text"]

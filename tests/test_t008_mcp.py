@@ -29,7 +29,7 @@ from tests import fake_claude  # noqa: E402
 
 MODULE = os.path.abspath(easy_memory.__file__)
 PROTOCOL = "2025-06-18"
-TOOLS = ["memory_forget", "memory_list", "memory_read", "memory_search"]
+TOOLS = ["memory_forget", "memory_list", "memory_read", "memory_restore", "memory_search"]
 ALLOW_RULE = "mcp__easy-memory"
 
 
@@ -192,7 +192,7 @@ class ProtocolTest(Base):  # AC1
         self.assertTrue(client.no_more_output())
         self.assertEqual(client.request("ping")["result"], {})
 
-    def test_tools_list_has_four_tools_with_schemas(self):
+    def test_tools_list_has_five_tools_with_schemas(self):
         client = self.initialized()
         tools = client.request("tools/list")["result"]["tools"]
         self.assertEqual(sorted(tool["name"] for tool in tools), TOOLS)
@@ -203,6 +203,7 @@ class ProtocolTest(Base):  # AC1
         self.assertEqual(by_name["memory_search"]["inputSchema"]["required"], ["query"])
         self.assertEqual(by_name["memory_read"]["inputSchema"]["required"], ["id"])
         self.assertEqual(by_name["memory_forget"]["inputSchema"]["required"], ["id"])
+        self.assertEqual(by_name["memory_restore"]["inputSchema"]["required"], ["id"])
         self.assertNotIn("required", by_name["memory_list"]["inputSchema"])
 
     def test_unknown_method_is_a_jsonrpc_error(self):
