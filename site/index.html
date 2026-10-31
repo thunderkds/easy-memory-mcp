@@ -195,6 +195,14 @@
   footer { padding-top:24px; border-top:1px solid var(--line); font-size:13.5px; color:var(--text-muted); }
   footer p { margin:0; }
 
+  /* < 1100: five family links no longer fit the header row, so they move to the sidebar (the drawer below 1024) */
+  @media (max-width:1099px) {
+    .site-header .family { display:none; }
+    .js .nav-toggle { margin-left:auto; }
+    .drawer-family { display:flex; flex-direction:column; align-items:stretch; gap:2px; margin:0 0 28px; padding-bottom:20px; border-bottom:1px solid var(--line-subtle); }
+    .drawer-family .btn { margin-top:8px; justify-content:center; }
+  }
+
   /* 720-1023: sidebar becomes a drawer behind Menu, main padding 32px */
   @media (max-width:1023px) {
     .shell { grid-template-columns:minmax(0,1fr); }
@@ -217,11 +225,7 @@
   /* < 720: family nav moves into the drawer, one-column grids, 44px targets */
   @media (max-width:719px) {
     .header-inner { padding:0 var(--s-4); }
-    .site-header .family { display:none; }
-    .js .nav-toggle { margin-left:auto; }
-    .drawer-family { display:flex; flex-direction:column; align-items:stretch; gap:2px; margin:0 0 28px; padding-bottom:20px; border-bottom:1px solid var(--line-subtle); }
     .drawer-family .fam, .sidebar ul a { display:flex; align-items:center; min-height:44px; }
-    .drawer-family .btn { margin-top:8px; justify-content:center; }
     .btn, .site-header .btn, .codebox .btn { min-height:44px; }
     main { padding:var(--s-6) var(--s-4); gap:var(--s-8); }
     h1 { font-size:32px; }
@@ -257,8 +261,10 @@
   <span class="ver">memory kit · v0.1.0 prototype</span>
   <nav class="family" aria-label="Easy Kit family">
     <a class="fam" href="https://personal-agentic-claude.vercel.app/">Easy Kit</a>
-    <a class="fam" href="https://easy-memory.vercel.app/" aria-current="page">Easy Memory</a>
     <a class="fam" href="https://easy-verifier.vercel.app/">Easy Verifier</a>
+    <a class="fam" href="https://easy-ui-mcp.vercel.app/">Easy UI</a>
+    <a class="fam" href="https://easy-memory.vercel.app/" aria-current="page">Easy Memory</a>
+    <a class="fam" href="https://easy-personal.vercel.app/">Easy Personal</a>
     <a class="btn btn-secondary" href="https://github.com/thunderkds/easy-memory-mcp">GitHub</a>
   </nav>
   <button class="btn btn-secondary nav-toggle" type="button" aria-expanded="false" aria-controls="sidebar">Menu</button>
@@ -270,8 +276,10 @@
 <aside class="sidebar" id="sidebar">
   <nav class="family drawer-family" aria-label="Easy Kit family sites">
     <a class="fam" href="https://personal-agentic-claude.vercel.app/">Easy Kit</a>
-    <a class="fam" href="https://easy-memory.vercel.app/" aria-current="page">Easy Memory</a>
     <a class="fam" href="https://easy-verifier.vercel.app/">Easy Verifier</a>
+    <a class="fam" href="https://easy-ui-mcp.vercel.app/">Easy UI</a>
+    <a class="fam" href="https://easy-memory.vercel.app/" aria-current="page">Easy Memory</a>
+    <a class="fam" href="https://easy-personal.vercel.app/">Easy Personal</a>
     <a class="btn btn-secondary" href="https://github.com/thunderkds/easy-memory-mcp">GitHub</a>
   </nav>
   <nav id="site-nav" aria-label="Sections">

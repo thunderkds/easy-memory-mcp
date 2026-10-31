@@ -33,8 +33,10 @@ FONT_LINKS = (
 )
 FAMILY = [
     ("Easy Kit", "https://personal-agentic-claude.vercel.app/"),
-    ("Easy Memory", "https://easy-memory.vercel.app/"),
     ("Easy Verifier", "https://easy-verifier.vercel.app/"),
+    ("Easy UI", "https://easy-ui-mcp.vercel.app/"),
+    ("Easy Memory", "https://easy-memory.vercel.app/"),
+    ("Easy Personal", "https://easy-personal.vercel.app/"),
 ]
 GITHUB = "https://github.com/thunderkds/easy-memory-mcp"
 # sha256 of the two theme.css blocks as the spec rev 25 export gives them (tokens `:root`, then component CSS).
@@ -261,9 +263,21 @@ class SitePageTest(unittest.TestCase):
 
     def test_drawer_repeats_the_family_nav(self):
         drawer = re.search(r'<nav class="family drawer-family"[^>]*>(.*?)</nav>', self.html, re.S).group(1)
-        for name, url in FAMILY:
-            self.assertIn('href="%s"' % url, drawer)
+        links = re.findall(r'<a class="(fam|btn btn-secondary)" href="([^"]+)"([^>]*)>([^<]+)</a>', drawer)
+        self.assertEqual([(l[3], l[1]) for l in links], FAMILY + [("GitHub", GITHUB)])
+        current = [l[3] for l in links if 'aria-current="page"' in l[2]]
+        self.assertEqual(current, ["Easy Memory"])
         self.assertEqual(drawer.count('aria-current="page"'), 1)
+
+    def test_five_link_header_family_moves_to_sidebar_below_1100(self):
+        # Five family links + brand + version pill + GitHub need ~1083px; below 1100 the header copy hides and the
+        # sidebar/drawer copy shows instead, so the links never overlap or clip the header.
+        block = re.search(r"@media \(max-width:1099px\) \{(.*?)\n  \}", self.local_style, re.S)
+        self.assertIsNotNone(block, "no (max-width:1099px) block")
+        rules = dict(_rules(block.group(1)))
+        self.assertIn("display:none", rules[".site-header .family"])
+        self.assertIn("display:flex", rules[".drawer-family"])
+        self.assertIn("flex-direction:column", rules[".drawer-family"])
 
     def test_sidebar_groups_and_items(self):
         self.assertEqual(self.scan.by_class["group-label"], ["// overview", "// guide", "// reference"])
