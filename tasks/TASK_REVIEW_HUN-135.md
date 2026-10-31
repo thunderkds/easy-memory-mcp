@@ -14,20 +14,35 @@ Checks: (filled at Stage 4)
 Not done: merge (yours); auto verify: running (T182)
 Paused: auto-mode check failed — extended track, but the trace has no `code-review` Skill call (Stage 4 runs in auto mode); Risk High, but the trace has no `security-review` Skill call
 
+## Code review (Stage 4)
+
+`lane: C2, 7 files, 752 lines, EXCEEDS (lines 752 > 500); unpredicted: tasks/TASK_GUIDE_HUN-135.md, tests/test_t008_mcp.py, tests/test_t009_smoke.py`. Warn-only: 430 of the 752 lines are the new test file and 89 are this review file; the code diff is ~150 lines in `easy_memory.py` (+ byte-identical `plugin/easy_memory.py`, `cmp` clean). The unpredicted test edits are required (tool list now has 5 tools); the guide edit is the Questions Log line. Entry point `serve` → `_mcp_call_tool` → `_tool_forget` / `_tool_restore`: found (`MCP_HANDLERS`, easy_memory.py:1594). Reviewed by hand in this worktree on `git diff main...HEAD` with the `code-review` skill's rules (the skill has no worktree argument). Startup-reads check of the implementing agent: not done, its final report was not available to this reviewer. Fresh review at `865aa61`; the earlier review's fix `c946f87` (skip purge when `os.utime` fails) was re-checked and holds.
+
+- P0: none.
+- P1: none. All 9 Acceptance Criteria are met (AC1–AC8 by tests in `tests/test_v03_m6_trash.py`, AC9 by the README diff).
+- P2 (confidence 100, verified by a probe): `_tool_restore` (easy_memory.py:1581) does not refuse a `trash/` folder that is a symlink, but `_tool_forget` (:1561) and `redact_command` do. `_note_path(..., "trash")` resolves the parent with `realpath`, so the parent check passes through the link. Scenario: `trash -> /elsewhere`, a file `/elsewhere/x-1.json`; `memory_restore {"id": "x-1"}` returns `Restored note x-1.` and the file is moved out of `/elsewhere` into `notes/`. Needs write access to the user's own 0700 store, so not a vulnerability (security review agrees), but the three paths disagree and no test covers restore here. Action: add the same `is_symlink()` refusal to `_tool_restore` and a test; owner may waive.
+- P3 (confidence 75): the `c946f87` fix only defers the risk it addresses. If `os.utime` fails (:1572), the trashed note keeps its save time; the purge is skipped now, but the next `memory_forget` whose `utime` succeeds deletes that note at once if it was saved more than 30 days ago. Needs `utime` to fail on one file in the user's own folder and not on the next, so very unlikely. Action: none required; optionally purge by a time recorded elsewhere, or log it in the forget reply.
+- P3 (confidence 75): in `_redact_note`, if `os.utime(path, ns=...)` (:1748) fails after `_atomic_write`, the note is rewritten (secret gone) but reported `failed`, and its trash time becomes "now", which extends retention. Harmless direction (secret is removed, note kept longer). Action: none required.
+- Residual L1 from the security review (secret stays in `trash/` for at least 30 days after a forget) is by design and stated in the forget reply and README; not repeated as a finding.
+
+Checked, no issue: id validation shared with `_note_path` (no traversal into or out of `trash/`); `_move_note` link+unlink never overwrites and leaves one copy on failure; forget sets mtime to the move time and purges only regular `.json` files older than `TRASH_KEEP_DAYS`; purge errors are logged and forget still succeeds; search, list, read, `read_notes` and the prompt hook read only `notes/` (easy_memory.py:153, :685, :1328); nothing else sorts by note file mtime, so a restored note's new mtime changes nothing; old clients that never call `memory_restore` keep working; no hook path changed (NFR-004).
+
+Actions: Supervisor decides on the P2 (fix in a follow-up commit on this branch, or waive). P3s are suggestions only. No code was changed by this review.
+
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `tests/test_v03_m6_trash.py` (new, 31 tests): AC1 `test_forget_then_restore_gives_back_the_same_bytes`; AC2 `test_forget_of_an_unknown_id_is_an_error_and_moves_nothing`; AC3 `test_forgotten_note_is_gone_from_list_search_read_and_the_index`; AC4 `test_restore_of_an_id_not_in_the_trash_is_an_error`, `test_restore_never_overwrites_a_note_with_the_same_id`; AC5 `test_trash_older_than_30_days_is_deleted_at_the_next_forget`; AC6 `test_memory_restore_is_listed_with_the_schema_of_forget`; AC7 `RedactTrashTest` (7 tests); AC8 `test_trash_is_0700_and_a_trashed_file_0600`, `test_uninstall_purge_removes_the_trash`; AC9 README diff (docs, no test). `Ran 31 tests in 2.710s` `OK` (reviewer, 2026-10-31) |
+| Verification command run | ☑ pass | `python3 -m unittest tests.test_v03_m6_trash && python3 -m unittest discover -s tests` at `865aa61` → `Ran 31 tests in 2.710s` `OK`; then `Ran 465 tests in 45.663s` `OK (skipped=3)`, exit 0 |
+| Negative cases hold | ☑ pass | unknown id → `note not found: <id>`, nothing moved; second forget → not found; forget never overwrites a same-id trash file; restore of a live or unknown id → error; restore never overwrites a note; bad ids and a symlinked trash file refused; symlinked `trash/` refused by forget and redact (not by restore, see P2); failed `utime` skips the purge; purge error logged, forget succeeds |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | reviewed the `easy_memory.py` diff (`TRASH_KEEP_DAYS`, `MCP_TOOLS`, `_note_path`, `_move_note`, `_purge_trash`, `_tool_forget`, `_tool_restore`, `MCP_HANDLERS`, `_redact_note`, `redact_command`), `cmp` with `plugin/easy_memory.py`, their callers and the readers of `notes/` (`read_notes`, `_index_lines`, `_tool_search`/`_tool_list`/`_tool_read`, `uninstall --purge`), README, and the test diffs; nothing outside that set |
+| Full smoke suite still green (no regression) | ☑ pass | `Ran 465 tests in 45.663s` `OK (skipped=3)` (434 at `cb876eb` + 31 new); `tests/test_t008_mcp.py` and `tests/test_t009_smoke.py` changed only to expect `memory_restore` in the tool list; `tests/test_t010_redact.py` unchanged |
+| **Companion score (easy-verifier)** | ☑ N/A | not run |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ N/A | no UI |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ N/A | no UI |
+| **UI: Responsiveness at target viewports** | ☑ N/A | no UI |
 
 ---
 
