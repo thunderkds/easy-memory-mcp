@@ -9,7 +9,7 @@
 Mode: auto
 1. Spawn model sonnet for this task — FACT: PROJECT_SPEC.md:97 "| claude | `claude` | haiku-5-5 | sonnet-5-5 | sonnet-5-5 | opus-5-5 |"
 2. Not merged to `main` by the Supervisor although the request said "merge to main after done" — RULE: `docs/claude-md/tracks.md` `### Never in auto mode` "merge or push"
-3. `redact` (dry run and `--apply`) covers `trash/` — DEBATED: rewrite trash like notes (Advocate 1: rewrite trash like notes; Advocate 2: leave trash untouched; Advocate 3: list trash in dry run, apply to notes only) ⚠ decided for you — please review
+3. `redact` (dry run and `--apply`) covers `trash/` — DEBATED: rewrite trash like notes (Advocate 1: rewrite trash like notes; Advocate 2: leave trash untouched; Advocate 3: list trash in dry run, apply to notes only); re-run 2026-10-31 with 3 Advocate agents: self-ratings high / low / low, and Advocates 2 and 3 conceded because `tasks/TASK_GUIDE_HUN-135.md:73` "| 7 | `redact` (dry run and `--apply`) covers `trash/` | secret must not survive a forget |" ⚠ decided for you — please review
 Checks: (filled at Stage 4)
 Not done: merge (yours); auto verify: running (T182)
 Paused: auto-mode check failed — extended track, but the trace has no `code-review` Skill call (Stage 4 runs in auto mode); Risk High, but the trace has no `security-review` Skill call
