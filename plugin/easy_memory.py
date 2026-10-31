@@ -1580,6 +1580,8 @@ def _tool_forget(repo, args):
 
 def _tool_restore(repo, args):
     path = _note_path(repo, args.get("id"), "trash")
+    if path.parent.is_symlink():
+        raise _ToolError("cannot move note: the trash folder is a symlink")
     notes = path.parent.parent / "notes"
     try:
         _private_dir(notes)

@@ -80,6 +80,27 @@ trash folder mode: 700
 
 **DELTA**: A forgotten note now sits in `trash/` for 30 days and `memory_restore <id>` brings it back; before, `memory_forget` deleted the file for good.
 
+**BEFORE (restore symlink fix, 2026-10-31)**: captured 2026-10-31T16:31:00Z on branch `v03-m6-trash` at `21ecdee`, before the fix commit. The new test `test_restore_refuses_a_trash_folder_that_is_a_symlink` (`trash -> elsewhere`, file `elsewhere/x-1.json`, `memory_restore {"id":"x-1"}`) run against the unchanged `easy_memory.py`:
+
+```
+$ python3 -m unittest tests.test_v03_m6_trash.ForgetRestoreTest.test_restore_refuses_a_trash_folder_that_is_a_symlink
+F
+======================================================================
+FAIL: test_restore_refuses_a_trash_folder_that_is_a_symlink (tests.test_v03_m6_trash.ForgetRestoreTest.test_restore_refuses_a_trash_folder_that_is_a_symlink)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "tests/test_v03_m6_trash.py", line 198, in test_restore_refuses_a_trash_folder_that_is_a_symlink
+    self.assertTrue(is_error, text)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+AssertionError: False is not true : Restored note x-1.
+
+Ran 1 test in 0.071s
+
+FAILED (failures=1)
+```
+
+The restore succeeded through the symlink: the file left `elsewhere/` and went into `notes/`.
+
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
 implementing agent alone]
 

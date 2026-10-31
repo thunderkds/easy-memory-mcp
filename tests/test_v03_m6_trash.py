@@ -187,6 +187,20 @@ class ForgetRestoreTest(TrashBase):
         self.assertEqual(list(elsewhere.iterdir()), [])
         self.assertTrue((self.notes_dir() / f"{note_id}.json").exists())
 
+    def test_restore_refuses_a_trash_folder_that_is_a_symlink(self):
+        self.save("a", "answer " * 40)  # make the store exist
+        elsewhere = self.tmp / "elsewhere"
+        elsewhere.mkdir()
+        outside = elsewhere / "x-1.json"
+        outside.write_text("OUTSIDE", encoding="utf-8")
+        self.trash_dir().symlink_to(elsewhere)
+        text, is_error = self.initialized().text("memory_restore", {"id": "x-1"})
+        self.assertTrue(is_error, text)
+        self.assertIn("trash folder is a symlink", text)
+        self.assertTrue(outside.exists())
+        self.assertEqual(outside.read_text(encoding="utf-8"), "OUTSIDE")
+        self.assertFalse((self.notes_dir() / "x-1.json").exists())
+
     def test_forget_in_one_repo_leaves_another_repos_trash_alone(self):
         other = self.make_repo("other")
         theirs = self.save("theirs", "their answer " * 30, repo=other)
