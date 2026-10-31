@@ -20,7 +20,7 @@ Paused: auto-mode check failed — extended track, but the trace has no `code-re
 
 - P0: none.
 - P1: none. All 9 Acceptance Criteria are met (AC1–AC8 by tests in `tests/test_v03_m6_trash.py`, AC9 by the README diff).
-- P2 (confidence 100, verified by a probe): `_tool_restore` (easy_memory.py:1581) does not refuse a `trash/` folder that is a symlink, but `_tool_forget` (:1561) and `redact_command` do. `_note_path(..., "trash")` resolves the parent with `realpath`, so the parent check passes through the link. Scenario: `trash -> /elsewhere`, a file `/elsewhere/x-1.json`; `memory_restore {"id": "x-1"}` returns `Restored note x-1.` and the file is moved out of `/elsewhere` into `notes/`. Needs write access to the user's own 0700 store, so not a vulnerability (security review agrees), but the three paths disagree and no test covers restore here. Action: add the same `is_symlink()` refusal to `_tool_restore` and a test; owner may waive.
+- P2 (confidence 100, verified by a probe): `_tool_restore` (easy_memory.py:1581) does not refuse a `trash/` folder that is a symlink, but `_tool_forget` (:1561) and `redact_command` do. `_note_path(..., "trash")` resolves the parent with `realpath`, so the parent check passes through the link. Scenario: `trash -> /elsewhere`, a file `/elsewhere/x-1.json`; `memory_restore {"id": "x-1"}` returns `Restored note x-1.` and the file is moved out of `/elsewhere` into `notes/`. Needs write access to the user's own 0700 store, so not a vulnerability (security review agrees), but the three paths disagree and no test covers restore here. Action: add the same `is_symlink()` refusal to `_tool_restore` and a test; owner may waive. **FIXED in `2eba89e`** (2026-10-31): `_tool_restore` now refuses a symlinked `trash/` with the same reply as forget (`cannot move note: the trash folder is a symlink`); test `test_restore_refuses_a_trash_folder_that_is_a_symlink`.
 - P3 (confidence 75): the `c946f87` fix only defers the risk it addresses. If `os.utime` fails (:1572), the trashed note keeps its save time; the purge is skipped now, but the next `memory_forget` whose `utime` succeeds deletes that note at once if it was saved more than 30 days ago. Needs `utime` to fail on one file in the user's own folder and not on the next, so very unlikely. Action: none required; optionally purge by a time recorded elsewhere, or log it in the forget reply.
 - P3 (confidence 75): in `_redact_note`, if `os.utime(path, ns=...)` (:1748) fails after `_atomic_write`, the note is rewritten (secret gone) but reported `failed`, and its trash time becomes "now", which extends retention. Harmless direction (secret is removed, note kept longer). Action: none required.
 - Residual L1 from the security review (secret stays in `trash/` for at least 30 days after a forget) is by design and stated in the forget reply and README; not repeated as a finding.
@@ -100,6 +100,21 @@ FAILED (failures=1)
 ```
 
 The restore succeeded through the symlink: the file left `elsewhere/` and went into `notes/`.
+
+**AFTER (restore symlink fix, 2026-10-31)**: captured 2026-10-31T16:31:17Z at the fix commit `2eba89e` (`easy_memory.py` and `plugin/easy_memory.py` byte-identical, `cmp` clean). `python3 -m unittest tests.test_v03_m6_trash && python3 -m unittest discover -s tests`:
+
+```
+$ python3 -m unittest tests.test_v03_m6_trash
+................................
+Ran 32 tests in 1.979s
+OK
+
+$ python3 -m unittest discover -s tests
+Ran 466 tests in 25.790s
+OK (skipped=3)
+```
+
+The new test passes: the restore reply is an error, the file in `elsewhere/` stays where it was, and `notes/` has no `x-1.json`.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
 implementing agent alone]
