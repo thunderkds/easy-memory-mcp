@@ -36,3 +36,4 @@
 - [Hook time grows with notes; report pollution](learnings.md#gotchas) — ~1 ms per note; `report` ignores `configured`; window start 2026-10-29T02:01:36Z
 - [security-review needs `origin`; board has no Ready-for-Review](learnings.md#gotchas) — use an independent agent; mark Done before merge
 - [Hook-prompt tests and the auto switch](learnings.md#gotchas) — fixed by HUN-84; new prompt-hook test classes must set `switch = "on"`
+- [Ranking stays as main; HUN-140 shelved](decisions.md#architecture) — rare-word gate hid ~1/3 of relevant notes (exp 06 holdout); df cutoff (exp 05) also failed

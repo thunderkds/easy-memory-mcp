@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-10-30
+**Last updated**: 2026-10-31
 
 > Board cache, pulled from the board by `python3 scripts/board_sync.py pull`. Do not edit it by hand:
 > the board is the source of truth, and the next pull overwrites this file.
@@ -9,14 +9,14 @@
 ## Board
 
 ### Todo
+- [ ] **HUN-140** — Ranking adjusts for note length and needs one rare prompt word | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-140.md`
+- [ ] **HUN-139** — A file missing on this branch is flagged NOT-ON-BRANCH, not DELETED | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-139.md`
+
+### In Progress
 - [ ] **HUN-135** — memory_forget moves a note to the trash; memory_restore brings it back | backend-developer | C2 | Risk: High | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-135.md`
 - [ ] **HUN-136** — A saved note is found by memory_search within 1 s of the Stop hook | qa-expert | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-136.md`
 - [ ] **HUN-137** — Event turns borrow the last typed prompt as the note question | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-137.md`
 - [ ] **HUN-138** — A note cites only files its answer names and its turn touched | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-138.md`
-- [ ] **HUN-139** — A file missing on this branch is flagged NOT-ON-BRANCH, not DELETED | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-139.md`
-- [ ] **HUN-140** — Ranking adjusts for note length and needs one rare prompt word | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-140.md`
-
-### In Progress
 
 ### Ready for Review
 

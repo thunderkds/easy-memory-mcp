@@ -28,6 +28,12 @@
 **Update (HUN-133, merge `45d3068`)**: from 720px up the Install stepper's step items use `grid-template-rows: subgrid` (span 4) so the three code boxes share one height, Copy buttons align at the bottom and captions align; below 720px steps stack and boxes size to content.
 **Files**: `site/theme.css` (the spec `:root` block byte-identical, plus its component CSS; the other two sites must copy the same block, repos cannot share one file), `site/index.html`, `tests/test_site_page.py` (24 tests). Spec issue found: `--text-dim` #6E7772 is 4.0:1 on `--bg`, under the spec's own 4.5:1 rule; the page does not use it for text.
 
+### 2026-10-31 — Index ranking stays as on main; HUN-140 rare-word gate shelved
+**Decision**: Do not merge HUN-140 (branch `v03-m5-ranking`) in any tried form; `main` keeps its ranking. HUN-140 moved back to Todo on Linear with the evidence comment.
+**Why**: Offline recall check `experiments/06-hun140-recall/` (branch `exp-06-hun140-recall` @ `1d1d50f`, not merged): two blind labellers (kappa 0.87 on relevant-or-not), 486 sampled lines plus a 329-line holdout. Bar fixed before scoring: keep ≥90% of main's relevant index lines, 95% lower bound ≥80%. As built (`RARE_SHARE` 0.10, `BM25_B` 0.75): 65% [50, 82]. Rework V3 (gate only when rare words carry < 0.6 of prompt idf weight, `aec0013`): 67% [51, 83], 0 of 26 holdout relevant lines kept; its first pass came from one line in a 20-prompt sample (selection on 9 variants). Length rule alone: 86% [74, 98] and fails V-R4 AC 1. `RARE_SHARE` 0.30 + `BM25_B` 0.25 breaks AC 1–3. Trade-off: V-R4 costs ~1 extra index line (~60 tokens) per prompt, which exp 03 found the agent ignores; a missed relevant note cost 21k → 113k tokens in exp 03. Also rejected in the same pass: claude-mem's document-frequency cutoff (exp 05, branch `exp-05-df-cutoff`: −29% wrong lines, 78% recall on real prompts, 52% on scripted).
+**Lesson**: a ranking change that can hide notes must pass a holdout that was not used to pick it; the labelled pool in exp 06 is the reusable benchmark.
+**Files**: `easy_memory.py` (`score`, `_index_lines`), `experiments/05-df-cutoff/`, `experiments/06-hun140-recall/`, `tasks/TASK_GUIDE_HUN-140.md`
+
 ## Infrastructure
 
 ### 2026-10-28 — easy-verifier registered as the scoring MCP (dev tool)

@@ -145,3 +145,7 @@ python3 -m unittest tests.test_v03_m6_trash && python3 -m unittest discover -s t
 - [ ] README updated where an AC says so
 - [ ] Not merged into `main` unless the Merge gate above is open
 - [ ] Report: `Status: done` with commits, or `Status: blocked` + `Question:`
+
+## Questions Log
+
+* 2026-10-30 DEBATE Should redact (dry run and --apply) also cover <store>/trash/ once memory_forget moves notes there? → Yes, redact scans and rewrites trash/ like notes/ (rule 1: necessary — tasks/TASK_GUIDE_HUN-135.md:73 "| 7 | `redact` (dry run and `--apply`) covers `trash/` | secret must not survive a forget |"). Advocate 1: yes, rewrite trash (medium); Advocate 2: leave trash alone (low); Advocate 3: list trash in dry run, apply notes only (low). Decided by the Supervisor in auto mode — please review. ⚠ decided for you — please review (Linear comment on HUN-135)
