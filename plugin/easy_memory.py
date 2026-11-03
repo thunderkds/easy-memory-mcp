@@ -1477,7 +1477,7 @@ def report_command(args):
     """report: one table per repo, sessions with memory on against off; returns 0.
 
     Plain report is read-only. With --json it prints the FR-015 object and also writes it to
-    <store>/report.json (returns 1 if the write fails). --release-lock removes report.lock
+    <store>/report.json (returns 1 if the write fails or --repo is not a folder). --release-lock removes report.lock
     when the run ends (the Stop hook's background run sets it).
     """
     if not args.json:
@@ -1485,6 +1485,9 @@ def report_command(args):
         return 0
     store = store_home() / repo_key(args.repo)
     try:
+        if not Path(args.repo).is_dir():  # a typo must not leave a store folder behind
+            print(f"easy-memory report: no such folder: {args.repo}", file=sys.stderr)
+            return 1
         text = json.dumps(_report_object(_report_numbers(args.repo)), indent=2) + "\n"
         _private_dir(store)
         _atomic_write(store, "report.json", text)
