@@ -33,6 +33,7 @@ MAX_CITED_FILE_BYTES = 5 * 1024 * 1024
 MAX_STDIN_CHARS = 10 * 1024 * 1024
 WEIGHTS_MAX_AGE_SECONDS = 24 * 60 * 60  # refresh a file older than this if HEAD moved
 WEIGHTS_LOCK_STALE_SECONDS = 10 * 60  # a build lock older than this is a dead build
+REPORT_MAX_AGE_SECONDS = 60 * 60  # the Stop hook refreshes report.json when it is older
 # A word found in fewer source files than this is dropped from the weights file.
 # 2 gave 3.6 MB on orderly (limit 2 MB, AC2); 3 gives 1.7 MB and passes parity (HUN-76).
 MIN_FILES_PER_WORD = 3
@@ -397,7 +398,11 @@ def hook_stop(args):
         data = json.loads(sys.stdin.read(MAX_STDIN_CHARS))
         if not isinstance(data, dict):
             raise ValueError("Stop input is not a JSON object")
-        save_stop_note(data)
+        note = save_stop_note(data)
+        if note:
+            cwd = data.get("cwd")
+            _refresh_report(cwd if isinstance(cwd, str) and cwd else os.getcwd(),
+                            Path(note).parent.parent)
     except Exception as err:
         log_hook_error("hook-stop", err)
     return 0
@@ -500,12 +505,12 @@ def load_weights(path):
     return data
 
 
-def _take_build_lock(store):
-    """Create <store>/weights.lock with O_EXCL; True if this caller now owns the build.
+def _take_build_lock(store, name="weights.lock"):
+    """Create <store>/<name> with O_EXCL; True if this caller now owns the build.
 
     A lock older than 10 minutes belongs to a dead build and is replaced.
     """
-    lock = store / "weights.lock"
+    lock = store / name
     for _ in range(2):
         try:
             os.close(os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600))
@@ -538,6 +543,29 @@ def _start_background_build(repo):
             raise
     except OSError as err:
         log_hook_error("ensure-weights", err)
+
+
+def _refresh_report(repo, store):
+    """Start a detached report --json for the repo (its store is the folder store) when
+    report.json is missing or over an hour old and report.lock is free. Never waits for it.
+    A future mtime counts as fresh. The check is one stat."""
+    try:
+        if time.time() - os.stat(store / "report.json").st_mtime <= REPORT_MAX_AGE_SECONDS:
+            return
+    except FileNotFoundError:
+        pass
+    _private_dir(store)
+    if not _take_build_lock(store, "report.lock"):
+        return
+    try:
+        subprocess.Popen(
+            [sys.executable, os.path.abspath(__file__), "report", "--json", "--repo",
+             os.path.realpath(repo), "--release-lock"],
+            start_new_session=True, stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    except BaseException:
+        (store / "report.lock").unlink(missing_ok=True)
+        raise
 
 
 def ensure_weights(repo):
@@ -1312,8 +1340,8 @@ def _store_size(notes_dir):
     return count, size
 
 
-def report_command(args):
-    """report: one table per repo, sessions with memory on against off. Read-only; returns 0.
+def _report_numbers(repo):
+    """The numbers of the report for the repo at path repo, as a dict. Read-only.
 
     Sessions come from <store>/prompts.log, grouped by the effective state at their first
     prompt (G4), and are joined by session id to Claude's logs under projects/. Headline
@@ -1323,8 +1351,8 @@ def report_command(args):
     are disjoint: a forced session is forced even with no Claude log, so "no Claude log"
     counts auto sessions only.
     """
-    root = _repo_root(args.repo)
-    store = store_home() / repo_key(args.repo)
+    root = _repo_root(repo)
+    store = store_home() / repo_key(repo)
     notes_dir = store / "notes"
     projects = claude_projects_dir()
     first, injected = _first_prompt_lines(store / "prompts.log")
@@ -1350,17 +1378,39 @@ def report_command(args):
         no_data = sum(1 for p in own.glob("*.jsonl") if p.stem not in first)
     except OSError:
         no_data = 0
-    print(f"easy-memory report for {root}")
-    if not first:
+    count, size = _store_size(notes_dir)
+    return {"root": root, "projects": projects, "logged": len(first), "no_data": no_data,
+            "no_log": no_log, "forced": forced, "groups": groups,
+            "opened_of_indexed": opened_of_indexed, "notes": count, "bytes": size}
+
+
+def _too_few(groups):
+    return any(len(groups[state]) < REPORT_MIN_SESSIONS for state in groups)
+
+
+def _on_vs_off(groups):
+    """Percent change of the median headline tokens, on against off; None if off is 0."""
+    on_med = statistics.median(r["tokens_all"] for r in groups["on"])
+    off_med = statistics.median(r["tokens_all"] for r in groups["off"])
+    return 100 * (on_med - off_med) / off_med if off_med else None
+
+
+def _report_text(found):
+    """Print the report table for the dict from _report_numbers."""
+    groups, opened_of_indexed = found["groups"], found["opened_of_indexed"]
+    no_log, forced = found["no_log"], found["forced"]
+    print(f"easy-memory report for {found['root']}")
+    if not found["logged"]:
         print("No prompt log for this repo yet: nothing to compare. Use Claude Code here with "
               "the hooks installed, then run report again.")
     elif not any(groups.values()) and no_log:
         print("No Claude session log found for the logged sessions "
-              f"(looked under {projects}): nothing to compare.")
-    print(f"sessions logged: {len(first)} | no data: {no_data} (log file, no prompts.log line) "
+              f"(looked under {found['projects']}): nothing to compare.")
+    print(f"sessions logged: {found['logged']} | no data: {found['no_data']} "
+          f"(log file, no prompts.log line) "
           f"| no Claude log: {no_log} (prompts.log line, no log file) "
           f"| forced switch: {forced} (left out of the comparison)")
-    few = any(len(groups[state]) < REPORT_MIN_SESSIONS for state in groups)
+    few = _too_few(groups)
     if any(groups.values()) or forced:
         print(f"{'state':<6}{'sessions':>9}{'tokens incl. cache (headline)':>32}"
               f"{'tokens in+out':>15}{'median turns':>14}  note opened")
@@ -1386,12 +1436,69 @@ def report_command(args):
             print(f"{TOO_FEW} (fewer than {REPORT_MIN_SESSIONS} sessions in a group): "
                   "do not read a result into these numbers yet.")
         else:
-            on_med = statistics.median(r["tokens_all"] for r in groups["on"])
-            off_med = statistics.median(r["tokens_all"] for r in groups["off"])
-            if off_med:
-                print(f"on vs off, median headline tokens: {100 * (on_med - off_med) / off_med:+.0f}%")
-    count, size = _store_size(notes_dir)
-    print(f"store: {count} notes, {size:,} bytes (notes folder of this repo)")
+            pct = _on_vs_off(groups)
+            if pct is not None:
+                print(f"on vs off, median headline tokens: {pct:+.0f}%")
+    print(f"store: {found['notes']} notes, {found['bytes']:,} bytes (notes folder of this repo)")
+
+
+def _whole_median(values):
+    """Median of values rounded as the text report shows it, as an int; None if no values."""
+    return int(f"{statistics.median(values):.0f}") if values else None
+
+
+def _report_object(found):
+    """The FR-015 object (format v 1) for the dict from _report_numbers. Numbers only."""
+    groups, opened_of_indexed = found["groups"], found["opened_of_indexed"]
+    few = _too_few(groups)
+    pct = None if few else _on_vs_off(groups)
+    return {
+        "v": 1,
+        "generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "min_sessions": REPORT_MIN_SESSIONS,
+        "sessions_logged": found["logged"],
+        "no_data": found["no_data"],
+        "no_claude_log": found["no_log"],
+        "forced": found["forced"],
+        "groups": {state: {
+            "sessions": len(rows),
+            "tokens_all_median": _whole_median([r["tokens_all"] for r in rows]),
+            "tokens_io_median": _whole_median([r["tokens_io"] for r in rows]),
+            "turns_median": _whole_median([r["turns"] for r in rows]),
+        } for state, rows in groups.items()},
+        "note_opened": {"opened": opened_of_indexed[1], "indexed": opened_of_indexed[0]},
+        "too_few": few,
+        "on_vs_off_pct": None if pct is None else int(f"{pct:.0f}"),
+        "store": {"notes": found["notes"], "bytes": found["bytes"]},
+    }
+
+
+def report_command(args):
+    """report: one table per repo, sessions with memory on against off; returns 0.
+
+    Plain report is read-only. With --json it prints the FR-015 object and also writes it to
+    <store>/report.json (returns 1 if the write fails). --release-lock removes report.lock
+    when the run ends (the Stop hook's background run sets it).
+    """
+    if not args.json:
+        _report_text(_report_numbers(args.repo))
+        return 0
+    store = store_home() / repo_key(args.repo)
+    try:
+        text = json.dumps(_report_object(_report_numbers(args.repo)), indent=2) + "\n"
+        _private_dir(store)
+        _atomic_write(store, "report.json", text)
+    except OSError as err:
+        log_hook_error("report", err)
+        print(f"easy-memory report: {err}", file=sys.stderr)
+        return 1
+    finally:
+        if args.release_lock:
+            try:
+                (store / "report.lock").unlink(missing_ok=True)
+            except OSError:
+                pass
+    print(text, end="")
     return 0
 
 
@@ -1835,6 +1942,8 @@ def main(argv=None):
             command_parser.add_argument("--purge", action="store_true")
         elif name == "report":
             command_parser.add_argument("--repo", default=os.getcwd())
+            command_parser.add_argument("--json", action="store_true")
+            command_parser.add_argument("--release-lock", action="store_true")
         elif name == "redact":
             command_parser.add_argument("--repo", default=os.getcwd())
             command_parser.add_argument("--apply", action="store_true")
