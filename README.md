@@ -48,7 +48,9 @@ Known limits: the prompt hook gets slower as notes pile up (about 1 ms per note)
 
 Format `v` 1, numbers and flags only (no prompt, answer, note text, session id or file path): `v`, `generated` (UTC time), `min_sessions` (10), `sessions_logged`, `no_data`, `no_claude_log`, `forced`, `groups.on` and `groups.off` (each: `sessions`, `tokens_all_median`, `tokens_io_median`, `turns_median`; medians are whole numbers as the text report shows them, null when the group is empty), `note_opened` (`opened`, `indexed`), `too_few` (true when a group has fewer than `min_sessions`), `on_vs_off_pct` (median headline tokens, on against off, in percent; null when `too_few` or the off median is 0), `store` (`notes`, `bytes`).
 
-Refresh: after the Stop hook saves a note, it starts a detached `report --json` for the repo when `report.json` is missing or older than 1 hour and `report.lock` is free. The hook does not wait for it. A `report.lock` older than 10 minutes belongs to a dead run and is replaced.
+Refresh: after the Stop hook saves a note, it starts a detached `report --json` for the repo when `report.json` is missing or older than 1 hour and `report.lock` is free. The hook does not wait for it. A `report.lock` older than 10 minutes belongs to a dead run and is replaced. `report --json --repo <path>` with a path that is not a folder writes nothing and returns 1.
+
+`no_data` counts Claude Code logs of the checkout that ran the refresh only. Worktrees share one store, so this number can change with the worktree that refreshed last. The groups, medians and `on_vs_off_pct` do not depend on it.
 
 ## Purpose
 

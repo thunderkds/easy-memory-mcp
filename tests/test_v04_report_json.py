@@ -3,6 +3,7 @@
 Every test uses a temp EASY_MEMORY_HOME and a temp CLAUDE_CONFIG_DIR (the t007 fixtures). The
 Stop hook tests mock subprocess.Popen, so no real process starts.
 """
+import io
 import json
 import os
 import re
@@ -10,6 +11,7 @@ import stat
 import sys
 import time
 import unittest
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 from unittest import mock
 
@@ -337,6 +339,20 @@ class ChildReleasesLockTest(JsonReportCase):
         self.assertEqual(code, 1)
         self.assertIn("disk full", err)
         self.assertFalse((self.store / "report.lock").exists())
+
+
+
+class MissingRepoTest(JsonReportCase):
+    def test_missing_repo_path_writes_nothing_and_returns_1(self):  # HUN-199
+        missing = self.tmp / "no-such-repo"
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch.object(sys, "stdin", io.StringIO("")), \
+                redirect_stdout(out), redirect_stderr(err):
+            code = easy_memory.main(["report", "--json", "--repo", str(missing)])
+        self.assertEqual(code, 1)
+        self.assertEqual(out.getvalue(), "")
+        self.assertIn("no such folder", err.getvalue())
+        self.assertFalse((self.home / easy_memory.repo_key(missing)).exists())
 
 
 if __name__ == "__main__":
