@@ -32,6 +32,7 @@ python3 easy_memory.py install --dry-run   # preview the change to your Claude C
 python3 easy_memory.py install             # add the Stop and prompt hooks, the MCP server and the allow rule
 python3 easy_memory.py switch [on|off|auto]  # per repo; auto is on for even days, off for odd days
 python3 easy_memory.py report              # sessions with memory on against off
+python3 easy_memory.py report --json       # the same numbers as one JSON object; also writes <store>/report.json
 python3 easy_memory.py redact [--apply]    # list saved notes (and trashed notes, shown as trash/<id>) that hold a secret (dry run); --apply rewrites them
 python3 easy_memory.py uninstall [--purge] # remove it; --purge also deletes ~/.easy-memory
 python3 -m unittest discover -s tests      # the test suite
@@ -40,6 +41,14 @@ python3 -m unittest discover -s tests      # the test suite
 What it does: after each answer of 200 characters or more, the Stop hook saves a note under `~/.easy-memory/`. On your next prompt, the prompt hook adds a short index of matching notes. The agent can open one with the MCP tool `memory_read` (the tools are `memory_search`, `memory_read`, `memory_list`, `memory_forget` and `memory_restore`). Notes are saved in clear text with mode 0600. `memory_forget` does not delete a note: it moves it to `~/.easy-memory/<repo-key>/trash/`, and `memory_restore <id>` brings it back for 30 days. A trashed note older than 30 days is deleted at the next `memory_forget`. Search, list, read and the prompt hook do not see trashed notes. `redact` also scans the trash, and `uninstall --purge` deletes it with the rest of the store.
 
 Known limits: the prompt hook gets slower as notes pile up (about 1 ms per note), and the live check that opening a note causes no permission prompt has not run yet. Saved notes are searchable at once: a scripted test (`tests/test_v03_m7_save_search.py`) runs the Stop hook and then `memory_search` through `serve`, and the note is found in about 0.07 s, with or without word weights, and on the plugin path too. A note that does not show a few seconds after a turn is therefore a cause outside easy-memory's write path. The likely causes: Claude Code fires the Stop hook late (a note appeared only during the next run, in one plugin-only record of 2026-10-30); the query shares too few words with the note, so its score is under the 0.12 floor; or the plugin hook defers because the old hooks are still in the user settings (run `easy_memory.py uninstall`, or `install --dry-run` to look). See [the release page](docs/RELEASE_v0.1.0.md) for the install steps, the rollback plan and the full list. [RUNBOOK.md](RUNBOOK.md) has the day-to-day checks.
+
+### report.json (for easy-personal)
+
+`report --json` prints the comparison of `report` as one JSON object and writes it to `~/.easy-memory/<repo-key>/report.json` (mode 0600, written by atomic rename). The text `report` output does not change. easy-personal reads this file; it does not call easy-memory.
+
+Format `v` 1, numbers and flags only (no prompt, answer, note text, session id or file path): `v`, `generated` (UTC time), `min_sessions` (10), `sessions_logged`, `no_data`, `no_claude_log`, `forced`, `groups.on` and `groups.off` (each: `sessions`, `tokens_all_median`, `tokens_io_median`, `turns_median`; medians are whole numbers as the text report shows them, null when the group is empty), `note_opened` (`opened`, `indexed`), `too_few` (true when a group has fewer than `min_sessions`), `on_vs_off_pct` (median headline tokens, on against off, in percent; null when `too_few` or the off median is 0), `store` (`notes`, `bytes`).
+
+Refresh: after the Stop hook saves a note, it starts a detached `report --json` for the repo when `report.json` is missing or older than 1 hour and `report.lock` is free. The hook does not wait for it. A `report.lock` older than 10 minutes belongs to a dead run and is replaced.
 
 ## Purpose
 

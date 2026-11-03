@@ -61,12 +61,45 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE**: captured 2026-11-03T08:01:50Z in the worktree on branch `v04-report-json` (no implementation commit yet), by backend-developer:
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+```
+$ python3 easy_memory.py report --json; echo "exit=$?"; ls -l ~/.easy-memory/c5aa0c6dafcc6672/report.json
+usage: easy_memory [-h]
+                   {hook-stop,hook-prompt,serve,report,install,uninstall,build-weights,switch,redact} ...
+easy_memory: error: unrecognized arguments: --json
+exit=2
+ls: cannot access '/home/hungnguyenhuu/.easy-memory/c5aa0c6dafcc6672/report.json': No such file or directory
+```
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+**AFTER**: captured 2026-11-03T08:11:36Z (backend-developer, same worktree, after the change), against this repo's own store:
+
+```
+$ python3 easy_memory.py report --json; echo "exit=$?"; ls -l ~/.easy-memory/c5aa0c6dafcc6672/report.json
+{
+  "v": 1,
+  "generated": "2026-11-03T08:11:36Z",
+  "min_sessions": 10,
+  "sessions_logged": 9,
+  "no_data": 0,
+  "no_claude_log": 1,
+  "forced": 0,
+  "groups": {
+    "on": {"sessions": 3, "tokens_all_median": 11518487, "tokens_io_median": 98007, "turns_median": 123},
+    "off": {"sessions": 5, "tokens_all_median": 16553412, "tokens_io_median": 100808, "turns_median": 169}
+  },
+  "note_opened": {"opened": 0, "indexed": 3},
+  "too_few": true,
+  "on_vs_off_pct": null,
+  "store": {"notes": 135, "bytes": 266483}
+}
+exit=0
+-rw------- 1 hungnguyenhuu hungnguyenhuu 601 Nov  3 15:11 /home/hungnguyenhuu/.easy-memory/c5aa0c6dafcc6672/report.json
+```
+
+(The printed object is shown with the group objects on one line each; the real output is indented one key per line.) Plain `report` output on the same store: `cmp` of `main`'s `easy_memory.py report` and this branch's `report` run back to back: identical.
+
+**DELTA**: a user (and easy-personal) can now read the memory-on versus memory-off comparison as a JSON file at `<store>/report.json`, refreshed at most hourly by the Stop hook, without running `report` or calling an MCP tool.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/HUN-197.jsonl`, never the
 implementing agent alone]

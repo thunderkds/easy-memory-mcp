@@ -68,6 +68,15 @@ class HookTestCase(unittest.TestCase):
         patcher = mock.patch.dict(os.environ, {"EASY_MEMORY_HOME": str(self.home)})
         patcher.start()
         self.addCleanup(patcher.stop)
+        real_popen = subprocess.Popen
+
+        def popen(argv, *args, **kwargs):  # the report refresh starts no real process (HUN-197)
+            if "--release-lock" in argv and "report" in argv:
+                return mock.MagicMock()
+            return real_popen(argv, *args, **kwargs)
+        popen_patcher = mock.patch.object(easy_memory.subprocess, "Popen", popen)
+        popen_patcher.start()
+        self.addCleanup(popen_patcher.stop)
 
     def make_repo(self, files=None):
         repo = self.tmp / "repo"

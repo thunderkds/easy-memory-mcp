@@ -44,6 +44,8 @@ class BuildSpy:
         self.calls = []
 
     def __call__(self, argv, *args, **kwargs):
+        if "--release-lock" in argv and "report" in argv:  # the Stop hook's report refresh
+            return mock.MagicMock()
         if "build-weights" not in argv:
             return REAL_POPEN(argv, *args, **kwargs)
         self.calls.append(list(argv))
