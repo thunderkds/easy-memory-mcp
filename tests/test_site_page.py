@@ -1,5 +1,6 @@
-"""HUN-125 / HUN-127 / HUN-130: static release page `site/index.html` in the Graphite Mint theme (spec rev 25, neon layer). Standard library only."""
+"""HUN-125 / HUN-127 / HUN-130 / HUN-204: static release page `site/index.html` in the Graphite Mint theme (spec rev 25, neon layer). Standard library only."""
 import hashlib
+import os
 import re
 import unittest
 from html.parser import HTMLParser
@@ -32,13 +33,21 @@ FONT_LINKS = (
     '<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">',
 )
 FAMILY = [
-    ("Easy Kit", "https://personal-agentic-claude.vercel.app/"),
+    ("Easy Kit", "https://easy-kits.vercel.app/"),
     ("Easy Verifier", "https://easy-verifier.vercel.app/"),
     ("Easy UI", "https://easy-ui-mcp.vercel.app/"),
     ("Easy Memory", "https://easy-memory.vercel.app/"),
     ("Easy Personal", "https://easy-personal.vercel.app/"),
 ]
 GITHUB = "https://github.com/thunderkds/easy-memory-mcp"
+# The Easy Kit link used to point here; spelled in two parts so this file does not hold the string it checks for.
+OLD_KIT_HOST = "personal-agentic-claude" + ".vercel.app"
+EASY_PERSONAL = "https://easy-personal.vercel.app/"
+SECTION_ORDER = ["problem", "context", "how", "run", "use", "dashboard", "rollback", "numbers", "limits"]
+# Visible words (the wide pictures, not the hidden tall copies) outside <details> on the page before HUN-204 (pictures carry the explanation: at most 150 more).
+VISIBLE_WORDS_BEFORE = 794
+# This repo's store on 3 Nov 2026 (counts only): notes saved per day for the 30 days 5 Oct .. 3 Nov.
+SPARK_NOTES = [0] * 24 + [63, 23, 41, 0, 3, 13]
 # sha256 of the two theme.css blocks as the spec rev 25 export gives them (tokens `:root`, then component CSS).
 SPEC_ROOT_SHA256 = "a7ba10aeab3bc94a5184eab59c5e2574df0a108d8b3d26890883619170e29d45"
 SPEC_COMPONENTS_SHA256 = "730b8e5a36ef56cf87fb2b02288241d93bee292a398b6f22442abf947e7a5e3a"
@@ -48,8 +57,10 @@ NEON_SELECTORS = {
     ".btn-primary", ".codebox .prompt", ".strip .num", ".step-no", ".card.is-highlight", ".bar > span",
     # page rules
     "html.no-glow", ".glyph", '.fam[aria-current="page"]::before', ".sidebar ul a.active", ".eyebrow",
-    ".card .exp.shipped", ".card.is-highlight .big", ".bar-val", ".fl-no", ".fl-main-line",
+    ".bar-val", ".fl-no", ".fl-main-line",
     ".st-mark", ".st-line", ".stepper > li",
+    # HUN-204: the memory lane's token bar, the soft chart bars, the sparkline (today's bar is the current one)
+    ".fl-bar-on", ".bar.is-soft > span", ".sp-bar", ".sp-bar.is-today",
 }
 # Soft mint is for ordinary links, hover and the focus ring only.
 ACCENT_SELECTORS = {"a", "a:hover", ":focus-visible", ".skip-link"}
@@ -111,7 +122,42 @@ class _Scan(HTMLParser):
         return [a for t, a in self.tags if t == tag and token in a.get("class", "").split()]
 
 
+def _plain_text(markup):
+    """Tags replaced by a space, whitespace collapsed: the text a reader sees, in order."""
+    text = " ".join(re.sub(r"<[^>]+>", " ", markup).split())
+    return re.sub(r"\s+([,.;:)])", r"\1", re.sub(r"\(\s+", "(", text))
+
+
+class _Words(HTMLParser):
+    """Counts the words in the body outside <details>, <style> and <script>. SVG text counts; the tall copy of a picture
+    is the same words again (shown only below 800 px), so it does not."""
+    def __init__(self):
+        super().__init__()
+        self.count, self._skip, self._body, self._tall = 0, 0, False, False
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "body":
+            self._body = True
+        if tag in ("details", "style", "script"):
+            self._skip += 1
+        if tag == "svg" and "flow-tall" in dict(attrs).get("class", "").split():
+            self._tall = True
+
+    def handle_endtag(self, tag):
+        if tag in ("details", "style", "script"):
+            self._skip -= 1
+        if tag == "svg":
+            self._tall = False
+
+    def handle_data(self, data):
+        if self._body and not self._skip and not self._tall:
+            self.count += len(data.split())
+
+
 class SitePageTest(unittest.TestCase):
+    def section(self, sid):
+        return re.search(r'<section id="%s">(.*?)</section>' % sid, self.html, re.S).group(1)
+
     @classmethod
     def setUpClass(cls):
         cls.html = PAGE.read_text(encoding="utf-8")
@@ -219,8 +265,10 @@ class SitePageTest(unittest.TestCase):
         self.assertIn("box-shadow:var(--glow-dot)", local[".st-mark"])
         self.assertIn("fill:var(--neon); text-shadow:var(--glow-text)", local[".fl-no"])
         self.assertIn("color:var(--neon); text-shadow:var(--glow-text)", local[".bar-val"])
-        self.assertIn("color:var(--neon); text-shadow:var(--glow-text)", local[".card.is-highlight .big"])
-        self.assertEqual(local[".card .exp.shipped"].strip(), "color:var(--neon);")
+        self.assertEqual(local[".fl-bar-on"].strip(), "fill:var(--neon);")
+        self.assertEqual(local[".bar.is-soft > span"].replace(" ", ""), "background:var(--neon-bar);box-shadow:none;")
+        self.assertEqual(local[".sp-bar"].strip(), "fill:var(--neon-bar);")
+        self.assertEqual(local[".sp-bar.is-today"].strip(), "fill:var(--neon);")
         self.assertIn("background: var(--neon)", theme[".btn-primary"])
         self.assertIn("box-shadow: var(--glow-box)", theme[".btn-primary"])
         self.assertIn("filter: brightness(1.08)", theme[".btn-primary:hover"])
@@ -284,14 +332,22 @@ class SitePageTest(unittest.TestCase):
         side = re.search(r'<nav id="site-nav".*?</nav>', self.html, re.S).group(0)
         items = re.findall(r'<a href="#([^"]+)">([^<]+)</a>', side)
         self.assertEqual(items, [
-            ("what", "What it is"), ("context", "Context"), ("how", "How it works"),
-            ("run", "Install"), ("use", "Use it"), ("rollback", "Remove it"),
-            ("numbers", "Measured"), ("limits", "Known limits"), ("notes", "Release notes"),
+            ("problem", "Problem and solution"), ("context", "Context"), ("how", "How it works"),
+            ("run", "Install"), ("use", "Use it"), ("dashboard", "See it in Easy Personal"),
+            ("rollback", "Remove it"), ("numbers", "Measured"), ("limits", "Known limits"),
+        ])
+        groups = re.findall(r'<p class="group-label"[^>]*>([^<]+)</p>\s*<ul[^>]*>(.*?)</ul>', side, re.S)
+        self.assertEqual([(g, re.findall(r'href="#([^"]+)"', ul)) for g, ul in groups], [
+            ("// overview", ["problem", "context", "how"]),
+            ("// guide", ["run", "use", "dashboard", "rollback"]),
+            ("// reference", ["numbers", "limits"]),
         ])
 
     def test_section_order_and_anchors(self):
         sections = re.findall(r'<section id="([^"]+)">', self.html)
-        self.assertEqual(sections, ["what", "context", "how", "run", "use", "rollback", "numbers", "limits", "notes"])
+        self.assertEqual(sections, SECTION_ORDER)
+        main = re.search(r"<main.*?</main>", self.html, re.S).group(0)
+        self.assertEqual(len(re.findall(r"<section\b", main)), len(SECTION_ORDER))  # scroll-spy reads main > section[id]
         self.assertIn('<body id="top">', self.html)
 
     def test_in_page_links_have_targets(self):
@@ -313,12 +369,12 @@ class SitePageTest(unittest.TestCase):
 
     def test_how_it_works_flow_is_an_accessible_svg(self):
         flows = [a for t, a in self.scan.tags if t == "svg" and "flow" in a.get("class", "").split()]
-        self.assertEqual(len(flows), 2)  # wide and tall layout of the same flow
+        self.assertEqual(len(flows), 6)  # three pictures (problem, flow, note), each in a wide and a tall layout
         for a in flows:
             self.assertEqual(a.get("role"), "img")
             self.assertTrue(len(a.get("aria-label", "")) > 80)
             self.assertNotIn("aria-hidden", a)
-        flow = re.search(r'<svg class="flow flow-wide".*?</svg>', self.html, re.S).group(0)
+        flow = re.search(r'<svg class="flow flow-wide".*?</svg>', self.section("how"), re.S).group(0)
         titles = re.findall(r'<text class="fl-title"[^>]*>([^<]+)</text>', flow)
         self.assertEqual(titles, ["Your answer", "Stop hook", "Note store", "Prompt hook", "Next prompt",
                                   "Word weights", "MCP server"])
@@ -326,13 +382,136 @@ class SitePageTest(unittest.TestCase):
         self.assertEqual(flow.count('class="fl-main-line"'), 5)
         self.assertEqual(flow.count('class="fl-line"'), 3)
 
-    def test_experiment_cards(self):
-        cards = self.scan.with_class("article", "card")
-        self.assertEqual(len(cards), 3)
-        self.assertEqual([("is-highlight" in c["class"].split()) for c in cards], [False, False, True])
-        self.assertEqual(self.scan.by_class["big"], ["−58%", "~−15%", "−29% / −27%"])
-        self.assertEqual(self.scan.by_class["exp"], ["exp 01", "exp 02", "exp 03 · shipped"])
-        self.assertEqual(self.scan.by_class["shipped"], ["exp 03 · shipped"])
+    # HUN-204 AC 1: the Easy Kit link
+    def test_easy_kit_link_points_to_easy_kits_and_the_old_host_is_gone(self):
+        self.assertEqual(self.html.count('<a class="fam" href="https://easy-kits.vercel.app/">Easy Kit</a>'), 2)  # header + drawer
+        self.assertNotIn(OLD_KIT_HOST, self.html)
+        root = SITE.parent
+        skip = {".git", ".screens", "__pycache__", "worktrees", "tasks"}  # tasks/ guides quote the old host to describe the change
+        found = []
+        for folder, dirs, files in os.walk(root):
+            dirs[:] = [d for d in dirs if d not in skip]
+            for name in files:
+                path = Path(folder) / name
+                try:
+                    text = path.read_text(encoding="utf-8")
+                except (UnicodeDecodeError, OSError):
+                    continue
+                if OLD_KIT_HOST in text:
+                    found.append(str(path.relative_to(root)))
+        self.assertEqual(found, [])
+
+    # HUN-204 AC 2: problem and solution
+    def test_problem_and_solution_two_lane_picture(self):
+        sec = self.section("problem")
+        self.assertIn("<h2>Problem and solution</h2>", sec)
+        svgs = re.findall(r"<svg ([^>]*)>(.*?)</svg>", sec, re.S)
+        self.assertEqual([("flow flow-wide" in a, "flow flow-tall" in a) for a, _ in svgs], [(True, False), (False, True)])
+        for attrs, body in svgs:
+            self.assertIn('role="img"', attrs)
+            label = re.search(r'aria-label="([^"]+)"', attrs).group(1)
+            self.assertIn("Without memory", label)
+            self.assertIn("With memory", label)
+            text = _plain_text(body)
+            self.assertIn("Without memory", text)
+            self.assertIn("With memory", text)
+            self.assertIn('class="fl-bar"', body)
+            self.assertIn('class="fl-bar-on"', body)
+            self.assertEqual(body.count('class="fl-main-line"'), 3)  # the memory lane is the neon one
+        self.assertEqual(re.findall(r"<p><strong>([^<]+)</strong>", sec), ["Without memory.", "With memory."])
+        self.assertEqual(re.findall(r'<li class="chip">([^<]+)</li>', sec),
+                         ["notes are data, not instructions", "a hook never blocks you", "nothing written in your repo"])
+        self.assertNotIn("What it is", self.html)
+
+    # HUN-204 AC 3: how a note is saved
+    def test_how_a_note_is_saved_figure(self):
+        sec = self.section("how")
+        self.assertEqual(sec.count("<h3>How a note is saved</h3>"), 1)
+        self.assertLess(sec.index('class="flow flow-wide"'), sec.index("How a note is saved"))  # under the existing flow
+        figure = sec[sec.index("How a note is saved"):]
+        svgs = re.findall(r"<svg ([^>]*)>(.*?)</svg>", figure, re.S)
+        self.assertEqual(len(svgs), 2)  # wide and tall layout
+        for attrs, body in svgs:
+            self.assertIn('role="img"', attrs)
+            label = re.search(r'aria-label="([^"]+)"', attrs).group(1)
+            text = _plain_text(body)
+            for word in ("question", "answer", "time", "cited files", "sha256", "CHANGED:", "DELETED:"):
+                self.assertIn(word, text, word)
+            for word in ("question", "answer", "time", "cited", "sha256", "CHANGED:", "DELETED:"):
+                self.assertIn(word, label, word)
+
+    # HUN-204 AC 4: token chart
+    def test_context_token_chart(self):
+        sec = self.section("context")
+        self.assertNotIn('class="cards"', sec)
+        self.assertEqual(self.scan.with_class("article", "card"), [])
+        chart = re.search(r'<div class="chart">(.*?)</div>\s*<details', sec, re.S).group(1)
+        bars = re.findall(r'<div class="(bar[^"]*)" role="img" aria-label="([^"]+)"><span style="width:([\d.]+)%"></span></div>', chart)
+        self.assertEqual([(c, w) for c, _, w in bars], [("bar is-ref", "100"), ("bar is-soft", "42"), ("bar is-soft", "85"),
+                                                       ("bar is-shipped", "71"), ("bar is-shipped", "73")])
+        labels = [l for _, l, _ in bars]
+        self.assertIn("100%", labels[0])
+        self.assertIn("without memory", labels[0].lower())
+        self.assertIn("42%", labels[1])
+        self.assertIn("about 85%", labels[2])
+        self.assertIn("71%", labels[3])
+        self.assertIn("73%", labels[4])
+        self.assertEqual(re.findall(r'<span class="bar-name">([^<]+)</span>', chart),
+                         ["Without memory", "exp 01", "exp 02", "exp 03 · repo A", "exp 03 · repo B"])
+        values = [_plain_text(v) for v in re.findall(r'<span class="bar-val[^"]*">(.*?)</span>\s*</div>', chart, re.S)]
+        self.assertEqual(values, ["100%", "42% −58%", "~85% ~−15%", "71% −29%", "73% −27%"])
+        # the shipped method is the highlighted one: only its two bars use the neon fill (the bare .bar > span rule)
+        self.assertIn("exp 03", self.scan.by_class["bar-name"][3])
+        self.assertEqual(chart.count("is-shipped"), 2)
+        self.assertIn("is-muted", re.findall(r'<span class="(bar-val[^"]*)"', chart)[1])
+        self.assertNotIn("is-muted", re.findall(r'<span class="(bar-val[^"]*)"', chart)[3])
+        self.assertEqual(len(re.findall(r"<details", sec)), 1)
+        self.assertIn("Does memory from the last session cut tokens on a follow-up?", sec.split("<details")[1])
+
+    # HUN-204 AC 5: the Easy Personal panel with this repo's numbers
+    def test_dashboard_panel_shows_the_snapshot(self):
+        sec = self.section("dashboard")
+        self.assertIn("<h2>See it in Easy Personal</h2>", sec)
+        self.assertIn('<a href="%s">' % EASY_PERSONAL, sec)
+        text = _plain_text(sec)
+        for line in ("this repo, 3 Nov 2026", "easy-memory", "143 notes", "saved per day, last 30 days",
+                     "Hit rate 70% of 56 prompts", "Memory on vs off",
+                     "On 3 sessions 23.2M tokens / session", "Off 5 sessions 16.6M tokens / session",
+                     "too few sessions to compare (3 on / 5 off, need 10 each)",
+                     "Easy Personal reads report.json, which easy-memory refreshes about once an hour",
+                     "counts only, never note text"):
+            self.assertIn(line, text, line)
+        spark = re.search(r'<svg class="spark"([^>]*)>(.*?)</svg>', sec, re.S)
+        self.assertIn('role="img"', spark.group(1))
+        self.assertIn("last 30 days", spark.group(1))
+        rects = re.findall(r'<rect class="(sp-bar[^"]*)" data-n="(\d+)"', spark.group(2))
+        self.assertEqual(len(rects), 30)
+        self.assertEqual([int(n) for _, n in rects], SPARK_NOTES)
+        self.assertEqual(sum(SPARK_NOTES), 143)  # the bars add up to the total
+        self.assertEqual([c for c, _ in rects].count("sp-bar is-today"), 1)
+        self.assertEqual(rects[-1][0], "sp-bar is-today")
+        self.assertNotRegex(sec, r"\b(Saves|Uses)\b")
+        self.assertNotRegex(_plain_text(sec.split("<details")[0]), r"\d+\s*% (saved|fewer|less|cheaper)")
+        self.assertEqual(len(re.findall(r"<details", sec)), 1)
+
+    # HUN-204 AC 6: no release notes
+    def test_release_notes_are_gone(self):
+        self.assertNotIn('id="notes"', self.html)
+        self.assertNotIn('href="#notes"', self.html)
+        self.assertNotIn("Release notes", self.html)
+        self.assertNotIn("RELEASE_v0.1.0", self.html)
+        self.assertNotRegex(self.local_style, r"\.rn\b")
+        self.assertEqual(self.scan.with_class("dl", "rn"), [])
+        footer = re.search(r"<footer>(.*?)</footer>", self.html, re.S).group(1)
+        self.assertIn("Easy Memory v0.1.0 prototype", footer)
+        self.assertIn('<a href="%s">source</a>' % GITHUB, footer)
+        self.assertNotIn("release plan", footer)
+
+    # HUN-204: pictures carry the explanation
+    def test_visible_words_grow_by_at_most_150(self):
+        words = _Words()
+        words.feed(self.html)
+        self.assertLessEqual(words.count, VISIBLE_WORDS_BEFORE + 150, words.count)
 
     def test_install_stepper_has_codeboxes(self):
         self.assertEqual(self.scan.by_class["step-no"], ["01", "02", "03", "end"])
@@ -410,13 +589,8 @@ class SitePageTest(unittest.TestCase):
         self.assertNotIn('id="built"', self.html)
         self.assertNotIn("How it was built", self.html)
 
-    def test_release_notes_groups(self):
-        notes = re.search(r'<section id="notes">(.*?)</section>', self.html, re.S).group(1)
-        self.assertEqual(re.findall(r"<dt>([^<]+)</dt>", notes), ["save", "recall", "control", "measure", "install"])
-        self.assertNotIn("<details", notes)
-
     def test_each_section_folds_its_detail(self):
-        for sid in ("what", "context", "how", "run", "use", "rollback", "numbers", "limits"):
+        for sid in SECTION_ORDER:
             sec = re.search(r'<section id="%s">(.*?)</section>' % sid, self.html, re.S).group(1)
             self.assertEqual(sec.count('<details class="more">'), 1, sid)
             self.assertEqual(sec.count("<summary>More detail</summary>"), 1, sid)
@@ -426,8 +600,8 @@ class SitePageTest(unittest.TestCase):
     def test_content_kept(self):
         for text in ("Coding agents pay again for what an earlier session already found out.",
                      "python3 easy_memory.py install --dry-run",
-                     "1.69 MB", "Independent end-to-end smoke and latency checks.",
-                     "docs/RELEASE_v0.1.0.md", "7,831-file repo, 200 notes",
+                     "1.69 MB",
+                     "7,831-file repo, 200 notes",
                      "A 400 MB transcript used 808 MB.", "settings.json.easy-memory.bak.&lt;time&gt;"):
             self.assertIn(text, self.html)
 

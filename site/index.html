@@ -104,15 +104,6 @@
   .more dt { margin-top:12px; font-weight:600; color:var(--text-strong); }
   .more dd { margin:2px 0 0; }
 
-  /* Cards */
-  .cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:16px 0 12px; }
-  .card h3 { margin:0; }
-  .card p { margin:0; max-width:none; font-size:14px; line-height:1.5; color:var(--text); }
-  .card .exp { font:400 11.5px var(--font-mono); color:var(--text-muted); }
-  .card .exp.shipped { color:var(--neon); }
-  .card .big { font:500 28px/1.1 var(--font-mono); color:var(--text-strong); }
-  .card.is-highlight .big { color:var(--neon); text-shadow:var(--glow-text); }
-
   /* Flow diagram: main loop arrows and step numbers in neon, nodes, side paths and labels neutral */
   .flow { display:block; width:100%; max-width:820px; height:auto; }
   .flow-tall { display:none; max-width:400px; margin:0 auto; }
@@ -124,6 +115,11 @@
   .fl-meta { font:400 12px var(--font-mono); fill:var(--text-muted); text-anchor:middle; }
   .fl-note { font:400 12px var(--font-mono); fill:var(--text-muted); }
   .fl-note-end { text-anchor:end; }
+  .fl-start { text-anchor:start; }
+  .fl-text { font:400 13px var(--font-sans); fill:var(--text); }
+  /* Problem and solution: token bars. Without memory is neutral, with memory is the neon one */
+  .fl-bar { fill:var(--text-dim); }
+  .fl-bar-on { fill:var(--neon); }
 
   /* Install stepper: the three steps are one neon line */
   .stepper { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,.7fr); max-width:none; margin:20px 0 12px; padding:0; list-style:none; }
@@ -174,6 +170,28 @@
   .bar-val { margin-left:auto; font:500 20px/1.1 var(--font-mono); color:var(--neon); text-shadow:var(--glow-text); white-space:nowrap; }
   .bar-val small { font:400 12px var(--font-mono); color:var(--text-muted); text-shadow:none; }
   .chart .bar { height:10px; border-radius:5px; }
+  .bar-val.is-muted { color:var(--text-strong); text-shadow:none; }
+  .bar.is-soft > span { background:var(--neon-bar); box-shadow:none; }
+  .bar.is-ref > span { background:var(--text-dim); box-shadow:none; }
+
+  /* Easy Personal panel: counts drawn the way the dashboard shows them */
+  .ep { max-width:560px; padding:20px; background:var(--bg-sunken); border:1px solid var(--line-strong); border-radius:var(--r-sm); }
+  .ep-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .ep-title { font:600 16px var(--font-sans); color:var(--text-strong); }
+  .ep-total { font:500 20px/1.1 var(--font-mono); color:var(--text-strong); }
+  .spark { display:block; width:100%; height:auto; }
+  .sp-bar { fill:var(--neon-bar); }
+  .sp-bar.is-today { fill:var(--neon); }
+  .ep-cap { max-width:none; margin:6px 0 0; font:400 12px var(--font-mono); color:var(--text-muted); }
+  .ep-block { margin-top:16px; padding-top:16px; border-top:1px solid var(--line); }
+  .ep-hit { max-width:none; margin:0; font:500 14px var(--font-mono); color:var(--text); }
+  .ep-vs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; max-width:none; margin:10px 0 0; padding:0; list-style:none; }
+  .ep-vs > li { margin:0; padding:10px 12px; display:flex; flex-direction:column; gap:2px; border:1px solid var(--line); border-radius:var(--r-sm); }
+  .ep-k { font:400 12px var(--font-mono); color:var(--text-muted); }
+  .ep-n { font-size:13px; color:var(--text-2); }
+  .ep-v { font:500 20px/1.2 var(--font-mono); color:var(--text-strong); }
+  .ep-v small { font:400 12px var(--font-mono); color:var(--text-muted); }
+  .ep-warn { max-width:none; margin:10px 0 0; font-size:13px; line-height:1.5; color:var(--text-muted); }
 
   /* Tables */
   .table-wrap { margin:16px 0 12px; }
@@ -181,16 +199,6 @@
   td code { white-space:normal; }
   #limits td:first-child { white-space:nowrap; }
   .status { font:400 12.5px var(--font-mono); color:var(--text-muted); white-space:nowrap; }
-
-  /* Release notes */
-  .rn { max-width:72ch; margin:16px 0 12px; border:1px solid var(--line); border-radius:var(--r-md); }
-  .rn > div { display:grid; grid-template-columns:120px minmax(0,1fr); gap:16px; padding:14px 16px; border-bottom:1px solid var(--line); }
-  .rn > div:last-child { border-bottom:0; }
-  .rn dt { font:500 12.5px var(--font-mono); color:var(--text-strong); }
-  .rn dd { margin:0; }
-  .rn ul { max-width:none; margin:0; padding:0; list-style:none; }
-  .rn li { margin:0 0 4px; }
-  .rn li:last-child { margin-bottom:0; }
 
   footer { padding-top:24px; border-top:1px solid var(--line); font-size:13.5px; color:var(--text-muted); }
   footer p { margin:0; }
@@ -234,9 +242,9 @@
     .strip.stats { --cols:2; }
     .strip.stats > * + * { border-left:1px solid var(--line); border-top:0; }
     .strip.stats > :nth-child(3) { grid-column:1 / -1; border-left:0; border-top:1px solid var(--line); }
-    .cards { grid-template-columns:minmax(0,1fr); }
     .codebox { padding-left:16px; }
     .figure, .chart { padding:16px; }
+    .ep { padding:16px; }
     .stepper { grid-template-columns:minmax(0,1fr); }
     .stepper > li { padding:0 0 24px 20px; border-left:1.5px solid var(--neon); }
     .stepper > li:last-child { padding-bottom:0; border-left-color:var(--line-strong); }
@@ -244,7 +252,6 @@
     .days { grid-template-columns:repeat(4,minmax(0,1fr)); }
     .cmds li { grid-template-columns:minmax(0,1fr); gap:2px; }
     .cmds .to { display:none; }
-    .rn > div { grid-template-columns:minmax(0,1fr); gap:6px; }
     .more > summary { min-height:44px; }
   }
 </style>
@@ -260,7 +267,7 @@
   </a>
   <span class="ver">memory kit · v0.1.0 prototype</span>
   <nav class="family" aria-label="Easy Kit family">
-    <a class="fam" href="https://personal-agentic-claude.vercel.app/">Easy Kit</a>
+    <a class="fam" href="https://easy-kits.vercel.app/">Easy Kit</a>
     <a class="fam" href="https://easy-verifier.vercel.app/">Easy Verifier</a>
     <a class="fam" href="https://easy-ui-mcp.vercel.app/">Easy UI</a>
     <a class="fam" href="https://easy-memory.vercel.app/" aria-current="page">Easy Memory</a>
@@ -275,7 +282,7 @@
 
 <aside class="sidebar" id="sidebar">
   <nav class="family drawer-family" aria-label="Easy Kit family sites">
-    <a class="fam" href="https://personal-agentic-claude.vercel.app/">Easy Kit</a>
+    <a class="fam" href="https://easy-kits.vercel.app/">Easy Kit</a>
     <a class="fam" href="https://easy-verifier.vercel.app/">Easy Verifier</a>
     <a class="fam" href="https://easy-ui-mcp.vercel.app/">Easy UI</a>
     <a class="fam" href="https://easy-memory.vercel.app/" aria-current="page">Easy Memory</a>
@@ -286,7 +293,7 @@
     <div class="nav-group">
       <p class="group-label" id="g-overview">// overview</p>
       <ul aria-labelledby="g-overview">
-        <li><a href="#what">What it is</a></li>
+        <li><a href="#problem">Problem and solution</a></li>
         <li><a href="#context">Context</a></li>
         <li><a href="#how">How it works</a></li>
       </ul>
@@ -296,6 +303,7 @@
       <ul aria-labelledby="g-guide">
         <li><a href="#run">Install</a></li>
         <li><a href="#use">Use it</a></li>
+        <li><a href="#dashboard">See it in Easy Personal</a></li>
         <li><a href="#rollback">Remove it</a></li>
       </ul>
     </div>
@@ -304,7 +312,6 @@
       <ul aria-labelledby="g-reference">
         <li><a href="#numbers">Measured</a></li>
         <li><a href="#limits">Known limits</a></li>
-        <li><a href="#notes">Release notes</a></li>
       </ul>
     </div>
   </nav>
@@ -328,9 +335,98 @@
   <li><strong class="step-title">Measured on yourself</strong><span class="label">a per-repo switch alternates memory on and off by day, and a report compares the two.</span></li>
 </ul>
 
-<section id="what">
-  <h2>What it is</h2>
-  <p>Coding agents pay again for what an earlier session already found out. Easy Memory saves what a session concluded and gives it to the next session that needs it.</p>
+<section id="problem">
+  <h2>Problem and solution</h2>
+  <p>Coding agents pay again for what an earlier session already found out.</p>
+  <div class="figure">
+    <svg class="flow flow-wide" viewBox="0 0 760 238" role="img" aria-label="Two lanes. Without memory: a new session starts from zero, re-reads the same files, re-runs the same searches, then answers, and spends a long bar of tokens. With memory: the prompt hook adds an index of up to 5 lines, the agent opens one note with memory_read, then answers, and spends a short bar of tokens.">
+      <g>
+        <text class="fl-title fl-start" x="0" y="12">Without memory</text>
+        <rect class="fl-node" x="0" y="24" width="150" height="52" rx="6"/>
+        <rect class="fl-node" x="203" y="24" width="150" height="52" rx="6"/>
+        <rect class="fl-node" x="406" y="24" width="150" height="52" rx="6"/>
+        <rect class="fl-node" x="609" y="24" width="150" height="52" rx="6"/>
+        <text class="fl-title" x="75" y="46">New session</text>
+        <text class="fl-meta" x="75" y="64">starts from zero</text>
+        <text class="fl-title" x="278" y="46">Re-reads files</text>
+        <text class="fl-meta" x="278" y="64">same files again</text>
+        <text class="fl-title" x="481" y="46">Re-runs searches</text>
+        <text class="fl-meta" x="481" y="64">same searches</text>
+        <text class="fl-title" x="684" y="46">Answer</text>
+        <text class="fl-meta" x="684" y="64">after a long hunt</text>
+        <path class="fl-line" d="M154 50H199M193 45L199 50L193 55"/>
+        <path class="fl-line" d="M357 50H402M396 45L402 50L396 55"/>
+        <path class="fl-line" d="M560 50H605M599 45L605 50L599 55"/>
+        <text class="fl-note" x="0" y="102">many tokens</text>
+        <rect class="fl-bar" x="100" y="92" width="660" height="12" rx="3"/>
+      </g>
+      <g transform="translate(0 134)">
+        <text class="fl-title fl-start" x="0" y="12">With memory</text>
+        <rect class="fl-node" x="0" y="24" width="150" height="52" rx="6"/>
+        <rect class="fl-node" x="203" y="24" width="150" height="52" rx="6"/>
+        <rect class="fl-node" x="406" y="24" width="150" height="52" rx="6"/>
+        <rect class="fl-node" x="609" y="24" width="150" height="52" rx="6"/>
+        <text class="fl-title" x="75" y="46">New prompt</text>
+        <text class="fl-meta" x="75" y="64">the hook runs</text>
+        <text class="fl-title" x="278" y="46">Index</text>
+        <text class="fl-meta" x="278" y="64">up to 5 lines</text>
+        <text class="fl-title" x="481" y="46">Opens one note</text>
+        <text class="fl-meta" x="481" y="64">memory_read</text>
+        <text class="fl-title" x="684" y="46">Answer</text>
+        <text class="fl-meta" x="684" y="64">few tool calls</text>
+        <path class="fl-main-line" d="M154 50H199M193 45L199 50L193 55"/>
+        <path class="fl-main-line" d="M357 50H402M396 45L402 50L396 55"/>
+        <path class="fl-main-line" d="M560 50H605M599 45L605 50L599 55"/>
+        <text class="fl-note" x="0" y="102">fewer tokens</text>
+        <rect class="fl-bar-on" x="100" y="92" width="300" height="12" rx="3"/>
+      </g>
+    </svg>
+    <svg class="flow flow-tall" viewBox="0 0 340 352" role="img" aria-label="Two lanes side by side. Without memory: a new session starts from zero, re-reads the same files, re-runs the same searches, then answers, and spends a long bar of tokens. With memory: the prompt hook adds an index of up to 5 lines, the agent opens one note with memory_read, then answers, and spends a short bar of tokens.">
+      <g>
+        <text class="fl-title fl-start" x="0" y="12">Without memory</text>
+        <rect class="fl-node" x="0" y="24" width="160" height="52" rx="6"/>
+        <rect class="fl-node" x="0" y="98" width="160" height="52" rx="6"/>
+        <rect class="fl-node" x="0" y="172" width="160" height="52" rx="6"/>
+        <rect class="fl-node" x="0" y="246" width="160" height="52" rx="6"/>
+        <text class="fl-title" x="80" y="46">New session</text>
+        <text class="fl-meta" x="80" y="64">starts from zero</text>
+        <text class="fl-title" x="80" y="120">Re-reads files</text>
+        <text class="fl-meta" x="80" y="138">same files again</text>
+        <text class="fl-title" x="80" y="194">Re-runs searches</text>
+        <text class="fl-meta" x="80" y="212">same searches</text>
+        <text class="fl-title" x="80" y="268">Answer</text>
+        <text class="fl-meta" x="80" y="286">after a long hunt</text>
+        <path class="fl-line" d="M80 78V95M76 89L80 95L84 89"/>
+        <path class="fl-line" d="M80 152V169M76 163L80 169L84 163"/>
+        <path class="fl-line" d="M80 226V243M76 237L80 243L84 237"/>
+        <text class="fl-note" x="0" y="322">many tokens</text>
+        <rect class="fl-bar" x="0" y="330" width="160" height="12" rx="3"/>
+      </g>
+      <g>
+        <text class="fl-title fl-start" x="180" y="12">With memory</text>
+        <rect class="fl-node" x="180" y="24" width="160" height="52" rx="6"/>
+        <rect class="fl-node" x="180" y="98" width="160" height="52" rx="6"/>
+        <rect class="fl-node" x="180" y="172" width="160" height="52" rx="6"/>
+        <rect class="fl-node" x="180" y="246" width="160" height="52" rx="6"/>
+        <text class="fl-title" x="260" y="46">New prompt</text>
+        <text class="fl-meta" x="260" y="64">the hook runs</text>
+        <text class="fl-title" x="260" y="120">Index</text>
+        <text class="fl-meta" x="260" y="138">up to 5 lines</text>
+        <text class="fl-title" x="260" y="194">Opens one note</text>
+        <text class="fl-meta" x="260" y="212">memory_read</text>
+        <text class="fl-title" x="260" y="268">Answer</text>
+        <text class="fl-meta" x="260" y="286">few tool calls</text>
+        <path class="fl-main-line" d="M260 78V95M256 89L260 95L264 89"/>
+        <path class="fl-main-line" d="M260 152V169M256 163L260 169L264 163"/>
+        <path class="fl-main-line" d="M260 226V243M256 237L260 243L264 237"/>
+        <text class="fl-note" x="180" y="322">fewer tokens</text>
+        <rect class="fl-bar-on" x="180" y="330" width="72" height="12" rx="3"/>
+      </g>
+    </svg>
+  </div>
+  <p class="caption">Bar lengths are an illustration.</p>
+  <p><strong>Without memory.</strong> A new session reads the same files and runs the same searches that an earlier session already did. Every step costs tokens.</p>
+  <p><strong>With memory.</strong> The prompt hook adds an index of up to 5 lines. The agent opens one note and goes straight to the answer.</p>
   <ul class="chips" aria-label="Promises">
     <li class="chip">notes are data, not instructions</li>
     <li class="chip">a hook never blocks you</li>
@@ -353,25 +449,28 @@
 <section id="context">
   <h2>Context</h2>
   <p>This continues easy-context-mcp, retired on 2026-10-23. Memory between sessions was the first idea that beat plain grep.</p>
-  <div class="cards">
-    <article class="card">
-      <span class="exp">exp 01</span>
-      <span class="big">−58%</span>
-      <h3>Yes</h3>
-      <p>Same accuracy, and it caught a renamed method.</p>
-    </article>
-    <article class="card">
-      <span class="exp">exp 02</span>
-      <span class="big">~−15%</span>
-      <h3>Risk</h3>
-      <p>Cut 35% on one repo, added 4% on the other.</p>
-    </article>
-    <article class="card is-highlight">
-      <span class="exp shipped">exp 03 · shipped</span>
-      <span class="big">−29% / −27%</span>
-      <h3>Go for a prototype</h3>
-      <p>The index method, same accuracy on both repos.</p>
-    </article>
+  <p class="caption">Tokens with memory, as a share of the tokens without memory (without = 100%).</p>
+  <div class="chart">
+    <div class="bar-row">
+      <div class="bar-top"><span class="bar-name">Without memory</span><span class="bar-ctx">the reference</span><span class="bar-val is-muted">100%</span></div>
+      <div class="bar is-ref" role="img" aria-label="Without memory: 100% of the tokens, the reference"><span style="width:100%"></span></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-top"><span class="bar-name">exp 01</span><span class="bar-ctx">Yes. Same accuracy, caught a renamed method.</span><span class="bar-val is-muted">42% <small>−58%</small></span></div>
+      <div class="bar is-soft" role="img" aria-label="Experiment 01: 42% of the tokens without memory, 58% fewer"><span style="width:42%"></span></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-top"><span class="bar-name">exp 02</span><span class="bar-ctx">Risk. Cut 35% on one repo, added 4% on the other.</span><span class="bar-val is-muted">~85% <small>~−15%</small></span></div>
+      <div class="bar is-soft" role="img" aria-label="Experiment 02: about 85% of the tokens without memory, about 15% fewer"><span style="width:85%"></span></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-top"><span class="bar-name">exp 03 · repo A</span><span class="bar-ctx">Shipped method.</span><span class="bar-val">71% <small>−29%</small></span></div>
+      <div class="bar is-shipped" role="img" aria-label="Experiment 03, repo A, the shipped method: 71% of the tokens without memory, 29% fewer"><span style="width:71%"></span></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-top"><span class="bar-name">exp 03 · repo B</span><span class="bar-ctx">Shipped method.</span><span class="bar-val">73% <small>−27%</small></span></div>
+      <div class="bar is-shipped" role="img" aria-label="Experiment 03, repo B, the shipped method: 73% of the tokens without memory, 27% fewer"><span style="width:73%"></span></div>
+    </div>
   </div>
   <details class="more">
     <summary>More detail</summary>
@@ -495,6 +594,57 @@
     </svg>
   </div>
   <p class="caption">The prompt hook never builds weights. It starts a background build and adds nothing until the file exists.</p>
+  <h3>How a note is saved</h3>
+  <div class="figure">
+    <svg class="flow flow-wide" viewBox="0 0 760 176" role="img" aria-label="One saved note holds the question, the answer, the time, and the cited repo files with the sha256 of each. At the next prompt each cited file is hashed again. A file with the same hash is listed as it is. A changed file is flagged CHANGED:. A deleted file is flagged DELETED:.">
+      <rect class="fl-node" x="0" y="0" width="320" height="176" rx="6"/>
+      <text class="fl-title fl-start" x="16" y="28">One saved note</text>
+      <text class="fl-meta fl-start" x="16" y="64">question</text>
+      <text class="fl-text" x="116" y="64">the prompt you typed</text>
+      <text class="fl-meta fl-start" x="16" y="92">answer</text>
+      <text class="fl-text" x="116" y="92">the final reply</text>
+      <text class="fl-meta fl-start" x="16" y="120">time</text>
+      <text class="fl-text" x="116" y="120">when it was saved</text>
+      <text class="fl-meta fl-start" x="16" y="148">cited files</text>
+      <text class="fl-text" x="116" y="148">path + sha256 of each</text>
+      <path class="fl-main-line" d="M326 88H443M437 83L443 88L437 93"/>
+      <text class="fl-note" x="336" y="74">next prompt</text>
+      <text class="fl-note" x="336" y="112">re-hash files</text>
+      <rect class="fl-node" x="450" y="0" width="310" height="48" rx="6"/>
+      <text class="fl-title fl-start" x="466" y="22">File unchanged</text>
+      <text class="fl-meta fl-start" x="466" y="39">line is listed as it is</text>
+      <rect class="fl-node" x="450" y="64" width="310" height="48" rx="6"/>
+      <text class="fl-title fl-start" x="466" y="86">File changed</text>
+      <text class="fl-meta fl-start" x="466" y="103">CHANGED: src/auth.py</text>
+      <rect class="fl-node" x="450" y="128" width="310" height="48" rx="6"/>
+      <text class="fl-title fl-start" x="466" y="150">File deleted</text>
+      <text class="fl-meta fl-start" x="466" y="167">DELETED: src/old.py</text>
+    </svg>
+    <svg class="flow flow-tall" viewBox="0 0 340 380" role="img" aria-label="One saved note holds the question, the answer, the time, and the cited repo files with the sha256 of each. At the next prompt each cited file is hashed again. A file with the same hash is listed as it is. A changed file is flagged CHANGED:. A deleted file is flagged DELETED:.">
+      <rect class="fl-node" x="0" y="0" width="340" height="150" rx="6"/>
+      <text class="fl-title fl-start" x="16" y="26">One saved note</text>
+      <text class="fl-meta fl-start" x="16" y="58">question</text>
+      <text class="fl-text" x="114" y="58">the prompt you typed</text>
+      <text class="fl-meta fl-start" x="16" y="84">answer</text>
+      <text class="fl-text" x="114" y="84">the final reply</text>
+      <text class="fl-meta fl-start" x="16" y="110">time</text>
+      <text class="fl-text" x="114" y="110">when it was saved</text>
+      <text class="fl-meta fl-start" x="16" y="136">cited files</text>
+      <text class="fl-text" x="114" y="136">path + sha256 of each</text>
+      <path class="fl-main-line" d="M170 156V204M165 198L170 204L175 198"/>
+      <text class="fl-note" x="184" y="176">next prompt</text>
+      <text class="fl-note" x="184" y="192">re-hash files</text>
+      <rect class="fl-node" x="0" y="212" width="340" height="48" rx="6"/>
+      <text class="fl-title fl-start" x="16" y="234">File unchanged</text>
+      <text class="fl-meta fl-start" x="16" y="251">line is listed as it is</text>
+      <rect class="fl-node" x="0" y="272" width="340" height="48" rx="6"/>
+      <text class="fl-title fl-start" x="16" y="294">File changed</text>
+      <text class="fl-meta fl-start" x="16" y="311">CHANGED: src/auth.py</text>
+      <rect class="fl-node" x="0" y="332" width="340" height="48" rx="6"/>
+      <text class="fl-title fl-start" x="16" y="354">File deleted</text>
+      <text class="fl-meta fl-start" x="16" y="371">DELETED: src/old.py</text>
+    </svg>
+  </div>
   <details class="more">
     <summary>More detail</summary>
     <div class="more-body">
@@ -596,6 +746,69 @@
   </details>
 </section>
 
+<section id="dashboard">
+  <h2>See it in Easy Personal</h2>
+  <p>Easy Personal is the family dashboard. Its Memory view shows a repo's store. <a href="https://easy-personal.vercel.app/">Open Easy Personal</a></p>
+  <div class="figure">
+    <p class="fig-label">this repo, 3 Nov 2026</p>
+    <div class="ep" role="group" aria-label="Easy Personal, Memory view, for easy-memory">
+      <div class="ep-head"><span class="ep-title">easy-memory</span><span class="ep-total">143 notes</span></div>
+      <svg class="spark" viewBox="0 0 300 52" role="img" aria-label="Notes saved per day, last 30 days: 29 Oct 63, 30 Oct 23, 31 Oct 41, 2 Nov 3, 3 Nov 13. Every other day is 0.">
+        <rect class="sp-bar" data-n="0" x="0" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="10" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="20" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="30" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="40" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="50" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="60" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="70" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="80" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="90" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="100" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="110" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="120" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="130" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="140" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="150" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="160" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="170" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="180" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="190" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="200" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="210" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="220" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="0" x="230" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="63" x="240" y="4.0" width="7" height="48.0"/>
+        <rect class="sp-bar" data-n="23" x="250" y="34.5" width="7" height="17.5"/>
+        <rect class="sp-bar" data-n="41" x="260" y="20.8" width="7" height="31.2"/>
+        <rect class="sp-bar" data-n="0" x="270" y="50.5" width="7" height="1.5"/>
+        <rect class="sp-bar" data-n="3" x="280" y="49.7" width="7" height="2.3"/>
+        <rect class="sp-bar is-today" data-n="13" x="290" y="42.1" width="7" height="9.9"/>
+      </svg>
+      <p class="ep-cap">saved per day, last 30 days</p>
+      <div class="ep-block">
+        <p class="ep-hit">Hit rate 70% of 56 prompts</p>
+      </div>
+      <div class="ep-block">
+        <p class="ep-k">Memory on vs off</p>
+        <ul class="ep-vs">
+          <li><span class="ep-k">On</span><span class="ep-n">3 sessions</span><span class="ep-v">23.2M <small>tokens / session</small></span></li>
+          <li><span class="ep-k">Off</span><span class="ep-n">5 sessions</span><span class="ep-v">16.6M <small>tokens / session</small></span></li>
+        </ul>
+        <p class="ep-warn">too few sessions to compare (3 on / 5 off, need 10 each)</p>
+      </div>
+    </div>
+  </div>
+  <p class="caption">Easy Personal reads <code>report.json</code>, which easy-memory refreshes about once an hour. It shows counts only, never note text.</p>
+  <details class="more">
+    <summary>More detail</summary>
+    <div class="more-body">
+      <p><code>report.json</code> sits in the repo's store folder (<code>~/.easy-memory/&lt;repo key&gt;/</code>, mode 0600). It holds numbers, flags and a time. <code>python3 easy_memory.py report --json</code> prints the same object.</p>
+      <p>The comparison of memory on and off stays empty until each group has 10 sessions, as in the <code>report</code> command.</p>
+    </div>
+  </details>
+</section>
+
 <section id="rollback">
   <h2>Remove it</h2>
   <p>Roll back if you see any of these:</p>
@@ -674,33 +887,7 @@
   </details>
 </section>
 
-<section id="notes">
-  <h2>Release notes · v0.1.0</h2>
-  <dl class="rn">
-    <div><dt>save</dt><dd><ul>
-      <li>One note per turn, in an atomic, versioned store.</li>
-      <li>Worktrees of one repo share a store.</li>
-      <li>Notes cite only files that exist in the repo.</li>
-    </ul></dd></div>
-    <div><dt>recall</dt><dd><ul>
-      <li>The prompt hook adds a framed index. Note text cannot leave the frame.</li>
-      <li>Word weights are built in the background.</li>
-      <li>An MCP server with search, read, list and forget.</li>
-    </ul></dd></div>
-    <div><dt>control</dt><dd><ul>
-      <li>A per-repo <code>on</code>/<code>off</code>/<code>auto</code> switch and a prompt log.</li>
-    </ul></dd></div>
-    <div><dt>measure</dt><dd><ul>
-      <li><code>report</code>: memory on against off, from Claude session logs.</li>
-      <li>Independent end-to-end smoke and latency checks.</li>
-    </ul></dd></div>
-    <div><dt>install</dt><dd><ul>
-      <li><code>install</code> and <code>uninstall</code> edit the user-level settings, with a backup.</li>
-    </ul></dd></div>
-  </dl>
-</section>
-
-<footer><p>Easy Memory v0.1.0 prototype · <a href="https://github.com/thunderkds/easy-memory-mcp">source</a> · release plan in <code>docs/RELEASE_v0.1.0.md</code></p></footer>
+<footer><p>Easy Memory v0.1.0 prototype · <a href="https://github.com/thunderkds/easy-memory-mcp">source</a></p></footer>
 
 </main>
 </div>
