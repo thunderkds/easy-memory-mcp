@@ -41,16 +41,16 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `tests/test_site_page.py` (46 tests; new: `test_easy_kit_link_points_to_easy_kits_and_the_old_host_is_gone` AC1, `test_problem_and_solution_two_lane_picture` AC2, `test_how_a_note_is_saved_figure` AC3, `test_context_token_chart` AC4, `test_dashboard_panel_shows_the_snapshot` AC5, `test_release_notes_are_gone` AC6, updated `test_sidebar_groups_and_items` / `test_section_order_and_anchors` AC7, `test_visible_words_grow_by_at_most_150`). Red first: before the page edit the run ended `FAILED (failures=10, errors=4)`. |
+| Verification command run | ☑ pass | `python3 -m unittest tests.test_site_page -v` → `Ran 46 tests in 0.029s` / `OK`; `python3 -m unittest discover -s tests` → `Ran 504 tests in 37.448s` / `OK (skipped=3)` |
 | Negative cases hold | ☐ pass / ☐ fail | |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
 | Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
+| Full smoke suite still green | ☑ pass | the discover run above: 504 tests, OK, 3 skipped (opt-in or host-dependent) |
 | **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| **UI: Visual regression | ☑ pass | Full-page screenshots, looked at by the implementer, no overlap or clipped SVG text: `/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp-wt/HUN-204/.screens/after-1280.png`, `/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp-wt/HUN-204/.screens/after-375.png` (also `after-800.png`; per-section crops `problem-/context-/how-/dashboard-<width>.png`). Before: `before-1280.png`, `before-375.png`. One fix from the look: tall note figure value column moved from x=104 to x=114 ("cited files" touched its value). |
+| **UI: Design-system compliance | ☑ pass | `test_no_colour_literal_outside_the_token_block` and `test_neon_and_glow_only_on_the_highlight_selectors` pass. New neon selectors added to `NEON_SELECTORS` (the guide allows it): `.fl-bar-on` (the with-memory token bar in the Problem picture), `.bar.is-soft > span` (exp 01/02 chart bars in `--neon-bar`, as the guide says), `.sp-bar` and `.sp-bar.is-today` (sparkline: soft bars, today neon). Exp 03 bars use the bare `.bar > span` (neon). Removed `.card .exp.shipped` and `.card.is-highlight .big` from the set because the cards are gone. `site/theme.css` untouched (byte-identical test passes). Visible words outside `<details>`: 794 → 930 (+136, limit +150; tall copies not counted). |
+| **UI: Responsiveness | ☑ pass | `document.documentElement.scrollWidth` / `innerWidth` from headless Chromium: 1280 → 1280/1280 OK; 800 → 800/800 OK; 375 → 375/375 OK. Wide SVGs switch to tall copies below 800 px (`.flow-wide`/`.flow-tall`). Scroll-spy checked in the browser: problem → "Problem and solution", dashboard → "See it in Easy Personal", rollback → "Remove it", limits → "Known limits"; no page errors. |
 
 ---
 
@@ -72,9 +72,9 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 Headless screenshot of the current page at 1280 px (full page): `/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp-wt/HUN-204/.screens/before-1280.png` (375 px: `.screens/before-375.png`).
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER** (2026-11-03, after commit `c0962d7`): `grep -n "personal-agentic-claude\|id=\"notes\"\|id=\"what\"" site/index.html` prints nothing; `grep -n 'id="problem"\|id="dashboard"\|easy-kits.vercel.app' site/index.html` finds both sections and both Easy Kit links. Screenshot `/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp-wt/HUN-204/.screens/after-1280.png`.
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+**DELTA**: a reader sees the problem and the fix as two lanes, how a note is saved, the token saving as a bar chart, and this repo's real Easy Personal panel, with no release notes and the new Easy Kit link.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/Txxx.jsonl`, never the
 implementing agent alone]
