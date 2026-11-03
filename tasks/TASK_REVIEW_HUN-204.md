@@ -61,8 +61,16 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE** (2026-11-03T15:42:58Z, before any implementation commit; HEAD `196f541`), `grep -n "personal-agentic-claude\|id=\"notes\"\|id=\"what\"" site/index.html`:
+
+```
+263:    <a class="fam" href="https://personal-agentic-claude.vercel.app/">Easy Kit</a>
+278:    <a class="fam" href="https://personal-agentic-claude.vercel.app/">Easy Kit</a>
+331:<section id="what">
+677:<section id="notes">
+```
+
+Headless screenshot of the current page at 1280 px (full page): `/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp-wt/HUN-204/.screens/before-1280.png` (375 px: `.screens/before-375.png`).
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
