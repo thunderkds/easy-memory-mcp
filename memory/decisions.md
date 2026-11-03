@@ -40,6 +40,12 @@
 **Open (Low)**: a secret stays in clear text in the trash up to 30 days after a forget; `redact --apply` removes it at once.
 **Files**: `easy_memory.py` (`_tool_forget`, `_tool_restore`, `redact_command`), `tests/test_v03_m6_trash.py`, `README.md`
 
+### 2026-11-03 — report.json for easy-personal (HUN-197 merged)
+**Decision**: `report --json [--repo R]` prints the FR-015 object (format `v` 1, numbers/flags/time only) and writes `<store>/report.json` (0600, atomic). After a saved note, the Stop hook spawns a detached `report --json --release-lock` when the file is missing or >1 h old and `<store>/report.lock` is free (O_EXCL, 10-min stale); a future mtime counts as fresh. Text `report` output unchanged (split into `_report_numbers` + printer). Supersedes PRD.md A7 for this one file; easy-personal reads it directly (XR-1, its own board).
+**Why**: user 2026-11-03 "give the easy-personal the number ... to show on the dashboard"; one copy of the on/off join logic. Exp 07 (TokenEconomizer envfacts) failed, kept on branch `exp-07-envfacts`, not merged.
+**Open**: `report --json --repo <missing path>` creates a store folder holding only `report.json` (easy-personal may list it); `no_data` depends on which checkout refreshed last (P2).
+**Files**: `easy_memory.py` (`_refresh_report`, `_report_numbers`, `_report_object`, `report_command`, `hook_stop`), `tests/test_v04_report_json.py`, `PRD_v0.4.md`, `README.md`
+
 ## Infrastructure
 
 ### 2026-10-28 — easy-verifier registered as the scoring MCP (dev tool)
