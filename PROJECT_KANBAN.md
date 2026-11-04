@@ -13,7 +13,6 @@
 - [ ] **HUN-138** — A note cites only files its answer names and its turn touched | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-138.md`
 - [ ] **HUN-139** — A file missing on this branch is flagged NOT-ON-BRANCH, not DELETED | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-139.md`
 - [ ] **HUN-140** — Ranking adjusts for note length and needs one rare prompt word | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-140.md`
-- [ ] **HUN-211** — A very long prompt is scored on a capped set of its words, inside the hook timeout | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-211.md`
 
 ### In Progress
 - [ ] **HUN-204** — Site: Easy Kit link to easy-kits.vercel.app; problem/solution + flow + token chart; Easy Personal memory section; drop release notes | ? | ? | Risk: ? | P2 | Guide: `tasks/TASK_GUIDE_HUN-204.md`
@@ -47,6 +46,7 @@
 - [x] **HUN-199** — report --json with a wrong --repo must not create a store folder | ? | ? | Risk: ? | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-199.md`
 - [x] **HUN-208** — Prompt hook splits each word once per run, with the same ranking | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-208.md`
 - [x] **HUN-210** — Word cache skips long words, so its memory has a byte bound | backend-developer | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-210.md`
+- [x] **HUN-211** — A very long prompt is scored on a capped set of its words, inside the hook timeout | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-211.md`
 
 ### Closed (will not do)
 
