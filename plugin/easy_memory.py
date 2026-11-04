@@ -436,10 +436,28 @@ def tokens(text):
     return out
 
 
+# A prompt with more distinct words than this is scored on its PROMPT_MAX_WORDS highest-weight
+# (rarest) words, ties by first appearance. Scoring costs distinct words x notes. Measured
+# (HUN-211, 150,000-word 1.7 MB prompt, hook-prompt subprocess): 4,000 notes 229.8 s without the
+# cap, 1.5 s with 300 (0.7 s of it is the notes alone, 0.5 s is splitting the prompt); 440 notes
+# 16.3 s without, 0.72 s with 300. Each kept word costs about 0.1 ms per 1,000 notes; 300 keeps
+# that near 0.15 s at 4,000 notes. Half of this repo's files have 295 or fewer distinct words.
+PROMPT_MAX_WORDS = 300
+
+
 def _prompt_weight(prompt, weights):
-    """{word: weight} for the prompt's distinct words, from a weights dict (see score)."""
+    """{word: weight} for the prompt's distinct words, from a weights dict (see score).
+
+    Over PROMPT_MAX_WORDS words only the highest-weight ones are kept; the others add nothing
+    to the score or to its denominator."""
     n, df = weights["n"], weights["df"]
-    return {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in set(tokens(prompt))}
+    found = tokens(prompt)
+    words = set(found)
+    if len(words) <= PROMPT_MAX_WORDS:
+        return {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in words}
+    weight = {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in dict.fromkeys(found)}
+    kept = sorted(weight, key=weight.get, reverse=True)[:PROMPT_MAX_WORDS]  # stable: ties keep prompt order
+    return {t: weight[t] for t in kept}
 
 
 def _score_with(weight, text, k1=1.2):
