@@ -315,7 +315,7 @@ class FailureTest(PromptHookTestCase):
         repo = self.make_repo()
         self.write_weights(repo)
         self.note(repo, "alpha bravo", "Alpha bravo charlie delta echo.")
-        with mock.patch.object(easy_memory, "score", side_effect=RuntimeError("boom")):
+        with mock.patch.object(easy_memory, "_score_with", side_effect=RuntimeError("boom")):
             self.assert_silent_logged(self.hook_input(repo))
 
     def test_corrupt_weights_values_log_one_line(self):  # AC7: corrupt store
