@@ -413,7 +413,13 @@ _WORD = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
 _CAMEL_JOIN = re.compile(r"([a-z0-9])([A-Z])")
 
 
-@functools.lru_cache(maxsize=1 << 16)  # bound: at most 65,536 distinct words (a few MB) in a long `serve`
+WORD_CACHE_MAX_CHARS = 64
+
+
+# Bound: 65,536 entries x words of at most WORD_CACHE_MAX_CHARS (64) characters; tokens() does not
+# cache longer words. Measured with tracemalloc: a full cache of 65,536 camelCase-rich 64-character
+# words is about 46 MB.
+@functools.lru_cache(maxsize=1 << 16)
 def _word_parts(word):
     """Scorable lower-case parts of one source word: itself and its camelCase / underscore pieces."""
     parts = _CAMEL_JOIN.sub(r"\1 \2", word).replace("_", " ")
@@ -425,7 +431,8 @@ def tokens(text):
     """Lower-case words of text, also split at camelCase and underscores (experiment 02)."""
     out = []
     for word in _WORD.findall(text):
-        out.extend(_word_parts(word))
+        out.extend(_word_parts(word) if len(word) <= WORD_CACHE_MAX_CHARS
+                   else _word_parts.__wrapped__(word))
     return out
 
 
