@@ -2,7 +2,7 @@
 than a cold session or a resumed session, for a related follow-up task?
 
 Each run is `claude -p` in safe mode (no CLAUDE.md, hooks, MCP), tools limited
-to Read/Grep/Glob on a scratch copy of tapchat-apis. Token counts come from the
+to Read/Grep/Glob on a scratch copy of project-a. Token counts come from the
 CLI's own usage report.
 """
 import json

@@ -118,7 +118,7 @@ python3 -m unittest discover -s tests -p 'test_t002*.py' -v
 
 `hook-stop` reads stdin JSON, resolves the repo from `cwd`, reads the transcript JSONL from `transcript_path` to find the last user message whose content is plain text (skip entries that hold only `tool_result`). Study one real transcript under the Claude config dir to learn the line shape, then build SYNTHETIC fixtures (never commit real transcripts). Wrap the whole `main` in try/except → exit 0.
 
-**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (orderly, tapchat) are read-only benchmark targets: record numbers only, never quote or commit their source.
+**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (Project B, Project A) are read-only benchmark targets: record numbers only, never quote or commit their source.
 
 ---
 
@@ -153,7 +153,7 @@ python3 -m unittest discover -s tests -p 'test_t002*.py' -v
 
 ## Test Plan
 
-Unit tests with synthetic transcripts and a throwaway git repo. Latency run on orderly is a manual benchmark: record only timings, never quote its source code.
+Unit tests with synthetic transcripts and a throwaway git repo. Latency run on Project B is a manual benchmark: record only timings, never quote its source code.
 
 ---
 

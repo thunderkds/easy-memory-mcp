@@ -26,7 +26,7 @@ def rename(root, old, new, exts):
     return n
 
 
-def tapchat(root):
+def project_a(root):
     src = root / "src"
     # Rename (topic M): the restore method used by the cron job and appeals.
     rename(src, "restoreSuspendedUserByPhoneNumber", "liftSuspensionByPhoneNumber",
@@ -57,7 +57,7 @@ def tapchat(root):
          "  async updateMany(ids: string[], data: Partial<Transaction>): Promise<void> {\n")
 
 
-def orderly(root):
+def project_b(root):
     java = root / "SiftOrder/src"
     # Rename (topic R): the per-config generation methods.
     rename(java, "generateInvoicesForConfig", "processRecurringConfig", {".java"})
@@ -77,5 +77,5 @@ def orderly(root):
 
 
 if __name__ == "__main__":
-    {"tapchat": tapchat, "orderly": orderly}[sys.argv[1]](Path(sys.argv[2]))
+    {"project-a": project_a, "project-b": project_b}[sys.argv[1]](Path(sys.argv[2]))
     print("changes applied:", sys.argv[1], sys.argv[2])

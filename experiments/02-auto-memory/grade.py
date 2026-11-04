@@ -48,7 +48,7 @@ def main():
           f"spend ${sum(r['cost'] for r in data):.2f} (valid runs only)\n")
 
     print("== Per sequence (9 sessions), median over reps ==")
-    for repo in ("tapchat", "orderly"):
+    for repo in ("project-a", "project-b"):
         for cond in ("cold", "auto"):
             reps = defaultdict(lambda: [0, 0, 0.0, 0.0])
             for r in data:
@@ -63,7 +63,7 @@ def main():
                   f"turns={m(1):>4.0f} cost=${m(2):.2f} score={m(3):.1f}/9")
 
     print("\n== By session round (median tokens per session) ==")
-    for repo in ("tapchat", "orderly"):
+    for repo in ("project-a", "project-b"):
         for rnd in "abc":
             line = []
             for cond in ("cold", "auto"):
@@ -76,7 +76,7 @@ def main():
             print(f"{repo:8} round {rnd}: " + " | ".join(line))
 
     print("\n== Per session (median tokens cold -> auto, scores) ==")
-    for repo in ("tapchat", "orderly"):
+    for repo in ("project-a", "project-b"):
         for sid in tasks.sequence(repo):
             cell = {}
             for cond in ("cold", "auto", "noflag"):
@@ -89,7 +89,7 @@ def main():
             print(f"{repo:8} {sid}: " + " | ".join(f"{k} {v}" for k, v in cell.items()))
 
     print("\n== Picks (auto runs) ==")
-    for repo in ("tapchat", "orderly"):
+    for repo in ("project-a", "project-b"):
         same = cross = none_when_rel = none_ok = 0
         for r in data:
             if r["repo"] != repo or r["cond"] != "auto":

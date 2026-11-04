@@ -119,7 +119,7 @@ python3 -m unittest discover -s tests -p 'test_t006*.py' -v
 
 Load JSON, deep-copy, add entries under `hooks.Stop` and `hooks.UserPromptSubmit` (create lists if missing), write to temp then rename, keep file mode. Identify our entries by the `easy_memory.py` substring. Print a diff with `difflib`. This machine has both `~/.claude` and `~/.claude-personal`: honor `CLAUDE_CONFIG_DIR` and print which file was changed.
 
-**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (orderly, tapchat) are read-only benchmark targets: record numbers only, never quote or commit their source.
+**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (Project B, Project A) are read-only benchmark targets: record numbers only, never quote or commit their source.
 
 ---
 

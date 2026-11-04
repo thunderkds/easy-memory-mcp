@@ -58,7 +58,7 @@ Coding agents pay again for what an earlier session already worked out. A new se
 
 | ID | Requirement | Category |
 |----|-------------|----------|
-| NFR-001 | The UserPromptSubmit hook must add ≤ 1 s at p95 on a 7,000-file repo (orderly); the Stop hook ≤ 2 s. | Performance |
+| NFR-001 | The UserPromptSubmit hook must add ≤ 1 s at p95 on a 7,000-file repo (Project B); the Stop hook ≤ 2 s. | Performance |
 | NFR-002 | No network traffic: no model calls, no telemetry, nothing leaves the machine. | Privacy |
 | NFR-003 | Store files are readable only by the user (0600 files, 0700 folders). | Security |
 | NFR-004 | A hook failure must never block or alter the user's prompt: on any error the hook exits 0 and adds nothing, and it logs the error locally. | Reliability |

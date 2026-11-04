@@ -1,37 +1,37 @@
 Rounds b+c (6 sessions) per sequence, median over reps; change vs cold
 
-tapchat  cold   reps=3 tokens=  428,455 (+0%) cost=$0.50 score=5.5/6 misled=0
-tapchat  auto   reps=3 tokens=  229,773 (-46%) cost=$0.31 score=5.5/6 misled=0
-tapchat  facts  reps=3 tokens=  322,268 (-25%) cost=$0.43 score=5.5/6 misled=0
-tapchat  judge  reps=3 tokens=  304,532 (-29%) cost=$0.34 score=5.5/6 misled=0 judge(haiku) tokens=44,859
-tapchat  index  reps=3 tokens=  302,825 (-29%) cost=$0.36 score=5.5/6 misled=0
+project-a  cold   reps=3 tokens=  428,455 (+0%) cost=$0.50 score=5.5/6 misled=0
+project-a  auto   reps=3 tokens=  229,773 (-46%) cost=$0.31 score=5.5/6 misled=0
+project-a  facts  reps=3 tokens=  322,268 (-25%) cost=$0.43 score=5.5/6 misled=0
+project-a  judge  reps=3 tokens=  304,532 (-29%) cost=$0.34 score=5.5/6 misled=0 judge(haiku) tokens=44,859
+project-a  index  reps=3 tokens=  302,825 (-29%) cost=$0.36 score=5.5/6 misled=0
 
-orderly  cold   reps=3 tokens=  420,664 (+0%) cost=$0.47 score=6.0/6 misled=0
-orderly  auto   reps=3 tokens=  447,162 (+6%) cost=$0.51 score=6.0/6 misled=0
-orderly  facts  reps=3 tokens=  333,747 (-21%) cost=$0.39 score=6.0/6 misled=0
-orderly  judge  reps=3 tokens=  362,174 (-14%) cost=$0.42 score=6.0/6 misled=0 judge(haiku) tokens=43,113
-orderly  index  reps=3 tokens=  305,146 (-27%) cost=$0.39 score=6.0/6 misled=0
+project-b  cold   reps=3 tokens=  420,664 (+0%) cost=$0.47 score=6.0/6 misled=0
+project-b  auto   reps=3 tokens=  447,162 (+6%) cost=$0.51 score=6.0/6 misled=0
+project-b  facts  reps=3 tokens=  333,747 (-21%) cost=$0.39 score=6.0/6 misled=0
+project-b  judge  reps=3 tokens=  362,174 (-14%) cost=$0.42 score=6.0/6 misled=0 judge(haiku) tokens=43,113
+project-b  index  reps=3 tokens=  305,146 (-27%) cost=$0.39 score=6.0/6 misled=0
 
 Per session, median tokens (score sum over reps)
-tapchat  M_b: cold  62,105 (1.5) | auto  34,346 (1.5) | facts  45,174 (1.5) | judge  64,777 (2.0) | index  43,064 (1.5)
-tapchat  P_b: cold 112,219 (3.0) | auto  21,444 (3.0) | facts 113,431 (3.0) | judge  33,594 (3.0) | index  36,109 (3.0)
-tapchat  D_b: cold  33,962 (3.0) | auto  28,285 (3.0) | facts  36,505 (3.0) | judge  32,508 (3.0) | index  32,777 (3.0)
-tapchat  M_c: cold  99,073 (3.0) | auto  66,259 (3.0) | facts  49,657 (3.0) | judge  78,382 (3.0) | index  62,845 (3.0)
-tapchat  P_c: cold  78,007 (3.0) | auto  48,611 (3.0) | facts  39,333 (3.0) | judge  45,174 (3.0) | index  79,289 (3.0)
-tapchat  D_c: cold  26,790 (3.0) | auto  30,722 (3.0) | facts  27,153 (3.0) | judge  29,860 (3.0) | index  42,676 (3.0)
-orderly  R_b: cold  69,576 (3.0) | auto  26,694 (3.0) | facts  35,459 (3.0) | judge  28,108 (3.0) | index  41,952 (3.0)
-orderly  O_b: cold  67,880 (3.0) | auto  99,543 (2.5) | facts  60,313 (3.0) | judge  97,959 (3.0) | index  78,657 (3.0)
-orderly  E_b: cold  83,519 (3.0) | auto  97,663 (3.0) | facts  69,371 (3.0) | judge  71,169 (3.0) | index  29,880 (3.0)
-orderly  R_c: cold  72,201 (2.0) | auto  78,531 (2.5) | facts  50,170 (3.0) | judge  69,226 (3.0) | index  66,965 (3.0)
-orderly  O_c: cold  57,743 (3.0) | auto  58,218 (3.0) | facts  48,491 (3.0) | judge  47,185 (3.0) | index  52,560 (3.0)
-orderly  E_c: cold  79,845 (3.0) | auto  90,407 (3.0) | facts  61,714 (3.0) | judge  63,759 (3.0) | index  77,535 (3.0)
+project-a  M_b: cold  62,105 (1.5) | auto  34,346 (1.5) | facts  45,174 (1.5) | judge  64,777 (2.0) | index  43,064 (1.5)
+project-a  P_b: cold 112,219 (3.0) | auto  21,444 (3.0) | facts 113,431 (3.0) | judge  33,594 (3.0) | index  36,109 (3.0)
+project-a  D_b: cold  33,962 (3.0) | auto  28,285 (3.0) | facts  36,505 (3.0) | judge  32,508 (3.0) | index  32,777 (3.0)
+project-a  M_c: cold  99,073 (3.0) | auto  66,259 (3.0) | facts  49,657 (3.0) | judge  78,382 (3.0) | index  62,845 (3.0)
+project-a  P_c: cold  78,007 (3.0) | auto  48,611 (3.0) | facts  39,333 (3.0) | judge  45,174 (3.0) | index  79,289 (3.0)
+project-a  D_c: cold  26,790 (3.0) | auto  30,722 (3.0) | facts  27,153 (3.0) | judge  29,860 (3.0) | index  42,676 (3.0)
+project-b  R_b: cold  69,576 (3.0) | auto  26,694 (3.0) | facts  35,459 (3.0) | judge  28,108 (3.0) | index  41,952 (3.0)
+project-b  O_b: cold  67,880 (3.0) | auto  99,543 (2.5) | facts  60,313 (3.0) | judge  97,959 (3.0) | index  78,657 (3.0)
+project-b  E_b: cold  83,519 (3.0) | auto  97,663 (3.0) | facts  69,371 (3.0) | judge  71,169 (3.0) | index  29,880 (3.0)
+project-b  R_c: cold  72,201 (2.0) | auto  78,531 (2.5) | facts  50,170 (3.0) | judge  69,226 (3.0) | index  66,965 (3.0)
+project-b  O_c: cold  57,743 (3.0) | auto  58,218 (3.0) | facts  48,491 (3.0) | judge  47,185 (3.0) | index  52,560 (3.0)
+project-b  E_c: cold  79,845 (3.0) | auto  90,407 (3.0) | facts  61,714 (3.0) | judge  63,759 (3.0) | index  77,535 (3.0)
 
 Injection: how often memory was injected, and median chars when injected
-tapchat  auto   injected 18/18 runs, wrong-topic items 6
-tapchat  facts  injected 15/18 runs, wrong-topic items 18, median 2,368 chars
-tapchat  judge  injected 12/18 runs, wrong-topic items 0, median 4,038 chars
-tapchat  index  injected 18/18 runs, wrong-topic items 14, median 1,523 chars
-orderly  auto   injected 18/18 runs, wrong-topic items 9
-orderly  facts  injected 15/18 runs, wrong-topic items 7, median 1,863 chars
-orderly  judge  injected 15/18 runs, wrong-topic items 1, median 4,116 chars
-orderly  index  injected 18/18 runs, wrong-topic items 29, median 2,314 chars
+project-a  auto   injected 18/18 runs, wrong-topic items 6
+project-a  facts  injected 15/18 runs, wrong-topic items 18, median 2,368 chars
+project-a  judge  injected 12/18 runs, wrong-topic items 0, median 4,038 chars
+project-a  index  injected 18/18 runs, wrong-topic items 14, median 1,523 chars
+project-b  auto   injected 18/18 runs, wrong-topic items 9
+project-b  facts  injected 15/18 runs, wrong-topic items 7, median 1,863 chars
+project-b  judge  injected 15/18 runs, wrong-topic items 1, median 4,116 chars
+project-b  index  injected 18/18 runs, wrong-topic items 29, median 2,314 chars

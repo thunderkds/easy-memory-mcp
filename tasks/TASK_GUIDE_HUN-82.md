@@ -72,7 +72,7 @@ Confirm the whole prototype works together and meets the non-functional requirem
 | 1 | Full cycle in a temp config dir and temp home: `install` → Stop hook with a synthetic transcript → prompt hook returns an index naming that note → MCP `memory_read` returns it → `report` runs → `uninstall` returns the settings JSON to the original. | FR-001..FR-008 |
 | 2 | After the cycle every file under the store is 0600 and every folder 0700. | NFR-003 |
 | 3 | Hooks and the MCP server run with sockets disabled (patched `socket.socket` raising, or `unshare -n` if available) and still work. | NFR-002 |
-| 4 | On orderly with 200 notes: `hook-prompt` p95 < 1 s over 50 runs and `hook-stop` p95 < 2 s over 20 runs; numbers pasted (no source quoted). | NFR-001 |
+| 4 | On Project B with 200 notes: `hook-prompt` p95 < 1 s over 50 runs and `hook-stop` p95 < 2 s over 20 runs; numbers pasted (no source quoted). | NFR-001 |
 | 5 | With the store folder made unwritable and with garbage on stdin, each hook exits 0 with empty stdout. | NFR-004 |
 | 6 | No file inside the observed repo changed during the whole cycle (tree hash equal). | FR-002 |
 | 7 | The repo's test command runs the whole suite green from a clean checkout: `python3 -m unittest discover -s tests`. | Gate 5 |
@@ -91,7 +91,7 @@ Confirm the whole prototype works together and meets the non-functional requirem
 | \# | Given (input/state) | Expect (output/behavior) | How it's checked |
 | -- | -- | -- | -- |
 | 1 | Full cycle on a synthetic repo | all steps pass | tests/test_t009_smoke.py |
-| 2 | Latency run on orderly | p95 under limits | tests/bench_t004.py plus Stop-hook timing |
+| 2 | Latency run on Project B | p95 under limits | tests/bench_t004.py plus Stop-hook timing |
 | 3 | Unwritable store | exit 0, empty stdout | unittest |
 
 ### Verification Command (exact, runnable)
@@ -117,7 +117,7 @@ python3 -m unittest discover -s tests -v
 
 You are the Pillar 3 oracle: do not edit implementation code. If something fails, write the failing test, report it to the Supervisor and stop.
 
-**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (orderly, tapchat) are read-only benchmark targets: record numbers only, never quote or commit their source.
+**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (Project B, Project A) are read-only benchmark targets: record numbers only, never quote or commit their source.
 
 ---
 
@@ -125,7 +125,7 @@ You are the Pillar 3 oracle: do not edit implementation code. If something fails
 
 - [ ] Tests must not touch the real home, Claude settings or `~/.easy-memory`.
 - [ ] Latency numbers vary: report p50, p95 and max.
-- [ ] orderly is a private client repo: record numbers only.
+- [ ] Project B is a private client repo: record numbers only.
 
 ---
 

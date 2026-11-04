@@ -36,7 +36,7 @@ WEIGHTS_MAX_AGE_SECONDS = 24 * 60 * 60  # refresh a file older than this if HEAD
 WEIGHTS_LOCK_STALE_SECONDS = 10 * 60  # a build lock older than this is a dead build
 REPORT_MAX_AGE_SECONDS = 60 * 60  # the Stop hook refreshes report.json when it is older
 # A word found in fewer source files than this is dropped from the weights file.
-# 2 gave 3.6 MB on orderly (limit 2 MB, AC2); 3 gives 1.7 MB and passes parity (HUN-76).
+# 2 gave 3.6 MB on Project B (limit 2 MB, AC2); 3 gives 1.7 MB and passes parity (HUN-76).
 MIN_FILES_PER_WORD = 3
 MAX_WEIGHTS_SOURCE_BYTES = 300_000  # larger source files are not counted (as in experiment 02)
 SKIP_DIRS = {"node_modules", ".git", "dist", "target", "build", "coverage"}

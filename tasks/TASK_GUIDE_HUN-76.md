@@ -23,7 +23,7 @@ Before writing any code:
 
 ## Requirement (Pillar 1 — Adapt the requirement)
 
-FR-003 scores a prompt against notes using word weights from the repo's own source files. Building them took 16.5 s and gave a 16 MB file on orderly (7,835 files); the prompt hook has a 1 s budget. Build them in a background process, store them compactly, and prove the scores stay close to experiment 03.
+FR-003 scores a prompt against notes using word weights from the repo's own source files. Building them took 16.5 s and gave a 16 MB file on Project B (7,835 files); the prompt hook has a 1 s budget. Build them in a background process, store them compactly, and prove the scores stay close to experiment 03.
 
 **Restated intent** (Supervisor's interpretation, in the project's domain language):
 
@@ -70,7 +70,7 @@ FR-003 scores a prompt against notes using word weights from the repo's own sour
 | \# | Criterion (testable) | Traces to requirement |
 | -- | -- | -- |
 | 1 | `easy_memory.py build-weights --repo <path>` writes `<store>/weights.json` atomically from the repo's source files (same extensions, skipped folders and 300 KB limit as `memstore.build_idf`) and drops words found in only one file. | FR-003, G3 |
-| 2 | On orderly the file is ≤ 2 MB and loads in ≤ 0.1 s (timings pasted). | NFR-001 |
+| 2 | On Project B the file is ≤ 2 MB and loads in ≤ 0.1 s (timings pasted). | NFR-001 |
 | 3 | `ensure_weights()` never waits for a build: if the file is missing it starts a detached background build and returns 'not ready'. | NFR-001, edge E1 |
 | 4 | If the file is older than 1 day AND the repo HEAD differs from the one recorded in the file, `ensure_weights()` starts a rebuild but still returns the old file. | G3 |
 | 5 | Two calls at once start only one build (O_EXCL lock file with a stale-lock timeout of 10 minutes). | G3 |
@@ -117,7 +117,7 @@ python3 -m unittest discover -s tests -p 'test_t003*.py' -v && python3 tests/par
 
 Port tokenizer and scorer unchanged. Compaction: keep only words with document frequency ≥ 2 and store as one JSON object `{n, head, built_at, df}`. Background build: `subprocess.Popen([sys.executable, __file__, 'build-weights', ...], start_new_session=True, stdin/stdout/stderr=DEVNULL)`. Locate experiment 03's saved answers and prompts under `experiments/03-precision/results` and `work` first; if the data needed for parity is missing, STOP and ask.
 
-**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (orderly, tapchat) are read-only benchmark targets: record numbers only, never quote or commit their source.
+**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (Project B, Project A) are read-only benchmark targets: record numbers only, never quote or commit their source.
 
 ---
 
@@ -144,13 +144,13 @@ Port tokenizer and scorer unchanged. Compaction: keep only words with document f
 | File | Reason |
 | -- | -- |
 | experiments/\*\* | read-only evidence (read it, never write) |
-| Any file in orderly or tapchat | private client repos: read-only |
+| Any file in Project B or Project A | private client repos: read-only |
 
 ---
 
 ## Test Plan
 
-Unit tests on a synthetic repo for build, lock and not-ready behavior. Parity script on experiment 03 data. Timing on orderly recorded as numbers only.
+Unit tests on a synthetic repo for build, lock and not-ready behavior. Parity script on experiment 03 data. Timing on Project B recorded as numbers only.
 
 ---
 
