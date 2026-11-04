@@ -1,6 +1,6 @@
-# TASK_REVIEW — T[NNN]: [Short Title]
+# TASK_REVIEW — HUN-208: Prompt hook splits each word once per run, with the same ranking
 
-> Sibling of `tasks/TASK_GUIDE_T[NNN].md`. Everything here is **filled by the reviewer at Stage
+> Sibling of `tasks/TASK_GUIDE_HUN-208.md`. Everything here is **filled by the reviewer at Stage
 > 4/5** — it is deliberately NOT in the guide, because the implementing agent re-reads the guide on
 > every turn and never fills these two sections.
 >
@@ -41,16 +41,16 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
-| verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `tests/test_prompt_word_split.py` (11 tests: AC1 tokens vs frozen old, AC2 score places=12, AC3 golden sha256 `ddd6af73…`, AC4 prompt split once in `_index_lines` and `_tool_search`, AC6 no new store file, AC8 cache bound). Supervisor run 2026-11-04 in the worktree: `Ran 510 tests in 30.453s` / `OK (skipped=3)` — pass |
+| Verification command run | ☑ pass | Supervisor, 2026-11-04: `python3 -m unittest discover -s tests` → `Ran 510 tests` `OK (skipped=3)`; `HUN82_GROWTH_PROBE=1 python3 -m unittest tests.test_t009_smoke.StoreGrowthProbeTest` → `[HUN-82 growth probe] notes=4000 hook-prompt p50=0.396s max=0.408s` `OK` — pass |
+| Negative cases hold | ☑ pass | /verify probes on the real CLI: empty prompt, slash command, garbage stdin (one `hook.log` line), non-ASCII prompt → rc 0, no stdout; 2M-char word: main 18.8 s → branch 0.24 s, identical stdout; 150k distinct words: main 171.7 s → branch 17.4 s, identical stdout (still over the 5 s hook timeout — pre-existing, follow-up) — pass |
+| verify | ☑ pass | `/verify` run by the user's command 2026-11-04, Supervisor drove it: copy of the real `personal-agentic-claude` store (440 notes) under a temp `EASY_MEMORY_HOME`; `hook-prompt` main 288-298 ms → branch 143-151 ms, stdout byte-identical; MCP `serve` `memory_search` x3 replies byte-identical; real store untouched — verdict PASS |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | `easy_memory.py` `tokens`/`_word_parts`/`_prompt_weight`/`_score_with`/`score`/`_index_lines` and callers `_tool_search`, `prompt_index`, `_count_words` (weights build: df sha identical, 1.7 s → 0.4 s on personal-agentic-claude); 2 edited tests. lane_check: `C2, 6 files, 447 lines, FITS; unpredicted: tasks/TASK_GUIDE_HUN-208.md, tests/test_t004_hook_prompt.py, tests/test_t005_switch.py`. Code review: 0 P0; P1 process (agent skipped `agents/backend.md` startup read — recorded); P2 cache bounded by entries not bytes, 28.6 MB full, comment says "a few MB" — accepted by user 2026-11-04 ("merge it as is"), follow-up. Security review (independent read-only agent; built-in needs `origin/HEAD`): no P0/P1, same P3 — pass |
+| Full smoke suite still green (no regression) | ☑ pass | 499 baseline tests still pass inside the 510 — pass |
+| **Companion score (easy-verifier)** | ☑ N/A | not run for this task |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ N/A | backend only |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ N/A | backend only |
+| **UI: Responsiveness at target viewports** | ☑ N/A | backend only |
 
 ---
 
@@ -87,7 +87,6 @@ OK
 
 max 1.620 s to 0.414 s (3.9x lower); the probe's own 1 s assertion now passes too. Full suite: `Ran 510 tests ... OK (skipped=3)` (499 + 11 new in `tests/test_prompt_word_split.py`).
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+**DELTA**: The prompt hook and `memory_search` return the same notes about 2-4x faster (real 440-note store 290 ms → 145 ms; 4,000 notes 1.62 s → 0.41 s, now inside NFR-001's 1 s).
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/HUN-208.jsonl`, never the
-implementing agent alone]
+**WITNESS**: Supervisor, 2026-11-04 ~08:46Z: re-ran the suite and probe in the worktree, timed main vs branch on the real store (read-only) and drove `/verify` on a store copy; independent of the implementing agent.
