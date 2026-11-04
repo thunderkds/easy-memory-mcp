@@ -33,7 +33,7 @@
 - [easy-ui-mcp for page checks](learnings.md#patterns) — JSON-RPC over http://localhost:8765/mcp; no viewport tool, use iframes
 - [v0.2 plan: redaction only now](decisions.md#architecture) — Gate 0 (FR-009) shipped 2026-10-29T08:03:51Z; O5 report filter merged (HUN-122); split gated; key deferred; Gate 3 removed
 - [Redaction regex and split test traps](learnings.md#patterns) — `|.*` fallback; patches on the shim pass silently
-- [Hook time grows with notes; report pollution](learnings.md#gotchas) — ~1 ms per note; `report` ignores `configured`; window start 2026-10-29T02:01:36Z
+- [Hook time grows with notes; report pollution](learnings.md#gotchas) — ~1 ms per note (HUN-208: ~3x less); `report` ignores `configured`; window start 2026-10-29T02:01:36Z
 - [security-review needs `origin`; board has no Ready-for-Review](learnings.md#gotchas) — use an independent agent; mark Done before merge
 - [Hook-prompt tests and the auto switch](learnings.md#gotchas) — fixed by HUN-84; new prompt-hook test classes must set `switch = "on"`
 - [Ranking stays as main; HUN-140 shelved](decisions.md#architecture) — rare-word gate hid ~1/3 of relevant notes (exp 06 holdout); df cutoff (exp 05) also failed
@@ -42,3 +42,7 @@
 - [Merge gate blocks all merges while any task In Progress](learnings.md#gotchas) — park Gate-2a-held tasks in Todo with the merge condition
 - [Review skills can't target worktrees; stop hook 6h window](learnings.md#gotchas) — review/verify by hand in the worktree; kit fix T186 pending
 - [Cross-repo tasks from this session](learnings.md#gotchas) — spawn hook checks only local tasks/; revert foreign board rows; check other repo's FR numbers before merge
+- [Prompt hook word split once (HUN-208)](decisions.md#architecture) — merged 2026-11-04; same ranking, 3-4x faster; cache byte bound HUN-210 merged; long-prompt cap HUN-211 merged
+- [Merge prep: pulled guide copy, stale held status](learnings.md#gotchas) — delete untracked pulled guide before merge; check Linear status, not the comment; remote is `origin`
+- [Long prompts capped (HUN-211)](decisions.md#architecture) — merged 2026-11-04; 200,000 chars and 1,000 rarest words; sorted word parts; Gate 2a approved by user
+- [Status push rewrites the local guide; agents skip startup reads](learnings.md#gotchas) — restore guide before merge, take branch copy on conflict; always check `Startup reads:`

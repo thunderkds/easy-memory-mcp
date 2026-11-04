@@ -7,6 +7,7 @@ worktrees share the main repo's store. Nothing is ever written inside a repo.
 import argparse
 import copy
 import difflib
+import functools
 import hashlib
 import json
 import math
@@ -408,15 +409,68 @@ def hook_stop(args):
     return 0
 
 
+_WORD = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
+_CAMEL_JOIN = re.compile(r"([a-z0-9])([A-Z])")
+
+
+WORD_CACHE_MAX_CHARS = 64
+
+
+# Bound: 65,536 entries x words of at most WORD_CACHE_MAX_CHARS (64) characters; tokens() does not
+# cache longer words. Measured with tracemalloc: a full cache of 65,536 camelCase-rich 64-character
+# words is about 46 MB.
+@functools.lru_cache(maxsize=1 << 16)
+def _word_parts(word):
+    """Scorable lower-case parts of one source word: itself and its camelCase / underscore pieces."""
+    parts = _CAMEL_JOIN.sub(r"\1 \2", word).replace("_", " ")
+    return tuple(sorted(part for part in {word.lower(), *parts.lower().split()}
+                        if len(part) >= 3 and part not in STOP_WORDS))  # sorted: not hash order
+
+
 def tokens(text):
     """Lower-case words of text, also split at camelCase and underscores (experiment 02)."""
     out = []
-    for word in re.findall(r"[A-Za-z][A-Za-z0-9_]*", text):
-        parts = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", word).replace("_", " ")
-        for part in {word.lower(), *parts.lower().split()}:
-            if len(part) >= 3 and part not in STOP_WORDS:
-                out.append(part)
+    for word in _WORD.findall(text):
+        out.extend(_word_parts(word) if len(word) <= WORD_CACHE_MAX_CHARS
+                   else _word_parts.__wrapped__(word))
     return out
+
+
+# A prompt with more distinct words than this is scored on its PROMPT_MAX_WORDS highest-weight
+# (rarest) words, ties by first appearance. Scoring costs distinct words x notes. Measured
+# (HUN-211, 150,000-word 1.7 MB prompt, hook-prompt subprocess): without a cap 229.8 s on 4,000
+# notes and 16.3 s on 440. With 1,000: see tasks/TASK_REVIEW_HUN-211.md; the hook timeout is 5 s
+# and NFR-001 is 1 s. Fixed costs a cap cannot remove: the notes alone take about 0.7 s at 4,000
+# notes, splitting a 150,000-word prompt about 0.5 s. Each kept word costs about 0.12 us per note.
+# User chose 1,000 on 2026-11-04. Of this repo's 245 text files, 3 have more than 1,000 distinct
+# words (median 295, max 1,202; 121 are over 300, 24 over 500), so only those rank differently.
+PROMPT_MAX_WORDS = 1000
+# Only this many leading characters of a prompt are split and scored (security review P2 of
+# HUN-211: a 10 MB prompt of distinct words took 4 s and 449 MB on 440 notes).
+PROMPT_MAX_CHARS = 200_000
+
+
+def _prompt_weight(prompt, weights):
+    """{word: weight} for the prompt's distinct words, from a weights dict (see score).
+
+    Over PROMPT_MAX_WORDS words only the highest-weight ones are kept; the others add nothing
+    to the score or to its denominator."""
+    n, df = weights["n"], weights["df"]
+    found = tokens(prompt[:PROMPT_MAX_CHARS])
+    words = set(found)
+    if len(words) <= PROMPT_MAX_WORDS:
+        return {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in words}
+    weight = {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in dict.fromkeys(found)}
+    kept = sorted(weight, key=weight.get, reverse=True)[:PROMPT_MAX_WORDS]  # stable: ties keep prompt order
+    return {t: weight[t] for t in kept}
+
+
+def _score_with(weight, text, k1=1.2):
+    """score() for a prompt whose _prompt_weight is already computed."""
+    best = sum(weight.values()) * (k1 + 1)
+    tf = Counter(tokens(text))
+    got = sum(w * tf[t] * (k1 + 1) / (tf[t] + k1) for t, w in weight.items() if tf[t])
+    return got / best if best else 0.0
 
 
 def score(prompt, text, weights, k1=1.2):
@@ -426,12 +480,7 @@ def score(prompt, text, weights, k1=1.2):
     A word missing from df (never seen, or dropped because only one file has it)
     gets df 0, the rarest weight.
     """
-    n, df = weights["n"], weights["df"]
-    weight = {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in set(tokens(prompt))}
-    best = sum(weight.values()) * (k1 + 1)
-    tf = Counter(tokens(text))
-    got = sum(w * tf[t] * (k1 + 1) / (tf[t] + k1) for t, w in weight.items() if tf[t])
-    return got / best if best else 0.0
+    return _score_with(_prompt_weight(prompt, weights), text, k1)
 
 
 def _head(root):
@@ -680,11 +729,12 @@ def _index_lines(prompt, cwd, weights):
     """Index lines (at most INDEX_MAX_NOTES, best score first) of the repo's notes that score
     at least INDEX_FLOOR against prompt. Shared by the prompt hook and the memory_search tool."""
     ranked = []
+    weight = _prompt_weight(prompt, weights)  # once per call, not once per note
     for note in read_notes(cwd):
         if not (isinstance(note.get("id"), str) and NOTE_ID.fullmatch(note["id"])
                 and isinstance(note.get("prompt"), str) and isinstance(note.get("answer"), str)):
             continue
-        value = score(prompt, note["prompt"] + "\n" + note["answer"], weights)
+        value = _score_with(weight, note["prompt"] + "\n" + note["answer"])
         if value >= INDEX_FLOOR:
             ranked.append((value, note))
     if not ranked:
