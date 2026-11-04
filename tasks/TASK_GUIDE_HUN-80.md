@@ -116,7 +116,7 @@ python3 -m unittest discover -s tests -p 'test_t007*.py' -v
 
 Study one real session log to learn the line shape (`usage` fields on assistant entries, tool_use entries). Build SYNTHETIC fixtures; never commit real logs. Median via `statistics.median`.
 
-**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (orderly, tapchat) are read-only benchmark targets: record numbers only, never quote or commit their source.
+**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (Project B, Project A) are read-only benchmark targets: record numbers only, never quote or commit their source.
 
 ---
 

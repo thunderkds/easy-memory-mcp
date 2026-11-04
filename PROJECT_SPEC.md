@@ -50,7 +50,7 @@ Port from evidence: `experiments/02-auto-memory/memstore.py` (tokens, cited file
 - Never write inside an observed repo (FR-002). Only `~/.easy-memory/` and the installer's reversible edit of user-level Claude Code settings.
 - A hook never blocks or alters the prompt: catch everything, exit 0, log to `~/.easy-memory/hook.log` (NFR-004). Exit code 2 blocks a prompt, so never use it.
 - No network, no model call, no telemetry (NFR-002). Store files 0600, folders 0700 (NFR-003).
-- The prompt hook must not build word weights. Building took 16.5 s on orderly; the budget is 1 s (NFR-001).
+- The prompt hook must not build word weights. Building took 16.5 s on Project B; the budget is 1 s (NFR-001).
 - Do not edit anything under `experiments/`. Do not change the scorer's behavior without a new offline check against experiment 03 answers (A5).
 - The installer edits the user's real settings: back up first, support `--dry-run`, and `uninstall` must restore cleanly (FR-008).
 
@@ -110,5 +110,5 @@ Linear is the source of truth: team `HUN`, project **easy-memory-mcp** (https://
 
 | Date | Insight | Source Task |
 |------|---------|------------|
-| 2026-10-28 | Building word weights on orderly: 16.5 s, 16 MB, 0.3 s to load. They cannot be built inside a hook. | Stage 0.5 |
+| 2026-10-28 | Building word weights on Project B: 16.5 s, 16 MB, 0.3 s to load. They cannot be built inside a hook. | Stage 0.5 |
 | 2026-10-28 | Stop hook input has `last_assistant_message` but no user prompt; the prompt comes from the transcript or a stash. | Stage 0.5 |

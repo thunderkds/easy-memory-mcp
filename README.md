@@ -67,7 +67,7 @@ This continues easy-context-mcp, which was retired on 2026-10-23. Code search (v
 | # | Question | Result |
 |---|---|---|
 | [01](experiments/01-memory-vs-cold/RESULTS.md) | Does memory from the last session cut tokens on a follow-up? | Yes. The previous final answer cut tokens by 58% at the same accuracy and caught a renamed method. Resume was misled. |
-| [02](experiments/02-auto-memory/RESULTS.md) | Does it still work when saving, choosing and delivering memory are automatic, across repos? | Risk. It cut tokens by 35% on tapchat and added 4% on orderly, about 15% saved overall. Accuracy was the same, and stale memory misled 0 runs. The picker is the weak part: memory helps only when it already holds the answer. |
-| [03](experiments/03-precision/RESULTS.md) | Can more precise injection save tokens on both repos? | Go for a prototype. The index method (list notes, the agent opens one) cut tokens by 29% on tapchat and 27% on orderly. Accuracy was the same, and stale memory misled 0 runs. |
+| [02](experiments/02-auto-memory/RESULTS.md) | Does it still work when saving, choosing and delivering memory are automatic, across repos? | Risk. It cut tokens by 35% on Project A and added 4% on Project B, about 15% saved overall. Accuracy was the same, and stale memory misled 0 runs. The picker is the weak part: memory helps only when it already holds the answer. |
+| [03](experiments/03-precision/RESULTS.md) | Can more precise injection save tokens on both repos? | Go for a prototype. The index method (list notes, the agent opens one) cut tokens by 29% on Project A and 27% on Project B. Accuracy was the same, and stale memory misled 0 runs. |
 
 Raw agent answers stay local (`.gitignore`). They quote private source code.

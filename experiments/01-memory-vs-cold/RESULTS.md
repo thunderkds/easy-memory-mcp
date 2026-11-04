@@ -6,7 +6,7 @@
 
 ## Setup
 
-- Repo: tapchat-apis (NestJS, 557 TypeScript files), read-only scratch copies (`prepare.sh`).
+- Repo: project-a (NestJS, 557 TypeScript files), read-only scratch copies (`prepare.sh`).
 - Runs: 54 `claude -p` runs, Sonnet (`claude-sonnet-5-5`), `--effort medium`, `--safe-mode`, tools `Read,Grep,Glob`. Spend $3.68.
 - 3 task chains. Session A explores a topic. Session B is a related follow-up:
   - **M** — moderation: how a suspension happens and is lifted → where to send a push when a moderator suspends a user.

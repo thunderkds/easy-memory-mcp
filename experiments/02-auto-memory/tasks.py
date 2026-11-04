@@ -8,7 +8,7 @@ import re
 
 SUFFIX = "\n\nDo not edit files. Answer concisely with file:line references."
 
-TAPCHAT = {
+PROJECT_A = {
     "M_a": "In this NestJS API, trace how a user gets suspended after a "
            "moderator makes a decision, and how the suspension is later lifted "
            "(automatically or through an appeal).",
@@ -36,7 +36,7 @@ TAPCHAT = {
            "allows or prevents it.",
 }
 
-ORDERLY = {
+PROJECT_B = {
     "O_a": "In this Spring app, trace how a restaurant order is sent to "
            "suppliers: from finalizing the order to the supplier emails, and "
            "how email open/click tracking is recorded.",
@@ -65,9 +65,9 @@ ORDERLY = {
 }
 
 ORDER = ["a", "b", "c"]
-CHANGED = {"tapchat": {"M": "rename", "P": "logic", "D": None},
-           "orderly": {"R": "rename", "O": "logic", "E": None}}
-PROMPTS = {"tapchat": TAPCHAT, "orderly": ORDERLY}
+CHANGED = {"project-a": {"M": "rename", "P": "logic", "D": None},
+           "project-b": {"R": "rename", "O": "logic", "E": None}}
+PROMPTS = {"project-a": PROJECT_A, "project-b": PROJECT_B}
 
 
 def sequence(repo):
@@ -83,7 +83,7 @@ def score(repo, sid, text):
     """1 full, 0.5 partial, 0 wrong. Also returns 'misled' for trap sessions."""
     t = text or ""
     misled = None
-    if repo == "tapchat":
+    if repo == "project-a":
         if sid == "M_a":
             h = has(t, r"makeDecision", r"suspendByModeration",
                     r"handleRestoreSuspendedUsers|cron", r"appeal")

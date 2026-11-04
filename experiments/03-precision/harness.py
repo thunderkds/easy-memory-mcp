@@ -95,7 +95,7 @@ def main():
     reps = int(sys.argv[2]) if len(sys.argv) > 2 else 3
     RESULTS.mkdir(exist_ok=True)
     WORK.mkdir(exist_ok=True)
-    plan = [(r, rep, v) for rep in range(1, reps + 1) for r in ("tapchat", "orderly") for v in VARIANTS]
+    plan = [(r, rep, v) for rep in range(1, reps + 1) for r in ("project-a", "project-b") for v in VARIANTS]
     with ThreadPoolExecutor(len(plan)) as ex:
         [f.result() for f in [ex.submit(sequence, *p) for p in plan]]
 

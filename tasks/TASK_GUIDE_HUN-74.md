@@ -117,7 +117,7 @@ python3 -m unittest discover -s tests -p 'test_t001*.py' -v
 
 Create `easy_memory.py` with `main(argv)` and a dict of subcommands (empty handlers for later tasks print 'not implemented' and exit 0). Resolve the repo key with `git rev-parse --git-common-dir` (absolute); fall back to the real path. Hash the resolved path to a short folder name and keep a `meta.json` with the readable path. Use `os.open(..., 0o600)`, `os.makedirs(mode=0o700)` and `os.replace`.
 
-**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (orderly, tapchat) are read-only benchmark targets: record numbers only, never quote or commit their source.
+**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (Project B, Project A) are read-only benchmark targets: record numbers only, never quote or commit their source.
 
 ---
 

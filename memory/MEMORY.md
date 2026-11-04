@@ -21,12 +21,12 @@
 <!-- Format: - [Title](cold-file.md#section) — one-line summary.
      Target ≤150 chars/entry. Advisory: reported by the size test, never enforced.
      The enforced gate is the 42,000-character whole-file budget above. -->
-- [Path C: single-file stdlib prototype](decisions.md#architecture) — hooks + hand-written MCP; weights built in background (16.5 s on orderly)
+- [Path C: single-file stdlib prototype](decisions.md#architecture) — hooks + hand-written MCP; weights built in background (16.5 s on Project B)
 - [Linear is the source of truth](decisions.md#infrastructure) — tasks HUN-74..82; kanban and tasks/ are a pull cache
 - [Board setup without a tty](learnings.md#patterns) — script `init` with a scripted ask; rewrite forward IDs after create
 - [Experiment results were tracked and pushed](learnings.md#gotchas) — untracked in 649903c; remote history still has them; parity check needs local copies
 - [easy-verifier as scoring MCP](decisions.md#infrastructure) — user's container, HTTP :8766, project-scoped .mcp.json; dev tool only
-- [Weights keep words in 3+ files](decisions.md#architecture) — 2 gave 3.6 MB on orderly (limit 2 MB); 3 gives 1.7 MB and passes parity
+- [Weights keep words in 3+ files](decisions.md#architecture) — 2 gave 3.6 MB on Project B (limit 2 MB); 3 gives 1.7 MB and passes parity
 - [Prototype open defects D1-D3](learnings.md#patterns) — prompt-hook time grows with notes (~1 ms each); big transcripts; uncapped non-git build
 - [v0.1.0 released to GitHub](../RUNBOOK.md) — tag v0.1.0 at 7916424, main pushed 2026-10-28; install and the AC6 live check are the user's
 - [Release page: Graphite Mint family theme](decisions.md#architecture) — HUN-125 spec-driven; `site/theme.css` tokens byte-identical to the spec; HUN-127: 1280px container, pictures first, no task IDs; HUN-130: rev 25 neon layer, `html.no-glow`

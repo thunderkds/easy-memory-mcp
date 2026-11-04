@@ -79,7 +79,7 @@ A UserPromptSubmit hook must add an index of at most 5 notes whose score against
 | 6 | Weights not ready → empty stdout, exit 0, and `ensure_weights()` has started a build. | NFR-001, edge E1 |
 | 7 | Any exception (bad stdin, corrupt store, missing weights) → exit 0, empty stdout, one line in `hook.log`. | NFR-004 |
 | 8 | A note whose answer contains 'ignore previous instructions' appears only as a truncated quoted line inside the index frame, never outside it. | FR-004, edge E10 |
-| 9 | p95 ≤ 0.5 s over 50 runs on orderly with 200 notes in the store (hard limit 1 s). Result pasted. | NFR-001 |
+| 9 | p95 ≤ 0.5 s over 50 runs on Project B with 200 notes in the store (hard limit 1 s). Result pasted. | NFR-001 |
 
 ---
 
@@ -122,7 +122,7 @@ python3 -m unittest discover -s tests -p 'test_t004*.py' -v
 
 Hook flow: read stdin → repo key from `cwd` → `ensure_weights()` → load notes → score with the HUN-76 scorer → filter ≥ 0.12 → top 5 → check each cited file's current sha256 → render → cap to 2,500 characters → print JSON. Do the cheapest work first and exit early. Use `json.dumps` for output so quotes and newlines in notes cannot break the JSON.
 
-**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (orderly, tapchat) are read-only benchmark targets: record numbers only, never quote or commit their source.
+**Conventions**: Python 3, standard library only (NFR-005). Tests use `unittest` (pytest is not guaranteed). Follow `docs/claude-md/code-naming-conventions.md`. Tests never touch the real home folder, the real Claude settings, or the real `~/.easy-memory` (use temp dirs and `EASY_MEMORY_HOME` / `CLAUDE_CONFIG_DIR`). Private client repos (Project B, Project A) are read-only benchmark targets: record numbers only, never quote or commit their source.
 
 ---
 
@@ -157,7 +157,7 @@ Hook flow: read stdin → repo key from `cwd` → `ensure_weights()` → load no
 
 ## Test Plan
 
-Unit tests on a synthetic repo and store. Benchmark script on orderly with 200 generated notes; record timings only.
+Unit tests on a synthetic repo and store. Benchmark script on Project B with 200 generated notes; record timings only.
 
 ---
 

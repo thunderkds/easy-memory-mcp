@@ -42,7 +42,7 @@ def main():
     data = {**load(E2 / "results", {"cold", "auto"}), **load(HERE / "results", {"facts", "judge", "index"})}
     conds = ("cold", "auto", "facts", "judge", "index")
     print("Rounds b+c (6 sessions) per sequence, median over reps; change vs cold\n")
-    for repo in ("tapchat", "orderly"):
+    for repo in ("project-a", "project-b"):
         base = None
         for cond in conds:
             seqs = defaultdict(lambda: [0, 0.0, 0.0, 0, 0, 0])
@@ -61,7 +61,7 @@ def main():
                   + (f" judge(haiku) tokens={m(4):,.0f}" if cond == "judge" else ""))
         print()
     print("Per session, median tokens (score sum over reps)")
-    for repo in ("tapchat", "orderly"):
+    for repo in ("project-a", "project-b"):
         for sid in tasks.sequence(repo):
             if sid.endswith("_a"):
                 continue
@@ -72,7 +72,7 @@ def main():
                     cells.append(f"{cond} {st.median(v['tok'] for v in vs):>7,.0f} ({sum(v['score'] for v in vs):.1f})")
             print(f"{repo:8} {sid}: " + " | ".join(cells))
     print("\nInjection: how often memory was injected, and median chars when injected")
-    for repo in ("tapchat", "orderly"):
+    for repo in ("project-a", "project-b"):
         for cond in ("auto", "facts", "judge", "index"):
             vs = [v for (r, _, c, _), v in data.items() if r == repo and c == cond]
             inj = [v for v in vs if v["chosen"]]

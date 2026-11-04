@@ -11,6 +11,7 @@ without the changed-file note.
 Usage: harness.py run [reps]   |   harness.py copy <repo> <dest>
 """
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -27,8 +28,8 @@ HERE = Path(__file__).resolve().parent
 WORK = HERE / "work"          # repo copies + stores (gitignored via results/)
 RESULTS = HERE / "results"
 SOURCES = {
-    "tapchat": Path.home() / "workspace/project/beautifly/github/tapchat-apis",
-    "orderly": Path.home() / "workspace/project/phanpy/orderly",
+    "project-a": Path(os.environ.get("EASY_MEMORY_PROJECT_A", "~/project-a")).expanduser(),
+    "project-b": Path(os.environ.get("EASY_MEMORY_PROJECT_B", "~/project-b")).expanduser(),
 }
 MODEL, EFFORT = "sonnet", "medium"
 SLOTS = threading.Semaphore(8)  # concurrent agent runs
@@ -152,7 +153,7 @@ def main():
     reps = int(sys.argv[2]) if len(sys.argv) > 2 else 3
     RESULTS.mkdir(exist_ok=True)
     WORK.mkdir(exist_ok=True)
-    plan = [(repo, rep) for rep in range(1, reps + 1) for repo in ("tapchat", "orderly")]
+    plan = [(repo, rep) for rep in range(1, reps + 1) for repo in ("project-a", "project-b")]
     with ThreadPoolExecutor(len(plan)) as ex:
         [f.result() for f in [ex.submit(sequence, *p) for p in plan]]
 

@@ -112,8 +112,8 @@ def score(query, docs, idf_file, k1=1.2):
 def pick(store, prompt, root, idf_file, k=2, min_score=0.18, rel=0.5):
     """Top-k memories above an absolute floor and within rel of the best.
 
-    Floor set on experiment 01's tapchat answers: same topic 0.23-0.49,
-    false matches up to 0.17. Orderly is the unseen check.
+    Floor set on experiment 01's project-a answers: same topic 0.23-0.49,
+    false matches up to 0.17. Project B is the unseen check.
     """
     recs = load(store)
     scores = score(prompt, [r["prompt"] + "\n" + r["answer"] for r in recs], idf_file)

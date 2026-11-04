@@ -19,7 +19,7 @@ Three design choices are open. They are the real content of this log:
 
 | Claim | Source | Result |
 |---|---|---|
-| Building word weights is too slow to run per prompt | Timed `experiments/02-auto-memory/memstore.py:build_idf` on `~/workspace/project/phanpy/orderly` (7,835 tracked files) | **16.5 s** to build, **16 MB** JSON, **0.3 s** just to load it. NFR-001 is 1 s. |
+| Building word weights is too slow to run per prompt | Timed `experiments/02-auto-memory/memstore.py:build_idf` on `<Project B checkout>` (7,835 tracked files) | **16.5 s** to build, **16 MB** JSON, **0.3 s** just to load it. NFR-001 is 1 s. |
 | Stop hook gets the final answer | code.claude.com/docs/en/hooks | `last_assistant_message` is documented for Stop. Stop input has no user prompt, so the saved prompt must come from `transcript_path` or from a UserPromptSubmit-time stash. |
 | UserPromptSubmit gets the prompt and can add context | same | Input has `prompt`. Output `hookSpecificOutput.additionalContext` (cap 10,000 characters per string); plain stdout also becomes context. Default timeout 30 s on this event. |
 | Exit codes | same | Exit 0 = success. Exit 2 **blocks** the prompt. Any other non-zero = non-blocking. NFR-004 means: catch everything, exit 0. |
@@ -97,7 +97,7 @@ Open for Stage 1: the installer edits the user's real settings files; it needs a
 ## Next Actions for Stage 2
 
 1. Offline check: does a compact weight file (≤2 MB) keep scores within tolerance of experiment 03 on its saved answers?
-2. Time the `hook-prompt` path on orderly: target p95 < 0.5 s to leave margin for NFR-001.
+2. Time the `hook-prompt` path on Project B: target p95 < 0.5 s to leave margin for NFR-001.
 3. Split FR-005 (MCP server) into its own task after the hooks.
 4. Add to FR-008: installer backs up settings and offers `--dry-run`.
 5. Decide A3 by test: with the allow rule in place, does `memory_read` run with no prompt in a fresh session?
