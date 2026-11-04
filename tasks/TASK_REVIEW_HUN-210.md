@@ -41,16 +41,16 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
-| verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `tests/test_word_cache_bound.py` (7 tests: AC1 lengths 63/64/65/100,000 vs frozen `old_tokens`; AC2 1,000 long words leave `currsize == 0`, short words still hit; AC4 plugin copy). Supervisor run 2026-11-04: `Ran 517 tests in 69.057s` / `OK (skipped=3)` — pass |
+| Verification command run | ☑ pass | Supervisor 2026-11-04: `python3 -m unittest discover -s tests` → `Ran 517 tests` `OK (skipped=3)` (510 + 7 new); `tests/test_prompt_word_split.py` unedited and green — pass |
+| Negative cases hold | ☑ pass | words of length 65 and 100,000 split as before (AC1); camelCase long word still yields short parts; lane_check `C1, 3 files, 81 lines, FITS` — pass |
+| verify | ☑ pass | Supervisor real-surface run 2026-11-04 (user `/verify` not run for this task): MCP `serve` on a copy of the real 440-note store under a temp `EASY_MEMORY_HOME`, 40 `memory_search` calls with 1,600 distinct 20,000-char words: main RSS 27 → 95 MB, branch 27 → 35 MB; 0 errors; normal query 5 hits on both — pass |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | `tokens`, `_word_parts`, `WORD_CACHE_MAX_CHARS`; callers `_prompt_weight`, `_score_with`, `_count_words` unchanged. Code review (inline): 0 P0, 0 P1, 0 P2; P3 tests reach `_word_parts.__wrapped__`/`cache_info` (lru internals, stable stdlib API) — accepted. Startup reads complete (PROJECT_SPEC, guide, `agents/backend.md`). Security review not required (Risk Low) — pass |
+| Full smoke suite still green (no regression) | ☑ pass | 510 baseline tests pass inside the 517 — pass |
+| **Companion score (easy-verifier)** | ☑ N/A | not run for this task |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ N/A | backend only |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ N/A | backend only |
+| **UI: Responsiveness at target viewports** | ☑ N/A | backend only |
 
 ---
 
@@ -84,7 +84,6 @@ tracemalloc current bytes: 362 = 0.0 MB
 
 New comment at `_word_parts`: "Bound: 65,536 entries x words of at most WORD_CACHE_MAX_CHARS (64) characters; tokens() does not cache longer words. Measured with tracemalloc: a full cache of 65,536 camelCase-rich 64-character words is about 46 MB."
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+**DELTA**: A long-running `serve` no longer keeps very long words in memory: 1,600 distinct 20,000-character query words leave it at 35 MB instead of 95 MB, with the same search results.
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/HUN-210.jsonl`, never the
-implementing agent alone]
+**WITNESS**: Supervisor, 2026-11-04: re-ran the suite in the worktree and drove MCP `serve` on main vs branch (store copy, temp `EASY_MEMORY_HOME`); independent of the implementing agent.
