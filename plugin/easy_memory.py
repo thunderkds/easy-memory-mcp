@@ -423,8 +423,8 @@ WORD_CACHE_MAX_CHARS = 64
 def _word_parts(word):
     """Scorable lower-case parts of one source word: itself and its camelCase / underscore pieces."""
     parts = _CAMEL_JOIN.sub(r"\1 \2", word).replace("_", " ")
-    return tuple(part for part in {word.lower(), *parts.lower().split()}
-                 if len(part) >= 3 and part not in STOP_WORDS)
+    return tuple(sorted(part for part in {word.lower(), *parts.lower().split()}
+                        if len(part) >= 3 and part not in STOP_WORDS))  # sorted: not hash order
 
 
 def tokens(text):
@@ -436,10 +436,33 @@ def tokens(text):
     return out
 
 
+# A prompt with more distinct words than this is scored on its PROMPT_MAX_WORDS highest-weight
+# (rarest) words, ties by first appearance. Scoring costs distinct words x notes. Measured
+# (HUN-211, 150,000-word 1.7 MB prompt, hook-prompt subprocess): without a cap 229.8 s on 4,000
+# notes and 16.3 s on 440. With 1,000: see tasks/TASK_REVIEW_HUN-211.md; the hook timeout is 5 s
+# and NFR-001 is 1 s. Fixed costs a cap cannot remove: the notes alone take about 0.7 s at 4,000
+# notes, splitting a 150,000-word prompt about 0.5 s. Each kept word costs about 0.12 us per note.
+# User chose 1,000 on 2026-11-04. Of this repo's 245 text files, 3 have more than 1,000 distinct
+# words (median 295, max 1,202; 121 are over 300, 24 over 500), so only those rank differently.
+PROMPT_MAX_WORDS = 1000
+# Only this many leading characters of a prompt are split and scored (security review P2 of
+# HUN-211: a 10 MB prompt of distinct words took 4 s and 449 MB on 440 notes).
+PROMPT_MAX_CHARS = 200_000
+
+
 def _prompt_weight(prompt, weights):
-    """{word: weight} for the prompt's distinct words, from a weights dict (see score)."""
+    """{word: weight} for the prompt's distinct words, from a weights dict (see score).
+
+    Over PROMPT_MAX_WORDS words only the highest-weight ones are kept; the others add nothing
+    to the score or to its denominator."""
     n, df = weights["n"], weights["df"]
-    return {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in set(tokens(prompt))}
+    found = tokens(prompt[:PROMPT_MAX_CHARS])
+    words = set(found)
+    if len(words) <= PROMPT_MAX_WORDS:
+        return {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in words}
+    weight = {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in dict.fromkeys(found)}
+    kept = sorted(weight, key=weight.get, reverse=True)[:PROMPT_MAX_WORDS]  # stable: ties keep prompt order
+    return {t: weight[t] for t in kept}
 
 
 def _score_with(weight, text, k1=1.2):
