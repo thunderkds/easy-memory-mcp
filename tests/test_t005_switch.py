@@ -306,7 +306,7 @@ class PromptLogTest(SwitchTestCase):
     def test_hook_error_still_leaves_one_prompt_log_line(self):  # AC5: every run
         repo = self.ready_repo()
         self.set_day(EVEN_DAY)
-        with mock.patch.object(easy_memory, "score", side_effect=RuntimeError("boom")):
+        with mock.patch.object(easy_memory, "_score_with", side_effect=RuntimeError("boom")):
             self.assertEqual(self.run_hook(self.hook_input(repo))[:2], (0, ""))
         (entry,) = self.prompt_log(repo)
         self.assertEqual((entry["effective"], entry["injected"]), ("on", False))

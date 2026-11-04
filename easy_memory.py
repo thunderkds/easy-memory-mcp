@@ -7,6 +7,7 @@ worktrees share the main repo's store. Nothing is ever written inside a repo.
 import argparse
 import copy
 import difflib
+import functools
 import hashlib
 import json
 import math
@@ -408,15 +409,38 @@ def hook_stop(args):
     return 0
 
 
+_WORD = re.compile(r"[A-Za-z][A-Za-z0-9_]*")
+_CAMEL_JOIN = re.compile(r"([a-z0-9])([A-Z])")
+
+
+@functools.lru_cache(maxsize=1 << 16)  # bound: at most 65,536 distinct words (a few MB) in a long `serve`
+def _word_parts(word):
+    """Scorable lower-case parts of one source word: itself and its camelCase / underscore pieces."""
+    parts = _CAMEL_JOIN.sub(r"\1 \2", word).replace("_", " ")
+    return tuple(part for part in {word.lower(), *parts.lower().split()}
+                 if len(part) >= 3 and part not in STOP_WORDS)
+
+
 def tokens(text):
     """Lower-case words of text, also split at camelCase and underscores (experiment 02)."""
     out = []
-    for word in re.findall(r"[A-Za-z][A-Za-z0-9_]*", text):
-        parts = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", word).replace("_", " ")
-        for part in {word.lower(), *parts.lower().split()}:
-            if len(part) >= 3 and part not in STOP_WORDS:
-                out.append(part)
+    for word in _WORD.findall(text):
+        out.extend(_word_parts(word))
     return out
+
+
+def _prompt_weight(prompt, weights):
+    """{word: weight} for the prompt's distinct words, from a weights dict (see score)."""
+    n, df = weights["n"], weights["df"]
+    return {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in set(tokens(prompt))}
+
+
+def _score_with(weight, text, k1=1.2):
+    """score() for a prompt whose _prompt_weight is already computed."""
+    best = sum(weight.values()) * (k1 + 1)
+    tf = Counter(tokens(text))
+    got = sum(w * tf[t] * (k1 + 1) / (tf[t] + k1) for t, w in weight.items() if tf[t])
+    return got / best if best else 0.0
 
 
 def score(prompt, text, weights, k1=1.2):
@@ -426,12 +450,7 @@ def score(prompt, text, weights, k1=1.2):
     A word missing from df (never seen, or dropped because only one file has it)
     gets df 0, the rarest weight.
     """
-    n, df = weights["n"], weights["df"]
-    weight = {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in set(tokens(prompt))}
-    best = sum(weight.values()) * (k1 + 1)
-    tf = Counter(tokens(text))
-    got = sum(w * tf[t] * (k1 + 1) / (tf[t] + k1) for t, w in weight.items() if tf[t])
-    return got / best if best else 0.0
+    return _score_with(_prompt_weight(prompt, weights), text, k1)
 
 
 def _head(root):
@@ -680,11 +699,12 @@ def _index_lines(prompt, cwd, weights):
     """Index lines (at most INDEX_MAX_NOTES, best score first) of the repo's notes that score
     at least INDEX_FLOOR against prompt. Shared by the prompt hook and the memory_search tool."""
     ranked = []
+    weight = _prompt_weight(prompt, weights)  # once per call, not once per note
     for note in read_notes(cwd):
         if not (isinstance(note.get("id"), str) and NOTE_ID.fullmatch(note["id"])
                 and isinstance(note.get("prompt"), str) and isinstance(note.get("answer"), str)):
             continue
-        value = score(prompt, note["prompt"] + "\n" + note["answer"], weights)
+        value = _score_with(weight, note["prompt"] + "\n" + note["answer"])
         if value >= INDEX_FLOOR:
             ranked.append((value, note))
     if not ranked:
