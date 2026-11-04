@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-10-31
+**Last updated**: 2026-11-04
 
 > Board cache, pulled from the board by `python3 scripts/board_sync.py pull`. Do not edit it by hand:
 > the board is the source of truth, and the next pull overwrites this file.
@@ -9,18 +9,17 @@
 ## Board
 
 ### Todo
-- [ ] **HUN-138** — A note cites only files its answer names and its turn touched | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-138.md`
 - [ ] **HUN-137** — Event turns borrow the last typed prompt as the note question | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-137.md`
-- [ ] **HUN-140** — Ranking adjusts for note length and needs one rare prompt word | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-140.md`
+- [ ] **HUN-138** — A note cites only files its answer names and its turn touched | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-138.md`
 - [ ] **HUN-139** — A file missing on this branch is flagged NOT-ON-BRANCH, not DELETED | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-139.md`
+- [ ] **HUN-140** — Ranking adjusts for note length and needs one rare prompt word | backend-developer | C2 | Risk: Medium | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-140.md`
 
 ### In Progress
+- [ ] **HUN-204** — Site: Easy Kit link to easy-kits.vercel.app; problem/solution + flow + token chart; Easy Personal memory section; drop release notes | ? | ? | Risk: ? | P2 | Guide: `tasks/TASK_GUIDE_HUN-204.md`
 
 ### Ready for Review
 
 ### Done
-- [x] **HUN-136** — A saved note is found by memory_search within 1 s of the Stop hook | qa-expert | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-136.md`
-- [x] **HUN-135** — memory_forget moves a note to the trash; memory_restore brings it back | backend-developer | C2 | Risk: High | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-135.md`
 - [x] **HUN-74** — Package skeleton, repo key and atomic note store | common-infrastructure | C1 | Risk: Low | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-74.md`
 - [x] **HUN-75** — Stop hook saves one note per turn | backend-developer | C2 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-75.md`
 - [x] **HUN-76** — Word weights built in the background, with a parity check | backend-developer | C2 | Risk: Medium | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-76.md`
@@ -41,6 +40,11 @@
 - [x] **HUN-130** — Release page — Graphite Mint neon highlight layer | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-130.md`
 - [x] **HUN-133** — Install stepper — equal code boxes across the three steps | frontend-developer | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-133.md`
 - [x] **HUN-134** — easy-memory installs as a Claude Code plugin (hooks + MCP server, no clone, no settings edit) | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-134.md`
+- [x] **HUN-135** — memory_forget moves a note to the trash; memory_restore brings it back | backend-developer | C2 | Risk: High | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-135.md`
+- [x] **HUN-136** — A saved note is found by memory_search within 1 s of the Stop hook | qa-expert | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-136.md`
+- [x] **HUN-197** — report --json writes report.json for the easy-personal dashboard | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-197.md`
+- [x] **HUN-199** — report --json with a wrong --repo must not create a store folder | ? | ? | Risk: ? | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-199.md`
+- [x] **HUN-208** — Prompt hook splits each word once per run, with the same ranking | backend-developer | C2 | Risk: Medium | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-208.md`
 
 ### Closed (will not do)
 
