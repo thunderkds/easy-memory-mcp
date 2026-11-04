@@ -46,6 +46,12 @@
 **Follow-ups**: HUN-199 merged 2026-11-03: `report --json --repo <not a folder>` returns 1 and writes nothing; `no_data` (counts only the refreshing checkout's logs) documented in README, not changed (Gate 2a). Consumer HUN-198 merged in easy-personal-mcp (`63271cf`, its FR-066): Memory panel block reads `report.json`, abstains on `v` > 1.
 **Files**: `easy_memory.py` (`_refresh_report`, `_report_numbers`, `_report_object`, `report_command`, `hook_stop`), `tests/test_v04_report_json.py`, `PRD_v0.4.md`, `README.md`
 
+### 2026-11-04 — Prompt hook splits each word once per run (HUN-208 merged)
+**Decision**: `tokens()` uses `_word_parts(word)` (`functools.lru_cache(maxsize=1<<16)`); `_index_lines` builds the prompt's weight map once (`_prompt_weight`) and scores each note with `_score_with`; `score()` is a thin wrapper. Ranking byte-identical (golden sha256 test, real store check). No saved word-count cache, no retention limit (user 2026-11-04, picked from 3 options).
+**Why**: defect D1. cProfile: `tokens()` was ~97% of scoring; the prompt was re-split per note. Results: 4,000-note probe max 1.62 s → 0.41 s (probe now passes); real 440-note store hook 290 → 145 ms; weights build 1.7 → 0.4 s, same df.
+**Follow-ups**: P2 accepted ("merge it as is"): the cache bounds entries not bytes (full = 28.6 MB; comment says "a few MB"; long words cached; matters only in long-running `serve`) — fix: skip caching words > ~64 chars. Pre-existing: a 1.7 MB prompt of 150k distinct words still takes 17.4 s (hook timeout 5 s) — cap prompt words before scoring. Still linear in notes: a saved cache file is the next step if a store nears ~3,000 notes.
+**Files**: `easy_memory.py` (`_word_parts`, `tokens`, `_prompt_weight`, `_score_with`, `score`, `_index_lines`), `tests/test_prompt_word_split.py`, `tests/test_t004_hook_prompt.py`, `tests/test_t005_switch.py`
+
 ## Infrastructure
 
 ### 2026-10-28 — easy-verifier registered as the scoring MCP (dev tool)
