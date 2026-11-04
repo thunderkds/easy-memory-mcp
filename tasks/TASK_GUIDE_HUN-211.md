@@ -48,7 +48,7 @@ HUN-208 /verify probe, 2026-11-04, real CLI on a copy of a 440-note store: a 1.7
 
 **Branch**: `prompt-word-cap` from `main`.
 
-**Merge gate**: PRD v0.2 Gate 2a — APPROVED by the user 2026-11-04 for this task, with cap 1,000 ("Cap 1,000, timeout target"). Measured on this repo's 245 text files: 3 of 245 (about 1%) exceed 1,000 distinct words, so only those rank differently. Otherwise none beyond Stage 4/5.
+**Merge gate**: PRD v0.2 Gate 2a — APPROVED by the user 2026-11-04 for this task, with cap 1,000 ("Cap 1,000, timeout target"). Measured on this repo's 245 text files: 3 of 245 (about 1%) exceed 1,000 distinct words, so only those rank differently. Otherwise none beyond Stage 4/5. Also approved 2026-11-04: `PROMPT_MAX_CHARS` = 200,000 (only prompts over 200,000 characters change).
 
 **Entry point**: `hook_prompt` → `prompt_index` → `_index_lines` → `_prompt_weight`; MCP `memory_search` → `_tool_search` → `_index_lines`.
 
@@ -64,6 +64,8 @@ HUN-208 /verify probe, 2026-11-04, real CLI on a copy of a 440-note store: a 1.7
 | 4 | `PROMPT_MAX_WORDS = 1000` (user 2026-11-04); the measurement table (cap vs notes vs time, and the 245-file corpus counts) is in a code comment summary and the review file | measured, user-chosen |
 | 5 | `memory_search` with an over-cap query returns within the same bound | both callers |
 | 6 | `plugin/easy_memory.py` is byte-identical to `easy_memory.py` | release rule |
+| 7 | Only the first `PROMPT_MAX_CHARS` (200,000) characters of a prompt are split and scored, for the hook and `memory_search` (applied inside `_prompt_weight`). A 10 MB prompt (stdin maximum, 1.75M distinct words) exits 0 in < 1 s on 440 notes; prompts of ≤ 200,000 characters rank exactly as before | security review P2 2026-11-04 (10 MB: 3.98 s, 449 MB on 440 notes); user 2026-11-04 "Both fixes", Gate 2a approved |
+| 8 | `_word_parts` returns its parts in sorted order, so `_prompt_weight`'s kept set over the cap is identical across `PYTHONHASHSEED` values for prompts with camelCase / underscore words (test: cap 5, `fooBarBazQuxQuuxCorge zq000 zq111 zq222 zq333 zq444`, seeds 0-3 give one set); `tokens()` multiset unchanged | security review P3→P1 (AC2 broken, confirmed by Supervisor: 4 seeds, 4 sets) |
 
 ---
 
@@ -75,7 +77,7 @@ HUN-208 /verify probe, 2026-11-04, real CLI on a copy of a 440-note store: a 1.7
 | -- | -- | -- | -- |
 | 1 | under-cap prompts, golden fixture | identical output | automated test |
 | 2 | over-cap prompt, 2 hash seeds | same kept words | automated test |
-| 3 | 4,000 notes / 440 notes, 150k-word prompt | < 5 s / < 1 s, rc 0 | opt-in probe test (`HUN211_CAP_PROBE=1`, `HUN211_CAP_NOTES`), numbers pasted |
+| 3 | 4,000 notes / 440 notes, 150k-word prompt | < 5 s / < 1 s, rc 0 | opt-in probe test (`HUN211_CAP_PROBE=1`, two cases: 4,000 and 440 notes), numbers pasted |
 
 ### Verification Command (exact, runnable)
 
