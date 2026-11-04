@@ -3,6 +3,18 @@
 > One Decision record per minimal-track task (`docs/claude-md/tracks.md`), **newest first**: insert each
 > new record directly under this note. The same block is the Supervisor's final chat message.
 
+## HUN-204 follow-up — old-host test scans tracked files only · minimal
+**Asked:** "add the permission and do it" (2026-11-05: merge HUN-204 and HUN-218). After the merge, `test_easy_kit_link_points_to_easy_kits_and_the_old_host_is_gone` failed on `main`.
+**Decisions:**
+- Cause: the test walked every file on disk. On `main` it found the old host in git-ignored local trace logs (`memory/event-trace/HUN-211.jsonl`, `_untagged.jsonl`, `HUN-82.jsonl`). The HUN-204 worktree had no such logs, so it passed there.
+- Fix: scan `git ls-files` only, as `tests/test_no_legacy_names.py` does; `tasks/` stays excluded. No new task ID: this is HUN-204's own test.
+**Checked:**
+- Red: on `main` after both merges, `Ran 541 tests` `FAILED (failures=1, skipped=7)`, the failure above
+- Green: `python3 -m unittest discover -s tests` — `Ran 541 tests`, `OK (skipped=7)`
+- Negative: the old host appended to `README.md` → the test fails with `['README.md'] != []`; restored → OK
+**Files:** `tests/test_site_page.py`, `tasks/MINIMAL_LOG.md`
+**Not done:** push (yours)
+
 ## HUN-218 — Legacy project names replaced by Project A / Project B · minimal
 **Asked:** "update the legacy naming like [the two test repos] in the coding, by using a symbol like Project A, project B" (2026-11-04)
 **Decisions:**
