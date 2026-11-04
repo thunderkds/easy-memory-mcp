@@ -438,11 +438,13 @@ def tokens(text):
 
 # A prompt with more distinct words than this is scored on its PROMPT_MAX_WORDS highest-weight
 # (rarest) words, ties by first appearance. Scoring costs distinct words x notes. Measured
-# (HUN-211, 150,000-word 1.7 MB prompt, hook-prompt subprocess): 4,000 notes 229.8 s without the
-# cap, 1.5 s with 300 (0.7 s of it is the notes alone, 0.5 s is splitting the prompt); 440 notes
-# 16.3 s without, 0.72 s with 300. Each kept word costs about 0.1 ms per 1,000 notes; 300 keeps
-# that near 0.15 s at 4,000 notes. Half of this repo's files have 295 or fewer distinct words.
-PROMPT_MAX_WORDS = 300
+# (HUN-211, 150,000-word 1.7 MB prompt, hook-prompt subprocess): without a cap 229.8 s on 4,000
+# notes and 16.3 s on 440. With 1,000: see tasks/TASK_REVIEW_HUN-211.md; the hook timeout is 5 s
+# and NFR-001 is 1 s. Fixed costs a cap cannot remove: the notes alone take about 0.7 s at 4,000
+# notes, splitting a 150,000-word prompt about 0.5 s. Each kept word costs about 0.12 us per note.
+# User chose 1,000 on 2026-11-04. Of this repo's 245 text files, 3 have more than 1,000 distinct
+# words (median 295, max 1,202; 121 are over 300, 24 over 500), so only those rank differently.
+PROMPT_MAX_WORDS = 1000
 
 
 def _prompt_weight(prompt, weights):

@@ -25,7 +25,7 @@ HUN-208 /verify probe, 2026-11-04, real CLI on a copy of a 440-note store: a 1.7
 
 **Restated intent**:
 
-> When a prompt has more than `PROMPT_MAX_WORDS` distinct scorable words, the hook and `memory_search` score it on only that many: the highest-weight (rarest) words, ties broken by first appearance. A prompt at or under the cap is scored exactly as today. `PROMPT_MAX_WORDS` is chosen by measurement so a capped prompt on the 4,000-note probe store stays within NFR-001 (1 s).
+> When a prompt has more than `PROMPT_MAX_WORDS` (1,000) distinct scorable words, the hook and `memory_search` score it on only that many: the highest-weight (rarest) words, ties broken by first appearance. A prompt at or under the cap is scored exactly as today. Target (user, 2026-11-04): the worst-case prompt stays under the 5 s hook timeout on 4,000 notes, and under NFR-001 (1 s) at the real store size (440 notes).
 
 **Out of scope**:
 
@@ -48,7 +48,7 @@ HUN-208 /verify probe, 2026-11-04, real CLI on a copy of a 440-note store: a 1.7
 
 **Branch**: `prompt-word-cap` from `main`.
 
-**Merge gate**: ASK THE USER before merge whether PRD v0.2 Gate 2a applies. Ranking changes only for prompts over the cap; those used to time out on large stores, but on small stores some finished under 5 s, so their results can differ. Report the measured cap and how often real prompts exceed it (count from a test corpus, never by reading `~/.easy-memory`).
+**Merge gate**: PRD v0.2 Gate 2a — APPROVED by the user 2026-11-04 for this task, with cap 1,000 ("Cap 1,000, timeout target"). Measured on this repo's 245 text files: 3 of 245 (about 1%) exceed 1,000 distinct words, so only those rank differently. Otherwise none beyond Stage 4/5.
 
 **Entry point**: `hook_prompt` → `prompt_index` → `_index_lines` → `_prompt_weight`; MCP `memory_search` → `_tool_search` → `_index_lines`.
 
@@ -60,8 +60,8 @@ HUN-208 /verify probe, 2026-11-04, real CLI on a copy of a 440-note store: a 1.7
 | -- | -- | -- |
 | 1 | For prompts with ≤ `PROMPT_MAX_WORDS` distinct words, `_index_lines` output equals the HUN-208 golden (`tests/test_prompt_word_split.py` unchanged and green) | under-cap unchanged |
 | 2 | For a prompt over the cap, `_prompt_weight` keeps exactly `PROMPT_MAX_WORDS` words: the highest weights, ties by first appearance; deterministic across runs and `PYTHONHASHSEED` values | rule |
-| 3 | The 150,000-distinct-word prompt (1.7 MB) on a 4,000-note fixture store: `hook-prompt` subprocess finishes in < 1 s, exits 0 | NFR-001, timeout |
-| 4 | `PROMPT_MAX_WORDS` value and the measurement that chose it are in a code comment and the review file | measured, not guessed |
+| 3 | The 150,000-distinct-word prompt (1.7 MB): `hook-prompt` subprocess exits 0 in < 5 s (hook timeout) on a 4,000-note fixture store, and in < 1 s on a 440-note store | timeout; NFR-001 at real size (user 2026-11-04: 1 s at 4,000 notes is not reachable by a cap — read_notes alone ~0.7 s, prompt split ~0.5 s) |
+| 4 | `PROMPT_MAX_WORDS = 1000` (user 2026-11-04); the measurement table (cap vs notes vs time, and the 245-file corpus counts) is in a code comment summary and the review file | measured, user-chosen |
 | 5 | `memory_search` with an over-cap query returns within the same bound | both callers |
 | 6 | `plugin/easy_memory.py` is byte-identical to `easy_memory.py` | release rule |
 
@@ -75,7 +75,7 @@ HUN-208 /verify probe, 2026-11-04, real CLI on a copy of a 440-note store: a 1.7
 | -- | -- | -- | -- |
 | 1 | under-cap prompts, golden fixture | identical output | automated test |
 | 2 | over-cap prompt, 2 hash seeds | same kept words | automated test |
-| 3 | 4,000 notes, 150k-word prompt | < 1 s, rc 0 | opt-in probe test, numbers pasted |
+| 3 | 4,000 notes / 440 notes, 150k-word prompt | < 5 s / < 1 s, rc 0 | opt-in probe test (`HUN211_CAP_PROBE=1`, `HUN211_CAP_NOTES`), numbers pasted |
 
 ### Verification Command (exact, runnable)
 
