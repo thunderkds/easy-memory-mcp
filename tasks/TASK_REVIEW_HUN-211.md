@@ -41,16 +41,16 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
-| verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | `tests/test_prompt_word_cap.py` (AC1 under-cap identical, AC2/AC8 kept set across seeds 0,1,2,3,4,12345 in subprocesses incl. camelCase repro, AC7 only first 200,000 chars scored + exactly-200,000 unchanged, AC5 memory_search, AC6 plugin copy; 4 opt-in probe cases). Supervisor run 2026-11-04: `Ran 535 tests in 45.088s` / `OK (skipped=7)` — pass |
+| Verification command run | ☑ pass | Supervisor 2026-11-04 (load 4.2-4.9): full suite `Ran 535 tests` `OK (skipped=7)`; `HUN211_CAP_PROBE=1 python3 -m unittest tests.test_prompt_word_cap` → `Ran 18 tests` `OK`: 10 MB 4,000 notes p50 1.100 s max 1.165 s (limit 5 s); 10 MB 440 notes max 0.352 s (1 s); 1.7 MB 4,000 notes max 1.138 s; 1.7 MB 440 notes max 0.234 s — pass |
+| Negative cases hold | ☑ pass | seeds 0-3 on `fooBarBazQuxQuuxCorge zq000 … zq444` with cap 5 → one set (before fix: 4 sets); 10 MB prompt (stdin max) rc 0; weights odd values raise as before and the hook stays silent (security review check 4) — pass |
+| verify | ☑ pass | Supervisor real-CLI run 2026-11-04 (user `/verify` not run for this task) on a copy of the real 440-note store under a temp `EASY_MEMORY_HOME`: 4 real prompts (6 / 360 / 800 / 1,195 distinct words) byte-identical to main; 150k-word prompt main 171.7 s → branch 0.27 s (38 MB); 10 MB prompt 3.98 s / 449 MB (before AC7) → 0.44 s / 55 MB — pass |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | `_word_parts`, `PROMPT_MAX_WORDS`, `PROMPT_MAX_CHARS`, `_prompt_weight`; callers `_index_lines` (hook + `memory_search`), `score`, `_count_words` (tokens multiset unchanged). lane_check `C2, 4 files, 274 lines, FITS; unpredicted: tasks/TASK_GUIDE_HUN-211.md`. Code review: 0 P0; P1 AC8 hash-seed order (security review, confirmed) — fixed `215b5e6`; P2 10 MB prompt 4 s / 449 MB — fixed by AC7 `215b5e6` (user approved, Gate 2a); P1 process: first pass skipped required startup reads, done after resume; P3 accepted: over the cap the denominator covers kept words only (large pastes may clear `INDEX_FLOOR` a bit more easily; injected text still bounded). AC3 re-scoped by the user 2026-11-04 (1 s at 4,000 notes unreachable by a cap). Security review: independent read-only agent — pass |
+| Full smoke suite still green (no regression) | ☑ pass | 517 pre-task tests pass unedited inside the 535 (HUN-208 golden and HUN-210 tests unchanged) — pass |
+| **Companion score (easy-verifier)** | ☑ N/A | not run for this task |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ N/A | backend only |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ N/A | backend only |
+| **UI: Responsiveness at target viewports** | ☑ N/A | backend only |
 
 ---
 
@@ -131,5 +131,4 @@ run 2 (uptime load 3.22)
 
 **DELTA**: Hook-prompt no longer takes more than 0.5 s on 440 notes (1.9 s on 4,000 notes) even for a 10 MB prompt of distinct words, down from 3.98 s (440 notes, Stage 4 finding) and from 229.8 s (150,000-word prompt on 4,000 notes, BEFORE); and which words a capped prompt keeps no longer changes between runs.
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/HUN-211.jsonl`, never the
-implementing agent alone]
+**WITNESS**: Supervisor, 2026-11-04: re-ran suite and all 4 probe cases in the worktree, seed check, and the real CLI on a store copy (temp `EASY_MEMORY_HOME`); security review by an independent read-only agent; independent of the implementing agent.
