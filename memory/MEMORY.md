@@ -44,3 +44,4 @@
 - [Cross-repo tasks from this session](learnings.md#gotchas) — spawn hook checks only local tasks/; revert foreign board rows; check other repo's FR numbers before merge
 - [Prompt hook word split once (HUN-208)](decisions.md#architecture) — merged 2026-11-04; same ranking, 3-4x faster; cache byte bound HUN-210 merged; long-prompt cap HUN-211 open
 - [Merge prep: pulled guide copy, stale held status](learnings.md#gotchas) — delete untracked pulled guide before merge; check Linear status, not the comment; remote is `origin`
+- [PUSH PENDING: main not on origin](learnings.md#gotchas) — 2026-11-04 push failed (GitHub issue, per user); next session: fetch, check not behind, `git push origin main`, then drop this line
