@@ -423,8 +423,8 @@ WORD_CACHE_MAX_CHARS = 64
 def _word_parts(word):
     """Scorable lower-case parts of one source word: itself and its camelCase / underscore pieces."""
     parts = _CAMEL_JOIN.sub(r"\1 \2", word).replace("_", " ")
-    return tuple(part for part in {word.lower(), *parts.lower().split()}
-                 if len(part) >= 3 and part not in STOP_WORDS)
+    return tuple(sorted(part for part in {word.lower(), *parts.lower().split()}
+                        if len(part) >= 3 and part not in STOP_WORDS))  # sorted: not hash order
 
 
 def tokens(text):
@@ -445,6 +445,9 @@ def tokens(text):
 # User chose 1,000 on 2026-11-04. Of this repo's 245 text files, 3 have more than 1,000 distinct
 # words (median 295, max 1,202; 121 are over 300, 24 over 500), so only those rank differently.
 PROMPT_MAX_WORDS = 1000
+# Only this many leading characters of a prompt are split and scored (security review P2 of
+# HUN-211: a 10 MB prompt of distinct words took 4 s and 449 MB on 440 notes).
+PROMPT_MAX_CHARS = 200_000
 
 
 def _prompt_weight(prompt, weights):
@@ -453,7 +456,7 @@ def _prompt_weight(prompt, weights):
     Over PROMPT_MAX_WORDS words only the highest-weight ones are kept; the others add nothing
     to the score or to its denominator."""
     n, df = weights["n"], weights["df"]
-    found = tokens(prompt)
+    found = tokens(prompt[:PROMPT_MAX_CHARS])
     words = set(found)
     if len(words) <= PROMPT_MAX_WORDS:
         return {t: math.log((n + 1) / (df.get(t, 0) + 1)) + 1 for t in words}

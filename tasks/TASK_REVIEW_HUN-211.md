@@ -107,7 +107,29 @@ Fixed costs a cap cannot remove: the notes alone take about 0.7 s at 4,000 notes
 
 Corpus (this repo, `git ls-files` text files, never `~/.easy-memory`): 245 files, median 295 distinct words, max 1,202; 121 over 300, 24 over 500, 3 over 1,000. All 245 pasted together (2.0 MB): 8,979 distinct words. With cap 1,000 only 3 of 245 files (about 1%) rank differently.
 
-**DELTA**: A 150,000-word, 1.7 MB prompt gets its index in about 0.55 s on a 440-note store (was 16.3 s) and about 1.4 s on 4,000 notes (was 229.8 s), both inside the 5 s hook timeout.
+**AFTER (Stage 4 fixes AC7 and AC8, 2026-11-04)**: `PROMPT_MAX_CHARS = 200_000` (only the first 200,000 characters of a prompt are split and scored) and `_word_parts` returns sorted parts. `HUN211_CAP_PROBE=1 python3 -m unittest tests.test_prompt_word_cap.OverCapProbeTest`, 4 cases, `Ran 4 tests` / `OK`, run twice; load is the 1-minute load average at print time:
+
+```
+run 1 (uptime load 2.69)
+[HUN-211 cap probe] notes=4000 prompt=10,000,003 chars hook-prompt p50=1.138s max=1.192s limit=5.0s load=2.64
+[HUN-211 cap probe] notes=440  prompt=10,000,003 chars hook-prompt p50=0.320s max=0.344s limit=1.0s load=2.64
+[HUN-211 cap probe] notes=4000 prompt=1,642,889 chars  hook-prompt p50=1.356s max=1.585s limit=5.0s load=2.58 ; memory_search 1.520s
+[HUN-211 cap probe] notes=440  prompt=1,642,889 chars  hook-prompt p50=0.235s max=0.276s limit=1.0s load=2.62 ; memory_search 0.232s
+run 2 (uptime load 3.22)
+[HUN-211 cap probe] notes=4000 prompt=10,000,003 chars hook-prompt p50=1.482s max=1.865s limit=5.0s load=3.52 ; memory_search 1.136s
+[HUN-211 cap probe] notes=440  prompt=10,000,003 chars hook-prompt p50=0.392s max=0.482s limit=1.0s load=3.64 ; memory_search 0.407s
+[HUN-211 cap probe] notes=4000 prompt=1,642,889 chars  hook-prompt p50=1.763s max=2.265s limit=5.0s load=4.47 ; memory_search 1.156s
+[HUN-211 cap probe] notes=440  prompt=1,642,889 chars  hook-prompt p50=0.263s max=0.281s limit=1.0s load=4.35 ; memory_search 0.266s
+```
+
+- The 10 MB prompt (about 2 million distinct 4- and 5-letter words, under the 10 MiB stdin limit) on 440 notes: 0.32-0.39 s p50, limit 1 s. On 4,000 notes: 1.14-1.48 s p50, limit 5 s. All rc 0.
+- `memory_search` takes lines of at most 4 MiB (`MCP_MAX_LINE`), so for the 10 MB cases it gets the first 3.5 million characters, still far over the cap.
+- The 150,000-word 1.7 MB prompt is now also cut to its first 200,000 characters (about 18,000 words), so it is faster than the cap-1,000-only numbers above (440 notes: 0.24-0.26 s was 0.55 s). The 10 MB case is the worst case now.
+- Memory: `_prompt_weight` on the 10 MB prompt in a scratch process kept peak RSS at the baseline of 124 MB (the baseline is the test's own word list) and took 0.077 s; the finding was 449 MB for the whole hook before the fix.
+- AC8: `tests/test_prompt_word_cap.py::test_kept_words_with_camel_and_underscore_parts_do_not_depend_on_hash_seed` runs the reviewer's repro (cap 5, `fooBarBazQuxQuuxCorge zq000 ...`) in subprocesses with `PYTHONHASHSEED` 0, 1, 2, 3, 4, 12345 and gets one result. The test failed before the fix.
+- Full suite: `Ran 535 tests` / `OK (skipped=7)`. HUN-208 golden and HUN-210 tests pass unedited.
+
+**DELTA**: Hook-prompt no longer takes more than 0.5 s on 440 notes (1.9 s on 4,000 notes) even for a 10 MB prompt of distinct words, down from 3.98 s (440 notes, Stage 4 finding) and from 229.8 s (150,000-word prompt on 4,000 notes, BEFORE); and which words a capped prompt keeps no longer changes between runs.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/HUN-211.jsonl`, never the
 implementing agent alone]

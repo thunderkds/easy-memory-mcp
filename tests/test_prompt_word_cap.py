@@ -92,6 +92,44 @@ class PromptWeightCapTest(unittest.TestCase):
         self.assertEqual(len(outs), 1)
         self.assertEqual(len(json.loads(outs.pop().replace("'", '"'))), 50)
 
+    def test_kept_words_with_camel_and_underscore_parts_do_not_depend_on_hash_seed(self):  # AC8
+        code = (
+            "import sys; sys.path.insert(0, %r); import easy_memory as e; "
+            "e.PROMPT_MAX_WORDS = 5; "
+            "print(sorted(e._prompt_weight('fooBarBazQuxQuuxCorge zq000 zq111 zq222 zq333 zq444', "
+            "{'n': 0, 'df': {}})))") % str(ROOT)
+        outs = set()
+        for seed in ("0", "1", "2", "3", "4", "12345"):
+            res = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                                 env={**os.environ, "PYTHONHASHSEED": seed}, check=True)
+            outs.add(res.stdout)
+        self.assertEqual(len(outs), 1, outs)
+
+    def test_word_parts_come_back_sorted_and_tokens_multiset_is_unchanged(self):  # AC8
+        for word in ("fooBarBazQuxQuuxCorge", "parse_http_response", "HTTPServer", "Foo2Bar"):
+            parts = easy_memory._word_parts(word)
+            self.assertEqual(list(parts), sorted(parts))
+        self.assertEqual(sorted(easy_memory.tokens("authService authService x1 the Foo2Bar")),
+                         sorted(["authservice", "auth", "service", "authservice", "auth", "service",
+                                 "foo2bar", "foo2", "bar"]))
+
+    def test_only_the_first_prompt_max_chars_are_scored(self):  # AC7
+        head = "alpha bravo "
+        prompt = head + "zzzfar"
+        with mock.patch.object(easy_memory, "PROMPT_MAX_CHARS", len(head) + 2):
+            self.assertEqual(set(easy_memory._prompt_weight(prompt, WEIGHTS)), {"alpha", "bravo"})
+        with mock.patch.object(easy_memory, "PROMPT_MAX_CHARS", len(prompt)):
+            self.assertEqual(set(easy_memory._prompt_weight(prompt, WEIGHTS)),
+                             {"alpha", "bravo", "zzzfar"})
+
+    def test_prompts_up_to_the_char_limit_rank_as_before(self):  # AC7
+        self.assertEqual(easy_memory.PROMPT_MAX_CHARS, 200_000)
+        prompt = " ".join(f"w{i:05d}x" for i in range(30_000))[:easy_memory.PROMPT_MAX_CHARS]
+        self.assertEqual(len(prompt), 200_000)
+        with mock.patch.object(easy_memory, "PROMPT_MAX_CHARS", 10 ** 9):
+            expected = easy_memory._prompt_weight(prompt, WEIGHTS)
+        self.assertEqual(easy_memory._prompt_weight(prompt, WEIGHTS), expected)
+
     def test_plugin_copy_is_byte_identical(self):  # AC6
         self.assertTrue(filecmp.cmp(ROOT / "easy_memory.py", ROOT / "plugin" / "easy_memory.py",
                                     shallow=False))
@@ -151,10 +189,12 @@ class OverCapSearchTest(unittest.TestCase):
 
 
 class OverCapProbeTest(Sandbox):
-    """Opt-in: HUN211_CAP_PROBE=1. A 1.7 MB prompt of 150,000 distinct words.
+    """Opt-in: HUN211_CAP_PROBE=1. Huge prompts of distinct words.
 
-    4,000 notes must finish inside the 5 s hook timeout; 440 notes (the real store size) inside
-    NFR-001's 1 s. 1 s at 4,000 notes is out of reach: the notes alone take about 0.7 s.
+    150,000 words (1.7 MB): 4,000 notes must finish inside the 5 s hook timeout; 440 notes (the
+    real store size) inside NFR-001's 1 s. 1 s at 4,000 notes is out of reach: the notes alone
+    take about 0.7 s. A 10 MB prompt (the stdin maximum, about 2 million distinct words) must
+    finish in 1 s on 440 notes because only its first PROMPT_MAX_CHARS characters are scored.
     """
 
     WORDS = 150_000
@@ -176,14 +216,31 @@ class OverCapProbeTest(Sandbox):
                                         "session_id": "s", "files": {"src/auth.py": "0" * 64}}),
                             encoding="utf-8")
             path.chmod(0o600)
+        return vocab, rng
+
+    def words_prompt(self, vocab, rng):
         words = vocab + [f"pay{i:07d}" for i in range(self.WORDS - len(vocab))]
         rng.shuffle(words)
         return " ".join(words)
 
-    def probe(self, notes, limit):
+    def ten_mb_prompt(self):
+        """About 10,000,000 characters of distinct 4- and 5-letter words, under MAX_STDIN_CHARS."""
+        import itertools
+        words, size = [], 0
+        for length in (4, 5):
+            for letters in itertools.product("abcdefghijklmnopqrstuvwxyz", repeat=length):
+                word = "".join(letters)
+                words.append(word)
+                size += length + 1
+                if size >= 10_000_000:
+                    return " ".join(words)
+        raise AssertionError("not enough words")
+
+    def probe(self, notes, limit, build_prompt):
         if not os.environ.get("HUN211_CAP_PROBE"):
             self.skipTest("probe: set HUN211_CAP_PROBE=1 to run (minutes without the cap)")
-        prompt = self.make_store(notes)
+        vocab, rng = self.make_store(notes)
+        prompt = build_prompt(vocab, rng)
         self.assertGreater(len(prompt), 1_500_000)
         times = []
         for _ in range(self.RUNS):
@@ -192,13 +249,15 @@ class OverCapProbeTest(Sandbox):
             times.append(time.perf_counter() - start)
             self.assertEqual(res.returncode, 0, res.stderr)
         print(f"\n[HUN-211 cap probe] notes={notes} prompt={len(prompt):,} chars "
-              f"words={self.WORDS:,} hook-prompt p50={statistics.median(times):.3f}s "
+              f"hook-prompt p50={statistics.median(times):.3f}s "
               f"max={max(times):.3f}s limit={limit}s load={os.getloadavg()[0]:.2f}", file=sys.stderr)
         self.assertLess(max(times), limit)
-        # AC5: memory_search with the same query, same bound
+        # AC5: memory_search with the same query, same bound (the MCP line limit is 4 MiB, so a
+        # 10 MB query is cut to its first 3.5 million characters, still far over the cap)
+        query = prompt[:3_500_000]
         start = time.perf_counter()
         replies = self.mcp_session([{"method": "tools/call", "params": {
-            "name": "memory_search", "arguments": {"query": prompt}}}])
+            "name": "memory_search", "arguments": {"query": query}}}])
         took = time.perf_counter() - start
         print(f"[HUN-211 cap probe] notes={notes} memory_search serve session {took:.3f}s "
               f"load={os.getloadavg()[0]:.2f}", file=sys.stderr)
@@ -206,10 +265,16 @@ class OverCapProbeTest(Sandbox):
         self.assertLess(took, limit)
 
     def test_4000_notes_finish_inside_the_5_second_hook_timeout(self):  # AC3, AC5
-        self.probe(4000, 5.0)
+        self.probe(4000, 5.0, self.words_prompt)
 
     def test_440_notes_finish_inside_1_second(self):  # AC3, AC5, NFR-001 at real size
-        self.probe(440, 1.0)
+        self.probe(440, 1.0, self.words_prompt)
+
+    def test_10_mb_prompt_on_440_notes_finishes_inside_1_second(self):  # AC7
+        self.probe(440, 1.0, lambda vocab, rng: self.ten_mb_prompt())
+
+    def test_10_mb_prompt_on_4000_notes_is_measured(self):  # AC7: 5 s hook timeout
+        self.probe(4000, 5.0, lambda vocab, rng: self.ten_mb_prompt())
 
 
 if __name__ == "__main__":
