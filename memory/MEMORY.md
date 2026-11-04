@@ -42,5 +42,5 @@
 - [Merge gate blocks all merges while any task In Progress](learnings.md#gotchas) — park Gate-2a-held tasks in Todo with the merge condition
 - [Review skills can't target worktrees; stop hook 6h window](learnings.md#gotchas) — review/verify by hand in the worktree; kit fix T186 pending
 - [Cross-repo tasks from this session](learnings.md#gotchas) — spawn hook checks only local tasks/; revert foreign board rows; check other repo's FR numbers before merge
-- [Prompt hook word split once (HUN-208)](decisions.md#architecture) — merged 2026-11-04; same ranking, 3-4x faster; P2 cache-size + long-prompt follow-ups open
+- [Prompt hook word split once (HUN-208)](decisions.md#architecture) — merged 2026-11-04; same ranking, 3-4x faster; cache byte bound HUN-210 merged; long-prompt cap HUN-211 open
 - [Merge prep: pulled guide copy, stale held status](learnings.md#gotchas) — delete untracked pulled guide before merge; check Linear status, not the comment; remote is `origin`
