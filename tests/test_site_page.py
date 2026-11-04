@@ -1,7 +1,7 @@
 """HUN-125 / HUN-127 / HUN-130 / HUN-204: static release page `site/index.html` in the Graphite Mint theme (spec rev 25, neon layer). Standard library only."""
 import hashlib
-import os
 import re
+import subprocess
 import unittest
 from html.parser import HTMLParser
 from pathlib import Path
@@ -387,18 +387,20 @@ class SitePageTest(unittest.TestCase):
         self.assertEqual(self.html.count('<a class="fam" href="https://easy-kits.vercel.app/">Easy Kit</a>'), 2)  # header + drawer
         self.assertNotIn(OLD_KIT_HOST, self.html)
         root = SITE.parent
-        skip = {".git", ".screens", "__pycache__", "worktrees", "tasks"}  # tasks/ guides quote the old host to describe the change
+        # Tracked files only: git-ignored local logs (memory/event-trace/) may quote the old host.
+        # tasks/ guides quote the old host to describe the change.
+        tracked = subprocess.run(["git", "ls-files", "-z"], cwd=root, capture_output=True,
+                                 check=True).stdout.decode().split("\0")
         found = []
-        for folder, dirs, files in os.walk(root):
-            dirs[:] = [d for d in dirs if d not in skip]
-            for name in files:
-                path = Path(folder) / name
-                try:
-                    text = path.read_text(encoding="utf-8")
-                except (UnicodeDecodeError, OSError):
-                    continue
-                if OLD_KIT_HOST in text:
-                    found.append(str(path.relative_to(root)))
+        for name in filter(None, tracked):
+            if name.startswith("tasks/"):
+                continue
+            try:
+                text = (root / name).read_text(encoding="utf-8")
+            except (UnicodeDecodeError, OSError):
+                continue
+            if OLD_KIT_HOST in text:
+                found.append(name)
         self.assertEqual(found, [])
 
     # HUN-204 AC 2: problem and solution
