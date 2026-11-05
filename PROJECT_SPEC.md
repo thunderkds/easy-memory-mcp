@@ -11,7 +11,7 @@
 ## Project Identity
 
 - **Name**: easy-memory-mcp
-- **Repo**: `/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp` (member of the Easy Kit family; core: `thunderkds/personal-agentic-claude`; siblings: `easy-ui-mcp`, `easy-verifier-mcp`, separate repos and boards)
+- **Repo**: `/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp` (member of the Easy Kit family; core: `thunderkds/easy-kit`; siblings: `easy-ui-mcp`, `easy-verifier-mcp`, separate repos and boards)
 - **Primary tech**: Python 3.14, standard library only (no MCP SDK)
 - **Type**: CLI tool with two Claude Code hooks and a stdio MCP server
 - **Deployment target**: the user's machine only; installed into the user-level Claude Code settings
