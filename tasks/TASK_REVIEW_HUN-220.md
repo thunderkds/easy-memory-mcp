@@ -21,7 +21,7 @@ Mode: auto
 6. Memory row (95 MB → 35 MB) shown as a caption line, not a third chart — RULE: AC1 names two charts, rows 1-4 only
 7. Old p95 strip ("0.212 s, 200 notes") kept in Measured; flagged as review finding P2, not changed — SAFER OPTION: out of the guide's restated intent, and pinned by existing tests ⚠ decided for you — please review
 Checks: tests `python3 -m unittest tests.test_site_page && python3 -m unittest discover -s tests` — 52 OK; 547 OK (skipped=7), re-run by Supervisor; reviews code-review — 0 P0, 0 P1, 1 P2, 1 P3 (report `reports/code-review_site-speed-charts_20261105T183638.html`); real run: headless Chrome at 1280/800/375/320 px — scrollWidth equals innerWidth at every width, no page errors, 320 px screenshot viewed by Supervisor (auto-checked, not /verify)
-Not done: merge (yours); /verify (yours) unless the auto-verify hook runs it; Linear status moved to In Review; screenshots in `.screens/` (git-excluded) not committed
+Not done: merge (yours); /verify (yours) unless the auto-verify hook runs it; Linear has no "In Review" status, so HUN-220 stays In Progress there (comment posted) and the Ready for Review row is in the main checkout's PROJECT_KANBAN.md (uncommitted); screenshots in `.screens/` (git-excluded) not committed
 
 ## Evidence
 
