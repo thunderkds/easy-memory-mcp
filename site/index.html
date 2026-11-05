@@ -106,6 +106,7 @@
 
   /* Flow diagram: main loop arrows and step numbers in neon, nodes, side paths and labels neutral */
   .flow { display:block; width:100%; max-width:820px; height:auto; }
+  .spd { display:block; width:100%; max-width:820px; height:auto; }
   .flow-tall { display:none; max-width:400px; margin:0 auto; }
   .fl-node { fill:var(--bg-sunken); stroke:var(--line-strong); stroke-width:1; }
   .fl-line { fill:none; stroke:var(--text-dim); stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
@@ -120,6 +121,9 @@
   /* Problem and solution: token bars. Without memory is neutral, with memory is the neon one */
   .fl-bar { fill:var(--text-dim); }
   .fl-bar-on { fill:var(--neon); }
+  /* Measured: before/after speed charts reuse the token-bar fills; values are plain strong text */
+  .spd-val { font:500 14px var(--font-mono); fill:var(--text-strong); }
+  .spd-grid { fill:none; stroke:var(--line-strong); stroke-width:1; }
 
   /* Install stepper: the three steps are one neon line */
   .stepper { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)) minmax(0,.7fr); max-width:none; margin:20px 0 12px; padding:0; list-style:none; }
@@ -848,6 +852,105 @@
     <li><span class="num">1.69 MB</span><span class="label">word-weights file</span></li>
     <li><span class="num">307</span><span class="label">tests pass (3 skipped: opt-in or host-dependent)</span></li>
   </ul>
+  <h3>Prompt hook speed</h3>
+  <div class="figure">
+    <svg class="spd flow-wide" viewBox="0 0 760 132" role="img" aria-label="Prompt hook time per prompt, before and after, measured 4 Nov 2026. Normal prompt, real 440-note store: 290 ms before, 145 ms after. 4,000-note probe, slowest run: 1.62 s before, 0.41 s after. All bars share one linear scale.">
+      <text class="fl-title fl-start" x="0" y="20">Normal prompt</text>
+      <text class="fl-meta fl-start" x="0" y="38">real 440-note store</text>
+      <text class="fl-note fl-note-end" x="234" y="18">before</text>
+      <rect class="fl-bar" x="244" y="6" width="75.2" height="16" rx="3"/>
+      <text class="spd-val" x="327.2" y="19">290 ms</text>
+      <text class="fl-note fl-note-end" x="234" y="44">after</text>
+      <rect class="fl-bar-on" x="244" y="32" width="37.6" height="16" rx="3"/>
+      <text class="spd-val" x="289.6" y="45">145 ms</text>
+      <text class="fl-title fl-start" x="0" y="98">4,000-note probe</text>
+      <text class="fl-meta fl-start" x="0" y="116">slowest run</text>
+      <text class="fl-note fl-note-end" x="234" y="96">before</text>
+      <rect class="fl-bar" x="244" y="84" width="420" height="16" rx="3"/>
+      <text class="spd-val" x="672" y="97">1.62 s</text>
+      <text class="fl-note fl-note-end" x="234" y="122">after</text>
+      <rect class="fl-bar-on" x="244" y="110" width="106.3" height="16" rx="3"/>
+      <text class="spd-val" x="358.3" y="123">0.41 s</text>
+    </svg>
+    <svg class="spd flow-tall" viewBox="0 0 340 200" role="img" aria-label="Prompt hook time per prompt, before and after, measured 4 Nov 2026. Normal prompt, real 440-note store: 290 ms before, 145 ms after. 4,000-note probe, slowest run: 1.62 s before, 0.41 s after. All bars share one linear scale.">
+      <text class="fl-title fl-start" x="0" y="16">Normal prompt</text>
+      <text class="fl-meta fl-start" x="0" y="34">real 440-note store</text>
+      <text class="fl-note fl-start" x="0" y="58">before</text>
+      <rect class="fl-bar" x="52" y="46" width="35.8" height="16" rx="3"/>
+      <text class="spd-val" x="95.8" y="59">290 ms</text>
+      <text class="fl-note fl-start" x="0" y="82">after</text>
+      <rect class="fl-bar-on" x="52" y="70" width="17.9" height="16" rx="3"/>
+      <text class="spd-val" x="77.9" y="83">145 ms</text>
+      <text class="fl-title fl-start" x="0" y="126">4,000-note probe</text>
+      <text class="fl-meta fl-start" x="0" y="144">slowest run</text>
+      <text class="fl-note fl-start" x="0" y="168">before</text>
+      <rect class="fl-bar" x="52" y="156" width="200" height="16" rx="3"/>
+      <text class="spd-val" x="260" y="169">1.62 s</text>
+      <text class="fl-note fl-start" x="0" y="192">after</text>
+      <rect class="fl-bar-on" x="52" y="180" width="50.6" height="16" rx="3"/>
+      <text class="spd-val" x="110.6" y="193">0.41 s</text>
+    </svg>
+  </div>
+  <p class="caption">Time per prompt, 4 Nov 2026. One scale for all bars.</p>
+  <h3>Worst-case prompts</h3>
+  <div class="figure">
+    <svg class="spd flow-wide" viewBox="0 0 760 158" role="img" aria-label="Worst-case prompt time, before and after, measured 4 Nov 2026 with 440 notes, drawn on a log scale. 1.7 MB / 150,000 words: 171.7 s before, 0.27 s after. 10 MB: 3.98 s before, 0.44 s after.">
+      <path class="spd-grid" d="M559 4V136"/>
+      <path class="spd-grid" d="M454 4V136"/>
+      <path class="spd-grid" d="M349 4V136"/>
+      <path class="spd-grid" d="M244 4V136"/>
+      <text class="fl-title fl-start" x="0" y="20">1.7 MB / 150,000 words</text>
+      <text class="fl-meta fl-start" x="0" y="38">440 notes</text>
+      <text class="fl-note fl-note-end" x="234" y="18">before</text>
+      <rect class="fl-bar" x="244" y="6" width="339.7" height="16" rx="3"/>
+      <text class="spd-val" x="591.7" y="19">171.7 s</text>
+      <text class="fl-note fl-note-end" x="234" y="44">after</text>
+      <rect class="fl-bar-on" x="244" y="32" width="45.3" height="16" rx="3"/>
+      <text class="spd-val" x="297.3" y="45">0.27 s</text>
+      <text class="fl-title fl-start" x="0" y="98">10 MB</text>
+      <text class="fl-meta fl-start" x="0" y="116">440 notes</text>
+      <text class="fl-note fl-note-end" x="234" y="96">before</text>
+      <rect class="fl-bar" x="244" y="84" width="168" height="16" rx="3"/>
+      <text class="spd-val" x="420" y="97">3.98 s</text>
+      <text class="fl-note fl-note-end" x="234" y="122">after</text>
+      <rect class="fl-bar-on" x="244" y="110" width="67.6" height="16" rx="3"/>
+      <text class="spd-val" x="319.6" y="123">0.44 s</text>
+      <text class="fl-meta" x="244" y="150">0.1 s</text>
+      <text class="fl-meta" x="349" y="150">1 s</text>
+      <text class="fl-meta" x="454" y="150">10 s</text>
+      <text class="fl-meta" x="559" y="150">100 s</text>
+      <text class="fl-note fl-start" x="0" y="150">log scale</text>
+    </svg>
+    <svg class="spd flow-tall" viewBox="0 0 340 224" role="img" aria-label="Worst-case prompt time, before and after, measured 4 Nov 2026 with 440 notes, drawn on a log scale. 1.7 MB / 150,000 words: 171.7 s before, 0.27 s after. 10 MB: 3.98 s before, 0.44 s after.">
+      <path class="spd-grid" d="M232 4V202"/>
+      <path class="spd-grid" d="M172 4V202"/>
+      <path class="spd-grid" d="M112 4V202"/>
+      <path class="spd-grid" d="M52 4V202"/>
+      <text class="fl-title fl-start" x="0" y="16">1.7 MB / 150,000 words</text>
+      <text class="fl-meta fl-start" x="0" y="34">440 notes</text>
+      <text class="fl-note fl-start" x="0" y="58">before</text>
+      <rect class="fl-bar" x="52" y="46" width="194.1" height="16" rx="3"/>
+      <text class="spd-val" x="254.1" y="59">171.7 s</text>
+      <text class="fl-note fl-start" x="0" y="82">after</text>
+      <rect class="fl-bar-on" x="52" y="70" width="25.9" height="16" rx="3"/>
+      <text class="spd-val" x="85.9" y="83">0.27 s</text>
+      <text class="fl-title fl-start" x="0" y="126">10 MB</text>
+      <text class="fl-meta fl-start" x="0" y="144">440 notes</text>
+      <text class="fl-note fl-start" x="0" y="168">before</text>
+      <rect class="fl-bar" x="52" y="156" width="96" height="16" rx="3"/>
+      <text class="spd-val" x="156" y="169">3.98 s</text>
+      <text class="fl-note fl-start" x="0" y="192">after</text>
+      <rect class="fl-bar-on" x="52" y="180" width="38.6" height="16" rx="3"/>
+      <text class="spd-val" x="98.6" y="193">0.44 s</text>
+      <text class="fl-meta" x="52" y="216">0.1 s</text>
+      <text class="fl-meta" x="112" y="216">1 s</text>
+      <text class="fl-meta" x="172" y="216">10 s</text>
+      <text class="fl-meta" x="232" y="216">100 s</text>
+      <text class="fl-note fl-note-end" x="340" y="216">log scale</text>
+    </svg>
+  </div>
+  <p class="caption">4 Nov 2026. Log scale: each grid line is 10 times the one before.</p>
+  <p class="caption">Word cache in a long <code>serve</code>, 4 Nov 2026: 1,600 long words used 95 MB before and 35 MB after.</p>
   <details class="more">
     <summary>More detail</summary>
     <div class="more-body">
@@ -861,7 +964,8 @@
   <div class="table-wrap" role="region" aria-label="Known limits" tabindex="0"><table>
     <thead><tr><th>Limit</th><th>Impact</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td>Notes pile up</td><td>The hook gets about 1 ms slower per note.</td><td><span class="status">open</span></td></tr>
+      <tr><td>Notes pile up</td><td>Each note costs about 3× less since 4 Nov 2026, but the hook still gets slower as the store grows.</td><td><span class="status">open</span></td></tr>
+      <tr><td>Index precision</td><td>About 8% of index lines were relevant in the 31 Oct 2026 check. Experiment 08 looks at it.</td><td><span class="status">open</span></td></tr>
       <tr><td>Big transcripts</td><td>A 400 MB transcript used 808 MB.</td><td><span class="status">open</span></td></tr>
       <tr><td>Non-git folder</td><td>The weights build has no cap.</td><td><span class="status">open</span></td></tr>
       <tr><td>Clear text</td><td>Notes are saved unencrypted (mode 0600).</td><td><span class="status">accepted</span></td></tr>
@@ -873,7 +977,9 @@
     <div class="more-body">
       <dl>
         <dt>Notes pile up</dt>
-        <dd>The prompt hook gets about 1 ms slower per saved note. It passes the 1 s limit at roughly 1,000 to 3,000 notes. At about 5 s the hook timeout kills it and the index silently disappears.</dd>
+        <dd>The prompt hook still gets slower in a straight line as saved notes pile up. Since 4 Nov 2026 each note costs about 3× less: with 4,000 notes the hook takes 0.41 s (1.62 s before). At about 5 s the hook timeout kills it and the index silently disappears.</dd>
+        <dt>Index precision</dt>
+        <dd>In the 31 Oct 2026 check, about 8% of the index lines were relevant (an estimate: 67 of 845 lines on 298 real prompts). Experiment 08 tests a cut-off that drops weak lines. The index is not changed yet.</dd>
         <dt>Big transcripts</dt>
         <dd>The Stop hook reads the whole transcript into memory. A 400 MB transcript used 808 MB.</dd>
         <dt>Non-git folder</dt>
