@@ -1,5 +1,5 @@
 # PROJECT_KANBAN.md
-**Last updated**: 2026-11-05
+**Last updated**: 2026-11-05 (HUN-220 Done, merged)
 
 > Board cache, pulled from the board by `python3 scripts/board_sync.py pull`. Do not edit it by hand:
 > the board is the source of truth, and the next pull overwrites this file.
@@ -20,6 +20,7 @@
 ### Ready for Review
 
 ### Done
+- [x] **HUN-220** — Release page shows the 2026-11-04 speed results as before/after charts | frontend-developer | C2 | Risk: Low | P1 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-220.md` | Branch: `site-speed-charts` | Review: `tasks/TASK_REVIEW_HUN-220.md`
 - [x] **HUN-204** — Site: Easy Kit link to easy-kits.vercel.app; problem/solution + flow + token chart; Easy Personal memory section; drop release notes | frontend-developer | C2 | Risk: Low | P2 | Guide: `tasks/TASK_GUIDE_HUN-204.md`
 - [x] **HUN-218** — Legacy project names replaced by Project A / Project B in tracked files | Supervisor | C1 | Risk: Low | P2 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-218.md`
 - [x] **HUN-74** — Package skeleton, repo key and atomic note store | common-infrastructure | C1 | Risk: Low | P0 | @hungnh1110 | Guide: `tasks/TASK_GUIDE_HUN-74.md`
