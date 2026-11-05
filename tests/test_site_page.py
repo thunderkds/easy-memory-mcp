@@ -1,4 +1,4 @@
-"""HUN-125 / HUN-127 / HUN-130 / HUN-204: static release page `site/index.html` in the Graphite Mint theme (spec rev 25, neon layer). Standard library only."""
+"""HUN-125 / HUN-127 / HUN-130 / HUN-204 / HUN-220: static release page `site/index.html` in the Graphite Mint theme (spec rev 25, neon layer). Standard library only."""
 import hashlib
 import re
 import subprocess
@@ -46,6 +46,8 @@ EASY_PERSONAL = "https://easy-personal.vercel.app/"
 SECTION_ORDER = ["problem", "context", "how", "run", "use", "dashboard", "rollback", "numbers", "limits"]
 # Visible words (the wide pictures, not the hidden tall copies) outside <details> on the page before HUN-204 (pictures carry the explanation: at most 150 more).
 VISIBLE_WORDS_BEFORE = 794
+# HUN-220 adds two speed charts, their captions and one Known limits row; this is the extra visible-word budget for them.
+HUN220_EXTRA_WORDS = 130
 # This repo's store on 3 Nov 2026 (counts only): notes saved per day for the 30 days 5 Oct .. 3 Nov.
 SPARK_NOTES = [0] * 24 + [63, 23, 41, 0, 3, 13]
 # sha256 of the two theme.css blocks as the spec rev 25 export gives them (tokens `:root`, then component CSS).
@@ -513,7 +515,7 @@ class SitePageTest(unittest.TestCase):
     def test_visible_words_grow_by_at_most_150(self):
         words = _Words()
         words.feed(self.html)
-        self.assertLessEqual(words.count, VISIBLE_WORDS_BEFORE + 150, words.count)
+        self.assertLessEqual(words.count, VISIBLE_WORDS_BEFORE + 150 + HUN220_EXTRA_WORDS, words.count)
 
     def test_install_stepper_has_codeboxes(self):
         self.assertEqual(self.scan.by_class["step-no"], ["01", "02", "03", "end"])
@@ -561,9 +563,112 @@ class SitePageTest(unittest.TestCase):
         self.assertRegex(self.html, r'<ul class="strip stats c3">')
 
     def test_known_limits_status_is_plain_words(self):
-        self.assertEqual(self.scan.by_class["status"], ["open", "open", "open", "accepted", "to run"])
+        self.assertEqual(self.scan.by_class["status"], ["open", "open", "open", "open", "accepted", "to run"])
         self.assertNotRegex(self.html, r'class="tag')
         self.assertNotIn(".tag", self.local_style)
+
+    # HUN-220 AC 1-2: two before/after speed charts (inline SVG, a wide and a tall copy each) with the measured numbers
+    SPEED_NUMBERS = ("290 ms", "145 ms", "1.62 s", "0.41 s", "171.7 s", "0.27 s", "3.98 s", "0.44 s")
+
+    def speed_svgs(self):
+        sec = self.section("numbers")
+        out = re.findall(r'<svg class="spd (flow-wide|flow-tall)" viewBox="([^"]+)" role="img" aria-label="([^"]+)">(.*?)</svg>', sec, re.S)
+        return sec, out
+
+    @staticmethod
+    def bar_widths(svg):
+        """(before, after) bar widths per group, in drawing order."""
+        before = [float(w) for w in re.findall(r'<rect class="fl-bar" [^>]*width="([\d.]+)"', svg)]
+        after = [float(w) for w in re.findall(r'<rect class="fl-bar-on" [^>]*width="([\d.]+)"', svg)]
+        return before, after
+
+    def test_measured_has_two_speed_charts_each_in_two_layouts(self):
+        sec, svgs = self.speed_svgs()
+        self.assertEqual([k for k, _, _, _ in svgs], ["flow-wide", "flow-tall", "flow-wide", "flow-tall"])
+        for kind, _, label, _ in svgs:
+            self.assertGreater(len(label), 80)
+        self.assertEqual(len(re.findall(r"<svg", sec)), 4)
+        self.assertNotIn("<script", sec)
+        # the two pictures sit in .figure boxes; the old p95 chart and stats strip stay
+        self.assertEqual(len(re.findall(r'<div class="figure">', sec)), 2)
+        self.assertIn('<ul class="strip stats c3">', sec)
+        # the existing flow test counts only class="flow ..." pictures: these must not change that count
+        self.assertEqual(len([1 for t, a in self.scan.tags if t == "svg" and "flow" in a.get("class", "").split()]), 6)
+
+    def test_speed_numbers_appear_exactly_with_their_date(self):
+        sec, svgs = self.speed_svgs()
+        wide = {i: svgs[i][3] for i in (0, 2)}
+        texts = {i: [t.strip() for t in re.findall(r"<text[^>]*>([^<]+)</text>", wide[i])] for i in wide}
+        for number in ("290 ms", "145 ms", "1.62 s", "0.41 s"):
+            self.assertIn(number, texts[0])
+            self.assertIn(number, svgs[1][3])
+            self.assertIn(number, svgs[0][2])
+        for number in ("171.7 s", "0.27 s", "3.98 s", "0.44 s"):
+            self.assertIn(number, texts[2])
+            self.assertIn(number, svgs[3][3])
+            self.assertIn(number, svgs[2][2])
+        self.assertTrue(any("440 notes" in t for t in texts[0] + texts[2]))
+        self.assertTrue(any("4,000-note" in t for t in texts[0]))
+        self.assertTrue(any(t.startswith("1.7 MB / 150,000 words") for t in texts[2]))
+        self.assertTrue(any(t.startswith("10 MB") for t in texts[2]))
+        plain = _plain_text(sec)
+        self.assertGreaterEqual(plain.count("4 Nov 2026"), 3)  # a caption per chart and one for the memory line
+        self.assertIn("log scale", plain)
+        self.assertIn("log scale", svgs[2][2])
+
+    def test_speed_bars_are_proportional(self):
+        _, svgs = self.speed_svgs()
+        for wide, tall in ((0, 1), (2, 3)):
+            for i in (wide, tall):
+                before, after = self.bar_widths(svgs[i][3])
+                self.assertEqual((len(before), len(after)), (2, 2), i)
+                for b, a in zip(before, after):
+                    self.assertGreater(b, a, i)
+        import math
+        # chart 1 is linear in milliseconds: width / value is one constant
+        for i in (0, 1):
+            before, after = self.bar_widths(svgs[i][3])
+            k = before[1] / 1620
+            for width, value in ((before[0], 290), (after[0], 145), (before[1], 1620), (after[1], 410)):
+                self.assertAlmostEqual(width, value * k, delta=0.2, msg=i)
+        # chart 2 is a log scale from 0.1 s: width = decades above 0.1 s * one constant
+        for i in (2, 3):
+            before, after = self.bar_widths(svgs[i][3])
+            k = before[0] / math.log10(171.7 / 0.1)
+            for width, value in ((before[0], 171.7), (after[0], 0.27), (before[1], 3.98), (after[1], 0.44)):
+                self.assertAlmostEqual(width, k * math.log10(value / 0.1), delta=0.2, msg=i)
+
+    def test_speed_charts_use_only_theme_tokens(self):
+        sec, _ = self.speed_svgs()
+        self.assertEqual(COLOUR.findall(sec), [])
+        self.assertNotIn("http", sec)  # no new external request
+        self.assertNotIn("<image", sec)
+
+    def test_word_cache_memory_line(self):
+        plain = _plain_text(self.section("numbers").split("<details")[0])
+        for text in ("95 MB", "35 MB", "1,600 long words"):
+            self.assertIn(text, plain)
+
+    # HUN-220 AC 3: Known limits
+    def test_known_limits_notes_pile_up_and_index_precision(self):
+        sec = self.section("limits")
+        rows = re.findall(r"<tr><td>([^<]+)</td><td>(.*?)</td><td><span class=\"status\">([^<]+)</span></td></tr>", sec)
+        self.assertEqual([r[0] for r in rows], ["Notes pile up", "Index precision", "Big transcripts", "Non-git folder",
+                                                "Clear text", "Permission prompt"])
+        pile, precision = rows[0], rows[1]
+        self.assertEqual(pile[2], "open")
+        self.assertIn("3×", pile[1])
+        self.assertIn("4 Nov 2026", pile[1])
+        self.assertIn("still", pile[1])
+        self.assertNotIn("1 ms", sec)
+        self.assertEqual(precision[2], "open")
+        self.assertIn("8%", precision[1])
+        self.assertIn("31 Oct 2026", precision[1])
+        self.assertIn("experiment 08", precision[1].lower())
+        detail = sec.split("<details")[1]
+        self.assertEqual(re.findall(r"<dt>([^<]+)</dt>", detail),
+                         ["Notes pile up", "Index precision", "Big transcripts", "Non-git folder", "Clear text", "Permission prompt"])
+        self.assertNotIn("HUN-", sec)
 
     # HUN-127: container, no task IDs, no "built" section, folded detail
     def test_container_stops_growing(self):
