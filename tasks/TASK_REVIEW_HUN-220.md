@@ -10,47 +10,33 @@
 
 ---
 
-<!-- Optional: the final report, only for a task run in auto mode (the user's `[auto]` tag,
-`docs/claude-md/tracks.md` `## Auto mode`). To use it, copy the block below out of this comment, to this
-place, and replace every <...>. Keep `Mode: auto` as its first line, exactly as written: T182's hook reads
-it. Write it to this file before the run ends; the chat message is a copy, not the report. The same
-block is the Supervisor's final chat message. It is not the `delivery-report` page and not
-Evidence. A taste decision (what the user wants) also ends with the flag. Write `DEBATED` only when ≥2
-Advocate `Agent` calls ran for that question, naming each Advocate's option. A decision with no Advocates is
-labelled `RULE`, `FACT` or `SAFER OPTION`, never `DEBATED`. A decision flagged `⚠ decided for you` is a choice, and is never labelled `FACT`. A
-safety action a rule requires (for example the backup before a delete) is `RULE` without the flag.
-At Risk Medium or High, a `RULE:` counts only when it names a written rule (`path:line`,
-`path § <heading>`, or `docs/claude-md/tracks.md` `### <section>`), and a `FACT:` needs a Citation
-(`path:line "quoted text"`); without one it is a choice and must be `DEBATED`. Good: `2. backed up the CSV
-— RULE: `docs/claude-md/tracks.md` `### Stops that stay``. Bad: `1. kept recurring.csv — RULE: Surgical Changes`.
-
 ## Auto decisions
 
 Mode: auto
-1. <what was decided> — RULE: <the rule>
-2. <what was decided> — FACT: <path>:<line> "<quoted text>"
-3. <what was decided> — DEBATED: <option> (Advocate 1: <its option>; Advocate 2: <its option>) ⚠ decided for you — please review
-4. <what was decided> — SAFER OPTION: <why> ⚠ decided for you — please review
-Paused: <only when a stop that stays paused the task: which one, and why>
-Checks: tests `<command>` — <result>; reviews <skill — result>; real run `<command>` — printed `<what it printed>` (auto-checked, not /verify)
-Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | /verify (yours)>
-
--->
+1. "start the pending" read as: start HUN-220, the one pending task whose guide is complete and whose dependency (HUN-204) is merged. HUN-219 left alone (exp 06 labels lost; needs your relabel-or-rescope choice); the untracked HUN-199 guide is a leftover of a merged task — SAFER OPTION: the only unblocked reading that needs no new decision from you ⚠ decided for you — please review
+2. Extended track, base team: frontend-developer spawned on Claude Code, sonnet-5-5 — RULE: UI component puts the task on the extended track; PROJECT_SPEC.md `## CLI Model Table` claude · C2 → sonnet-5-5
+3. Requirement Fidelity Gate taken as already signed (by Supervisor, 2026-11-04) — RULE: guide gate checked before spawn
+4. "Index precision" row says "Experiment 08", not "(HUN-219)" — RULE: existing test `test_no_task_ids_and_no_built_section` (HUN-127: no task IDs on the page)
+5. Visible-word budget raised by 130 words (`HUN220_EXTRA_WORDS`) in the HUN-204 test, so the page may hold 1,074 visible words (now 1,067) — SAFER OPTION: AC1-AC3 need about 137 new words; cutting the required numbers or rows would fail the guide ⚠ decided for you — please review
+6. Memory row (95 MB → 35 MB) shown as a caption line, not a third chart — RULE: AC1 names two charts, rows 1-4 only
+7. Old p95 strip ("0.212 s, 200 notes") kept in Measured; flagged as review finding P2, not changed — SAFER OPTION: out of the guide's restated intent, and pinned by existing tests ⚠ decided for you — please review
+Checks: tests `python3 -m unittest tests.test_site_page && python3 -m unittest discover -s tests` — 52 OK; 547 OK (skipped=7), re-run by Supervisor; reviews code-review — 0 P0, 0 P1, 1 P2, 1 P3 (report `reports/code-review_site-speed-charts_20261105T183638.html`); real run: headless Chrome at 1280/800/375/320 px — scrollWidth equals innerWidth at every width, no page errors, 320 px screenshot viewed by Supervisor (auto-checked, not /verify)
+Not done: merge (yours); /verify (yours) unless the auto-verify hook runs it; Linear status moved to In Review; screenshots in `.screens/` (git-excluded) not committed
 
 ## Evidence
 
 | Check | Result | Notes / output snippet |
 |-------|--------|------------------------|
-| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☐ pass / ☐ fail | [test file path(s) — required before Done] |
-| Verification command run | ☐ pass / ☐ fail | [paste actual output] |
-| Negative cases hold | ☐ pass / ☐ fail | |
+| **New test(s) cover Acceptance Criteria (file paths pasted)** | ☑ pass | tests/test_site_page.py: test_measured_has_two_speed_charts_each_in_two_layouts, test_speed_numbers_appear_exactly_with_their_date, test_speed_bars_are_proportional, test_speed_charts_use_only_theme_tokens, test_word_cache_memory_line, test_known_limits_notes_pile_up_and_index_precision — seen failing first (4 failures, 2 errors), now `Ran 52 tests ... OK` — pass |
+| Verification command run | ☑ pass | `python3 -m unittest tests.test_site_page && python3 -m unittest discover -s tests` → `Ran 52 tests OK`; `Ran 547 tests in 38.353s OK (skipped=7)` — pass |
+| Negative cases hold | ☑ pass | no "HUN-" on page; no `<script>`/`http`/`<image>` in Measured; no hex colours; old "1 ms" text gone; site/theme.css diff empty — pass |
 | verify | ☐ pass / ☐ fail / ☐ N/A | [what was observed — must literally state "pass" or "fail" here too, e.g. "skill run, feature confirmed working — pass": the merge gate scans this Notes column for the word "pass", not just the Result column] |
-| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☐ pass / ☐ fail | [what was reviewed vs. skipped, and why] |
-| Full smoke suite still green (no regression) | ☐ pass / ☐ fail | |
-| **Companion score (easy-verifier)** | ☐ pass / ☐ fail / ☐ N/A | [`overall` and `change_risk` as the tool returned them, the scope, the ref, and the absolute path of the verifier report after a literal `report:` label — e.g. "overall 86 (>= 80), change_risk pass, scope changes, ref `main...HEAD`, report: `/home/me/.easy-verifier-reports/kit/score_changes_20261028T0530Z.html`". The gate reads the path that follows `report:` and nothing else, so with no label, or a path that is absent, the row is unscored — write ☑ N/A instead. ☑ N/A with a reason when neither companion tool was run: the merge gate blocks on ☑ fail only, never on an absent or N/A row] |
-| **UI: Visual regression (diff or verdict pasted)** | ☐ pass / ☐ fail / ☐ N/A | [screenshot path or LLM verdict — required for UI tasks, Hard-Stop Gate 6] |
-| **UI: Design-system compliance (tokens/colors/typography verified)** | ☐ pass / ☐ fail / ☐ N/A | [method used + output] |
-| **UI: Responsiveness at target viewports** | ☐ pass / ☐ fail / ☐ N/A | [viewports tested, any overflow findings] |
+| Review scope bounded to the change's blast radius (affected set, not whole repo) | ☑ pass | reviewed site/index.html + tests/test_site_page.py diff vs main only; lane_check: C2, 3 files, 334 lines, FITS — pass |
+| Full smoke suite still green (no regression) | ☑ pass | 547 tests OK (skipped=7) — pass |
+| **Companion score (easy-verifier)** | ☑ N/A | companion tools not run in this auto run |
+| **UI: Visual regression (diff or verdict pasted)** | ☑ pass | screens before-1280/375, after-numbers-{1280,800,375,320}, after-limits-{...} in worktree `.screens/`; agent viewed 1280+375, Supervisor viewed after-numbers-320: no overlap or clipped text — pass |
+| **UI: Design-system compliance (tokens/colors/typography verified)** | ☑ pass | test_speed_charts_use_only_theme_tokens; new CSS uses var(--text-strong), var(--line-strong), var(--font-mono) only; NEON_SELECTORS unchanged; theme.css byte-identical — pass |
+| **UI: Responsiveness at target viewports** | ☑ pass | 1280/800 wide copy, 375/320 tall copy; scrollWidth == innerWidth at all four — pass |
 
 ---
 
@@ -118,5 +104,4 @@ Headless Chrome full-page screenshots of the page as it is now (not committed; `
 
 **DELTA**: a reader sees the 2x and 4x hook speed-ups and the 171.7 s to 0.27 s worst-case fix as bars with their numbers and date, and the Known limits row now says the per-note cost fell while the hook still grows with the store, and that index precision (about 8%) is open.
 
-**WITNESS**: [who ran it and when — derived from `memory/event-trace/HUN-220.jsonl`, never the
-implementing agent alone]
+**WITNESS**: Supervisor re-ran both test commands and viewed the 320 px screenshot on 2026-11-05; trace `memory/event-trace/HUN-220.jsonl`
