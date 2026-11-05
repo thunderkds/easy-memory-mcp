@@ -114,9 +114,9 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 
 Headless Chrome full-page screenshots of the page as it is now (not committed; `.screens/` is a scratch folder): `/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp-HUN-220/.screens/before-1280.png`, `.screens/before-375.png`.
 
-**AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
+**AFTER** (2026-11-05, commit `fbe0365`): `site/index.html` Measured keeps the p95 chart and stats strip, then adds "Prompt hook speed" (two before/after bar pairs: 290 ms to 145 ms on the real 440-note store; 1.62 s to 0.41 s on the 4,000-note probe; linear scale) and "Worst-case prompts" (log scale from 0.1 s: 1.7 MB / 150,000 words 171.7 s to 0.27 s; 10 MB 3.98 s to 0.44 s; 440 notes), each an inline SVG in a wide and a tall copy, plus the line "Word cache in a long serve, 4 Nov 2026: 1,600 long words used 95 MB before and 35 MB after." Known limits: "Notes pile up" now reads "Each note costs about 3× less since 4 Nov 2026, but the hook still gets slower as the store grows." (open); new row "Index precision": "About 8% of index lines were relevant in the 31 Oct 2026 check. Experiment 08 looks at it." (open); both also in the More detail list. Screenshots (not committed): `/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp-HUN-220/.screens/after-numbers-1280.png`, `after-numbers-375.png`, `after-limits-1280.png` (also 800 and 320).
 
-**DELTA**: [one sentence — what a user can now do that they could not before]
+**DELTA**: a reader sees the 2x and 4x hook speed-ups and the 171.7 s to 0.27 s worst-case fix as bars with their numbers and date, and the Known limits row now says the per-note cost fell while the hook still grows with the store, and that index precision (about 8%) is open.
 
 **WITNESS**: [who ran it and when — derived from `memory/event-trace/HUN-220.jsonl`, never the
 implementing agent alone]
