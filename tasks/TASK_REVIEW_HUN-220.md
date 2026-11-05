@@ -61,8 +61,58 @@ Not done: merge (yours); <auto verify: running (T182) | auto verify: <result> | 
 > **before any implementation commit exists**; if it does not (docs, templates, skill-instruction
 > text), BEFORE is the **verbatim prior content** of what changed — a quoted excerpt, not a command.
 
-**BEFORE**: [pasted timestamped command output showing the thing absent/failing, captured before the
-first implementation commit] OR [verbatim excerpt of the prior content, for non-executable changes]
+**BEFORE** (2026-11-05T11:30Z, before any implementation commit; HEAD `618f082`, branch `site-speed-charts`). Not executable code: verbatim prior content of `site/index.html` (lines 833-857, the Measured section, and the Known limits table and its first detail entry (the other detail entries are unchanged and not quoted), lines 859-888):
+
+```html
+<section id="numbers">
+  <h2>Measured</h2>
+  <p class="caption">p95 of each hook, against its limit.</p>
+  <div class="chart">
+    <div class="bar-row">
+      <div class="bar-top"><span class="bar-name">Prompt hook</span><span class="bar-ctx">7,831-file repo, 200 notes</span><span class="bar-val">0.212 s <small>of 1 s</small></span></div>
+      <div class="bar" role="img" aria-label="Prompt hook p95: 0.212 s of a 1 s limit"><span style="width:21.2%"></span></div>
+    </div>
+    <div class="bar-row">
+      <div class="bar-top"><span class="bar-name">Stop hook</span><span class="bar-val">0.066 s <small>of 2 s</small></span></div>
+      <div class="bar" role="img" aria-label="Stop hook p95: 0.066 s of a 2 s limit"><span style="width:3.3%"></span></div>
+    </div>
+  </div>
+  <ul class="strip stats c3">
+    <li><span class="num">0.024 s</span><span class="label">word weights load</span></li>
+    <li><span class="num">1.69 MB</span><span class="label">word-weights file</span></li>
+    <li><span class="num">307</span><span class="label">tests pass (3 skipped: opt-in or host-dependent)</span></li>
+  </ul>
+  <details class="more">
+    <summary>More detail</summary>
+    <div class="more-body">
+      <p>An independent QA task checked the full cycle: install, save, index, MCP read, report, uninstall. It also checked file modes, no network traffic (a socket shim and <code>strace</code>), garbage input, and that the repo tree hash does not change.</p>
+    </div>
+  </details>
+</section>
+```
+
+```html
+<section id="limits">
+  <h2>Known limits</h2>
+  <div class="table-wrap" role="region" aria-label="Known limits" tabindex="0"><table>
+    <thead><tr><th>Limit</th><th>Impact</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>Notes pile up</td><td>The hook gets about 1 ms slower per note.</td><td><span class="status">open</span></td></tr>
+      <tr><td>Big transcripts</td><td>A 400 MB transcript used 808 MB.</td><td><span class="status">open</span></td></tr>
+      <tr><td>Non-git folder</td><td>The weights build has no cap.</td><td><span class="status">open</span></td></tr>
+      <tr><td>Clear text</td><td>Notes are saved unencrypted (mode 0600).</td><td><span class="status">accepted</span></td></tr>
+      <tr><td>Permission prompt</td><td>The live check has not run.</td><td><span class="status">to run</span></td></tr>
+    </tbody>
+  </table></div>
+  <details class="more">
+    <summary>More detail</summary>
+    <div class="more-body">
+      <dl>
+        <dt>Notes pile up</dt>
+        <dd>The prompt hook gets about 1 ms slower per saved note. It passes the 1 s limit at roughly 1,000 to 3,000 notes. At about 5 s the hook timeout kills it and the index silently disappears.</dd>
+```
+
+Headless Chrome full-page screenshots of the page as it is now (not committed; `.screens/` is a scratch folder): `/home/hungnguyenhuu/workspace/pets/hungnguyen111/easy-memory-mcp-HUN-220/.screens/before-1280.png`, `.screens/before-375.png`.
 
 **AFTER**: [same command, post-change] OR [verbatim excerpt of the new content]
 
